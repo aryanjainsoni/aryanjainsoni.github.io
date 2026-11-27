@@ -12,7 +12,7 @@ export const site = {
 
 export const links = [
   { label: 'GitHub', href: 'https://github.com/aryanjainsoni' },
-  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/aryan-jain-a39137321' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/aryan-jain27' },
   { label: 'LeetCode', href: 'https://leetcode.com/u/aryanjainsoni/' },
   { label: 'Instagram', href: 'https://www.instagram.com/aryanjainsoni/' },
   { label: 'X', href: 'https://x.com/Aryanjainsoni' },
