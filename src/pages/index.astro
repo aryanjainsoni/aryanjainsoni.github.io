@@ -12,7 +12,7 @@ import Aurora from '../components/bits/Aurora';
 import SplitText from '../components/bits/SplitText';
 import ScrollReveal from '../components/bits/ScrollReveal';
 import { site, topics } from '../data/site';
-import { chapters, projects } from '../data/profile';
+import { chapters, projects, formatWhen, sortKey } from '../data/profile';
 import { getEntries, getStats, streaks } from '../lib/journal';
 import { getLeetCode, leetLevel } from '../lib/leetcode';
 
@@ -121,14 +121,42 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
   <section class="chapters" id="chapters">
     <div class="wrap">
       <h2 class="giant">Chapters</h2>
-      <ol>
+      <div class="ch-sort" role="group" aria-label="Sort chapters">
+        <button type="button" class="on" data-ch-sort="asc">Oldest first</button>
+        <button type="button" data-ch-sort="desc">Newest first</button>
+      </div>
+      <ol data-chapters>
         {chapters.map((c, i) => (
-          <li data-reveal style={`--d:${(i % 4) * 0.06}s`}>
+          <li data-reveal data-key={sortKey(c)} style={`--d:${(i % 4) * 0.06}s`}>
             <span class="num">{c.n}</span>
-            <div><h3>{c.title}</h3><p>{c.line}</p></div>
+            <div>
+              <h3>{c.title}{formatWhen(c) ? <time>{formatWhen(c)}</time> : <span class="nodate">date soon</span>}</h3>
+              <p>{c.line}</p>
+            </div>
           </li>
         ))}
       </ol>
+      <script is:inline>
+        (() => {
+          const ol = document.querySelector('[data-chapters]');
+          const btns = [...document.querySelectorAll('[data-ch-sort]')];
+          const sort = (dir) => {
+            const lis = [...ol.children];
+            lis.sort((a, b) => {
+              const ka = a.dataset.key, kb = b.dataset.key;
+              if (!ka && !kb) return 0; if (!ka) return 1; if (!kb) return -1; // undated hamesha neeche
+              return dir === 'asc' ? ka.localeCompare(kb) : kb.localeCompare(ka);
+            });
+            lis.forEach((li, i) => {
+              ol.appendChild(li);
+              li.querySelector('.num').textContent = String(i + 1).padStart(2, '0'); // 01, 02, 03… naye order mein
+            });
+            btns.forEach((b) => b.classList.toggle('on', b.dataset.chSort === dir));
+          };
+          btns.forEach((b) => b.addEventListener('click', () => sort(b.dataset.chSort)));
+          sort('asc');
+        })();
+      </script>
     </div>
   </section>
 
@@ -328,6 +356,13 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
   .chapters li:last-child { border-bottom: 1px solid rgba(35,20,15,.14); }
   .chapters .num { font: 300 clamp(2.4rem, 6vw, 4.6rem)/1 'Fraunces', serif; color: #1c1512; letter-spacing: -.03em; transition: color .3s; }
   .chapters li:hover .num { color: #c2552f; }
+  .chapters h3 time, .chapters .nodate { margin-left: 14px; padding: 3px 10px; border-radius: 999px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: none; vertical-align: middle; }
+  .chapters h3 time { color: #c2552f; border: 1px solid rgba(194,85,47,.35); }
+  .chapters .nodate { color: #9a8a80; border: 1px dashed rgba(35,20,15,.2); }
+  .ch-sort { display: flex; justify-content: center; gap: 4px; width: max-content; margin: -36px auto 40px; padding: 4px; border-radius: 999px; border: 1px solid rgba(35,20,15,.14); background: #fffaf4; }
+  .ch-sort button { border: none; background: none; color: #7a6a62; font: 600 13px 'Inter', sans-serif; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .ch-sort button.on { background: #1c1512; color: #f6f0e8; }
+  .ch-sort button:focus-visible { outline: 2px solid #c2552f; outline-offset: 2px; }
   .chapters h3 { margin: 0 0 6px; font: 500 clamp(.85rem, 1.2vw, 1rem)/1.1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .2em; }
   .chapters p { margin: 0; color: #4a3d36; font: 400 clamp(1.1rem, 2vw, 1.5rem)/1.35 'Fraunces', serif; }
 

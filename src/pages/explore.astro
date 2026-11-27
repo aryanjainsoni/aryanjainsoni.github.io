@@ -1,42 +1,39 @@
 ---
-// INDEX — site ki har cheez ek jagah, search ke saath.
+// INDEX — site ki har cheez ek jagah: search, category, aur date ke hisaab se timeline.
 // Naya content (journal entry, project, certificate…) apne aap yahan aa jaata hai,
 // kyunki ye page wahi data padhta hai jo baaki pages padhte hain.
 import Base from '../layouts/Base.astro';
+import IndexRow, { type IndexItem } from '../components/IndexRow.astro';
 import { topics, links } from '../data/site';
-import { education, experience, skills, certificates, beyond, campus, projects } from '../data/profile';
-import { getEntries } from '../lib/journal';
-
-type Item = {
-  cat: string; title: string; desc?: string; href?: string; external?: boolean;
-  tags?: string[]; date?: string; text?: string; soon?: boolean;
-};
+import { education, experience, skills, certificates, beyond, campus, projects, formatWhen, sortKey, type When } from '../data/profile';
+import { getEntries, dayKey } from '../lib/journal';
 
 const entries = await getEntries();
 const plain = (md = '') => md.replace(/```[\s\S]*?```/g, ' ').replace(/[#>*_`\-\[\]\(\)!]/g, ' ').replace(/\s+/g, ' ').trim();
-const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const dated = (w: When) => ({ when: formatWhen(w), key: sortKey(w) });
 
-const items: Item[] = [
+const items: IndexItem[] = [
   ...entries.map((e) => {
     const body = plain(e.body);
     return {
-      cat: 'Journal', title: e.data.title, href: `/journal/${e.id}/`, tags: e.data.tags, date: fmt(e.data.date),
+      cat: 'Journal', title: e.data.title, href: `/journal/${e.id}/`, tags: e.data.tags,
+      ...dated({ date: dayKey(e.data.date) }),
       desc: body.slice(0, 140) + (body.length > 140 ? '…' : ''), text: body,
     };
   }),
   ...projects.map((p) => ({
-    cat: 'Projects', title: p.name, desc: p.line, tags: [p.kind, ...p.tags], date: p.year,
+    cat: 'Projects', title: p.name, desc: p.line, tags: [p.kind, ...p.tags], ...dated(p),
     href: p.links[0]?.[1] ?? '/#work', external: !!p.links[0],
   })),
-  ...beyond.slice(0, 4).map((b) => ({ cat: 'Achievements', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['school', 'personal'] })),
-  ...campus.map((c) => ({ cat: 'Achievements', title: c.title, desc: c.meta, href: '/about/#campus', tags: ['campus', 'events', 'ADYPU'] })),
-  ...certificates.map((c) => ({ cat: 'Certificates', title: c.name, desc: `${c.by} · ${c.when}`, href: '/about/#certificates', tags: ['Java', 'certificate', c.by] })),
+  ...beyond.slice(0, 4).map((b) => ({ cat: 'Achievements', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['school', 'personal'], ...dated(b) })),
+  ...campus.map((c) => ({ cat: 'Achievements', title: c.title, desc: c.meta, href: '/about/#campus', tags: ['campus', 'events', 'ADYPU'], ...dated(c) })),
+  ...certificates.map((c) => ({ cat: 'Certificates', title: c.name, desc: c.by, href: '/about/#certificates', tags: ['Java', 'certificate', c.by], ...dated(c) })),
   ...Object.entries(skills).flatMap(([group, list]) =>
     list.map((s) => ({ cat: 'Skills', title: s, desc: group, href: '/about/#skills', tags: [group] })),
   ),
-  ...beyond.slice(4).map((b) => ({ cat: 'Life', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['fitness', 'hobby'] })),
-  ...education.map((e) => ({ cat: 'Education', title: e.title, desc: e.meta, href: '/about/#education', tags: ['study'] })),
-  ...experience.map((e) => ({ cat: 'Experience', title: e.title, desc: e.meta, href: '/about/#experience', tags: ['work', 'internship'] })),
+  ...beyond.slice(4).map((b) => ({ cat: 'Life', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['fitness', 'hobby'], ...dated(b) })),
+  ...education.map((e) => ({ cat: 'Education', title: e.title, desc: e.meta, href: '/about/#education', tags: ['study'], ...dated(e) })),
+  ...experience.map((e) => ({ cat: 'Experience', title: e.title, desc: e.meta, href: '/about/#experience', tags: ['work', 'internship'], ...dated(e) })),
   ...topics.map((t) => ({
     cat: 'Sections', title: t.title, desc: t.line, href: t.ready ? t.href : undefined, external: t.external, soon: !t.ready,
     tags: ['section'],
@@ -44,20 +41,27 @@ const items: Item[] = [
   ...links.map((l) => ({ cat: 'Profiles', title: l.label, desc: l.href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), href: l.href, external: true, tags: ['social', 'link'] })),
 ];
 
+// ---- Category view
 const order = ['Journal', 'Projects', 'Achievements', 'Certificates', 'Skills', 'Life', 'Education', 'Experience', 'Sections', 'Profiles'];
-const groups = order
-  .map((cat) => ({ cat, list: items.filter((i) => i.cat === cat) }))
-  .filter((g) => g.list.length);
-const searchText = (i: Item) => [i.cat, i.title, i.desc, i.date, ...(i.tags ?? []), i.text].filter(Boolean).join(' ').toLowerCase();
+const groups = order.map((cat) => ({ cat, list: items.filter((i) => i.cat === cat) })).filter((g) => g.list.length);
+
+// ---- Timeline view (sirf dated items; sabse naya upar)
+const datedItems = items.filter((i) => i.key).sort((a, b) => b.key!.localeCompare(a.key!));
+const years = [...new Set(datedItems.map((i) => i.key!.slice(0, 4)))];
+const timeline = years.map((y) => ({ year: y, list: datedItems.filter((i) => i.key!.startsWith(y)) }));
+const undated = items.filter((i) => !i.key && !['Sections', 'Profiles', 'Skills'].includes(i.cat));
+
+const searchText = (i: IndexItem) => [i.cat, i.title, i.desc, i.when, ...(i.tags ?? []), i.text].filter(Boolean).join(' ').toLowerCase();
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Streamlit', 'gym', 'AI'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 ---
-<Base title="Index" description="Everything on Aryan Jain's site — journal, projects, achievements, skills and more — in one searchable index.">
+<Base title="Index" description="Everything on Aryan Jain's site — journal, projects, achievements, skills and more — searchable, and sortable by date.">
   <section class="head">
     <div class="wrap">
       <p class="kicker">Index</p>
       <h1>Find <em class="sun">anything.</em></h1>
-      <p class="lead">Every entry, project, achievement and skill — in one place. Scroll the index, or just search.</p>
+      <p class="lead">Every entry, project, achievement and skill — by category or on a timeline. Scroll, filter by year, or just search.</p>
 
       <div class="searchbox" role="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -69,6 +73,31 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
         {suggestions.map((s) => <button type="button" data-suggest={s}>{s}</button>)}
       </p>
 
+      <!-- View, sort and date filters -->
+      <div class="controls">
+        <div class="seg" role="group" aria-label="View">
+          <button type="button" class="on" data-view="cat">By category</button>
+          <button type="button" data-view="time">Timeline</button>
+        </div>
+        <div class="seg" role="group" aria-label="Sort by date">
+          <button type="button" class="on" data-order="desc">Newest first</button>
+          <button type="button" data-order="asc">Oldest first</button>
+        </div>
+        <label class="sel"><span>Year</span>
+          <select id="year" aria-label="Filter by year">
+            <option value="">All years</option>
+            {years.map((y) => <option value={y}>{y}</option>)}
+          </select>
+        </label>
+        <label class="sel"><span>Month</span>
+          <select id="month" aria-label="Filter by month">
+            <option value="">All months</option>
+            {MONTHS.map((m, i) => <option value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+          </select>
+        </label>
+        <button type="button" class="reset" id="reset" hidden>Clear filters</button>
+      </div>
+
       <div class="chips" role="group" aria-label="Filter by category">
         <button type="button" class="chip on" data-cat="">All <span>{items.length}</span></button>
         {groups.map((g) => <button type="button" class="chip" data-cat={g.cat}>{g.cat} <span>{g.list.length}</span></button>)}
@@ -79,42 +108,48 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
 
   <section class="index">
     <div class="wrap layout">
-      <nav class="jump" aria-label="Jump to category">
+      <nav class="jump" aria-label="Jump to">
         <p>Jump to</p>
-        {groups.map((g) => <a href={`#${slug(g.cat)}`} data-jump={g.cat}>{g.cat}</a>)}
+        <div data-jumps="cat">{groups.map((g) => <a href={`#${slug(g.cat)}`} data-jump={g.cat}>{g.cat}</a>)}</div>
+        <div data-jumps="time" hidden>
+          {timeline.map((t) => <a href={`#y-${t.year}`} data-jump-year={t.year}>{t.year}</a>)}
+          {undated.length > 0 && <a href="#y-undated" data-jump-year="undated">Undated</a>}
+        </div>
       </nav>
 
-      <div class="groups">
-        {groups.map((g) => (
-          <div class="group" id={slug(g.cat)} data-group={g.cat}>
-            <h2>{g.cat} <span>{g.list.length}</span></h2>
-            <ul>
-              {g.list.map((i) => {
-                const Tag = i.href ? 'a' : 'div';
-                return (
-                  <li data-cat={i.cat} data-text={searchText(i)}>
-                    <Tag class:list={['row', { soon: i.soon }]} href={i.href} target={i.external ? '_blank' : undefined} rel={i.external ? 'noopener' : undefined}>
-                      <div class="main">
-                        <span class="t" data-title>{i.title}</span>
-                        {i.desc && <span class="d">{i.desc}</span>}
-                        {i.tags && i.tags.length > 0 && (
-                          <span class="tags">{i.tags.slice(0, 5).map((t) => <i>{t}</i>)}</span>
-                        )}
-                      </div>
-                      <div class="side">
-                        {i.date && <time>{i.date}</time>}
-                        {i.soon ? <span class="badge">soon</span> : i.href && <span class="arrow" aria-hidden="true">{i.external ? '↗' : '→'}</span>}
-                      </div>
-                    </Tag>
-                  </li>
-                );
-              })}
-            </ul>
+      <div class="views">
+        <!-- CATEGORY VIEW -->
+        <div class="view" data-view-pane="cat">
+          {groups.map((g) => (
+            <div class="group" id={slug(g.cat)} data-group>
+              <h2>{g.cat} <span data-n>{g.list.length}</span></h2>
+              <ul data-sortable>{[...g.list].sort((a, b) => (b.key ?? '').localeCompare(a.key ?? '')).map((i) => <IndexRow item={i} search={searchText(i)} />)}</ul>
+            </div>
+          ))}
+        </div>
+
+        <!-- TIMELINE VIEW -->
+        <div class="view" data-view-pane="time" hidden>
+          <div class="years" data-years>
+            {timeline.map((t) => (
+              <div class="group year" id={`y-${t.year}`} data-group>
+                <h2><span class="yr">{t.year}</span> <span data-n>{t.list.length}</span></h2>
+                <ul data-sortable>{t.list.map((i) => <IndexRow item={i} search={searchText(i)} showCat />)}</ul>
+              </div>
+            ))}
           </div>
-        ))}
+          {undated.length > 0 && (
+            <div class="group year undated-group" id="y-undated" data-group>
+              <h2><span class="yr">Undated</span> <span data-n>{undated.length}</span></h2>
+              <p class="note">Dates coming soon — these memories still need a year.</p>
+              <ul>{undated.map((i) => <IndexRow item={i} search={searchText(i)} showCat />)}</ul>
+            </div>
+          )}
+        </div>
+
         <div class="empty" id="empty" hidden>
-          <p class="big">Nothing found for “<span id="empty-q"></span>”.</p>
-          <p class="muted">Try a broader word — like <b>DSA</b>, <b>Python</b> or <b>football</b>.</p>
+          <p class="big">Nothing found.</p>
+          <p class="muted">Try a broader word — like <b>DSA</b>, <b>Python</b> or <b>football</b> — or clear the year/month filter.</p>
         </div>
       </div>
     </div>
@@ -122,73 +157,121 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
 
   <script is:inline>
     (() => {
-      const input = document.getElementById('q');
-      const rows = [...document.querySelectorAll('.groups li')];
-      const groups = [...document.querySelectorAll('[data-group]')];
-      const chips = [...document.querySelectorAll('.chip')];
-      const jumps = [...document.querySelectorAll('[data-jump]')];
-      const count = document.getElementById('count');
-      const empty = document.getElementById('empty');
-      let cat = '';
+      const $ = (s, r = document) => r.querySelector(s);
+      const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+      const input = $('#q'), yearSel = $('#year'), monthSel = $('#month'), resetBtn = $('#reset');
+      const count = $('#count'), empty = $('#empty');
+      const chips = $$('.chip');
+      const panes = { cat: $('[data-view-pane="cat"]'), time: $('[data-view-pane="time"]') };
+      const state = { cat: '', view: 'cat', order: 'desc' };
 
       const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      rows.forEach((r) => { const t = r.querySelector('[data-title]'); t.dataset.raw = t.textContent; });
+      $$('[data-title]').forEach((t) => (t.dataset.raw = t.textContent));
+
+      const matches = (r, terms, opts = {}) =>
+        (!(opts.cat ?? state.cat) || r.dataset.cat === (opts.cat ?? state.cat)) &&
+        (!yearSel.value || r.dataset.year === yearSel.value) &&
+        (!monthSel.value || r.dataset.month === monthSel.value) &&
+        terms.every((t) => r.dataset.text.includes(t));
+
+      // Sort: har list ki rows date ke hisaab se (undated hamesha neeche)
+      const sortLists = () => {
+        $$('[data-sortable]').forEach((ul) => {
+          const lis = [...ul.children];
+          lis.sort((a, b) => {
+            const ka = a.dataset.key, kb = b.dataset.key;
+            if (!ka && !kb) return 0; if (!ka) return 1; if (!kb) return -1;
+            return state.order === 'desc' ? kb.localeCompare(ka) : ka.localeCompare(kb);
+          });
+          lis.forEach((li) => ul.appendChild(li));
+        });
+        const years = $('[data-years]');
+        const ys = [...years.children];
+        ys.sort((a, b) => (state.order === 'desc' ? b.id.localeCompare(a.id) : a.id.localeCompare(b.id)));
+        ys.forEach((y) => years.appendChild(y));
+        const jumps = $('[data-jumps="time"]');
+        const js = $$('[data-jump-year]', jumps).filter((a) => a.dataset.jumpYear !== 'undated');
+        js.sort((a, b) => (state.order === 'desc' ? b.dataset.jumpYear.localeCompare(a.dataset.jumpYear) : a.dataset.jumpYear.localeCompare(b.dataset.jumpYear)));
+        const und = $('[data-jump-year="undated"]', jumps);
+        js.forEach((a) => jumps.appendChild(a)); if (und) jumps.appendChild(und);
+      };
 
       const apply = () => {
         const q = input.value.trim().toLowerCase();
         const terms = q.split(/\s+/).filter(Boolean);
+        const pane = panes[state.view];
+        Object.entries(panes).forEach(([k, p]) => (p.hidden = k !== state.view));
+        $$('[data-jumps]').forEach((j) => (j.hidden = j.dataset.jumps !== state.view));
+
         let shown = 0;
-        rows.forEach((r) => {
-          const ok = (!cat || r.dataset.cat === cat) && terms.every((t) => r.dataset.text.includes(t));
+        $$('li[data-text]').forEach((r) => {
+          const ok = matches(r, terms);
           r.hidden = !ok;
-          if (ok) shown++;
+          if (ok && pane.contains(r)) shown++;
           const t = r.querySelector('[data-title]');
           t.innerHTML = terms.length
             ? t.dataset.raw.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
                 .replace(new RegExp(`(${terms.map(esc).join('|')})`, 'gi'), '<mark>$1</mark>')
             : t.dataset.raw;
         });
-        groups.forEach((g) => {
-          const n = g.querySelectorAll('li:not([hidden])').length;
+        $$('[data-group]').forEach((g) => {
+          const n = $$('li:not([hidden])', g).length;
           g.hidden = n === 0;
-          g.querySelector('h2 span').textContent = n;
+          g.querySelector('[data-n]').textContent = n;
         });
-        // Chips par count: search ke hisaab se har category mein kitne milte hain
+        $$('[data-jump]').forEach((j) => (j.hidden = !$(`#${j.getAttribute('href').slice(1)}:not([hidden])`)));
+        $$('[data-jump-year]').forEach((j) => (j.hidden = !$(`#${j.getAttribute('href').slice(1)}:not([hidden])`)));
+
+        const catRows = $$('li[data-text]', pane); // jo view khula hai usi ke numbers
         chips.forEach((c) => {
-          const n = rows.filter((r) => (!c.dataset.cat || r.dataset.cat === c.dataset.cat) && terms.every((t) => r.dataset.text.includes(t))).length;
+          const n = catRows.filter((r) => matches(r, terms, { cat: c.dataset.cat })).length;
           c.querySelector('span').textContent = n;
           c.classList.toggle('zero', n === 0);
         });
-        jumps.forEach((j) => (j.hidden = !document.querySelector(`[data-group="${j.dataset.jump}"]:not([hidden])`)));
-        count.textContent = `${shown} ${shown === 1 ? 'item' : 'items'}${q ? ` for “${input.value.trim()}”` : ''}`;
+
+        const filters = [yearSel.value && yearSel.value, monthSel.value && monthSel.options[monthSel.selectedIndex].text].filter(Boolean).join(' ');
+        count.textContent = `${shown} ${shown === 1 ? 'item' : 'items'}${q ? ` for “${input.value.trim()}”` : ''}${filters ? ` · ${filters}` : ''}`;
         empty.hidden = shown > 0;
-        document.getElementById('empty-q').textContent = input.value.trim();
+        resetBtn.hidden = !(yearSel.value || monthSel.value || state.cat || q);
+
         const url = new URL(location.href);
-        q ? url.searchParams.set('q', input.value.trim()) : url.searchParams.delete('q');
-        cat ? url.searchParams.set('cat', cat) : url.searchParams.delete('cat');
+        const setp = (k, v) => (v ? url.searchParams.set(k, v) : url.searchParams.delete(k));
+        setp('q', input.value.trim()); setp('cat', state.cat); setp('year', yearSel.value); setp('month', monthSel.value);
+        setp('view', state.view === 'time' ? 'time' : ''); setp('order', state.order === 'asc' ? 'asc' : '');
         url.searchParams.delete('focus');
         history.replaceState(null, '', url);
       };
 
-      input.addEventListener('input', apply);
-      chips.forEach((c) => c.addEventListener('click', () => {
-        cat = c.dataset.cat;
-        chips.forEach((x) => x.classList.toggle('on', x === c));
+      const setSeg = (attr, val) => $$(`[data-${attr}]`).forEach((b) => b.classList.toggle('on', b.dataset[attr] === val));
+      $$('[data-view]').forEach((b) => b.addEventListener('click', () => { state.view = b.dataset.view; setSeg('view', state.view); apply(); }));
+      $$('[data-order]').forEach((b) => b.addEventListener('click', () => { state.order = b.dataset.order; setSeg('order', state.order); sortLists(); apply(); }));
+      chips.forEach((c) => c.addEventListener('click', () => { state.cat = c.dataset.cat; chips.forEach((x) => x.classList.toggle('on', x === c)); apply(); }));
+      [yearSel, monthSel].forEach((s) => s.addEventListener('change', () => {
+        // Saal ya mahina chuna -> timeline view zyada kaam ka hai
+        if (s.value && state.view !== 'time') { state.view = 'time'; setSeg('view', 'time'); }
         apply();
       }));
-      document.querySelectorAll('[data-suggest]').forEach((b) => b.addEventListener('click', () => {
-        input.value = b.dataset.suggest; input.focus(); apply();
-      }));
+      resetBtn.addEventListener('click', () => {
+        input.value = ''; yearSel.value = ''; monthSel.value = ''; state.cat = '';
+        chips.forEach((x) => x.classList.toggle('on', !x.dataset.cat)); apply();
+      });
+      input.addEventListener('input', apply);
+      $$('[data-suggest]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.suggest; input.focus(); apply(); }));
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') { input.value = ''; apply(); }
-        if (e.key === 'Enter') { const first = document.querySelector('.groups li:not([hidden]) .row[href]'); if (first) first.click(); }
+        if (e.key === 'Enter') { const first = $(`[data-view-pane="${state.view}"] li:not([hidden]) .row[href]`); if (first) first.click(); }
       });
 
-      // URL se shuru: /explore/?q=python&cat=Skills  (link share karne ke liye)
-      const params = new URLSearchParams(location.search);
-      if (params.get('q')) input.value = params.get('q');
-      if (params.get('cat')) { const c = chips.find((x) => x.dataset.cat === params.get('cat')); if (c) c.click(); }
-      const wantFocus = params.has('focus') || !!params.get('q');
+      // URL se shuru — e.g. /explore/?view=time&year=2025  (link share karne ke liye)
+      const p = new URLSearchParams(location.search);
+      if (p.get('q')) input.value = p.get('q');
+      if (p.get('year')) yearSel.value = p.get('year');
+      if (p.get('month')) monthSel.value = p.get('month');
+      if (p.get('view') === 'time') { state.view = 'time'; setSeg('view', 'time'); }
+      if (p.get('order') === 'asc') { state.order = 'asc'; setSeg('order', 'asc'); }
+      if (p.get('cat')) { const c = chips.find((x) => x.dataset.cat === p.get('cat')); if (c) { state.cat = c.dataset.cat; chips.forEach((x) => x.classList.toggle('on', x === c)); } }
+      const wantFocus = p.has('focus') || !!p.get('q');
+      sortLists();
       apply();
       if (wantFocus) input.focus();
     })();
@@ -198,7 +281,7 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
 <style>
   .head { padding-block: 72px 24px; }
   h1 { font-size: clamp(3rem, 9vw, 6rem); margin: 10px 0 14px; letter-spacing: -.03em; }
-  .lead { color: var(--muted); font-size: 1.15rem; max-width: 620px; margin: 0 0 30px; }
+  .lead { color: var(--muted); font-size: 1.15rem; max-width: 640px; margin: 0 0 30px; }
 
   .searchbox {
     position: relative; display: flex; align-items: center; gap: 12px; max-width: 760px;
@@ -209,12 +292,24 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
   .searchbox svg { width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex-shrink: 0; }
   .searchbox input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink); font: 500 1.1rem 'Inter', sans-serif; padding: 14px 0; }
   .searchbox input::placeholder { color: var(--muted); opacity: .8; }
-  .searchbox input::-webkit-search-cancel-button { cursor: pointer; }
   kbd { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 
-  .suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 16px 0 26px; font-size: 14px; color: var(--muted); }
+  .suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 16px 0 22px; font-size: 14px; color: var(--muted); }
   .suggest button { border: none; background: none; color: var(--accent); font: 500 14px 'Inter', sans-serif; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
   .suggest button:hover { background: var(--accent-soft); }
+
+  /* View / sort / date controls */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 18px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .seg button { border: none; background: none; color: var(--muted); font: 600 13px 'Inter', sans-serif; padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: all .2s; }
+  .seg button.on { background: var(--ink); color: var(--bg); }
+  .sel { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .sel span { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sel select { appearance: none; border: none; background: transparent; color: var(--ink); font: 600 13px 'Inter', sans-serif; padding: 8px 22px 8px 4px; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 8px center, right 4px center; background-size: 4px 4px; background-repeat: no-repeat; }
+  .sel select:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .reset { border: none; background: none; color: var(--accent); font: 600 13px 'Inter', sans-serif; cursor: pointer; padding: 8px 10px; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 14px; font: 600 14px 'Inter', sans-serif; cursor: pointer; transition: all .2s; }
@@ -227,31 +322,22 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
 
   .index { padding-top: 24px; }
   .layout { display: grid; grid-template-columns: 180px 1fr; gap: 40px; align-items: start; }
-  .jump { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 2px; }
+  .jump { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 120px); overflow: auto; }
   .jump p { margin: 0 0 8px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .jump div { display: flex; flex-direction: column; gap: 2px; }
+  .jump div[hidden] { display: none; }
   .jump a { color: var(--muted); font-weight: 500; padding: 6px 10px; border-radius: 10px; }
+  .jump a[hidden] { display: none; }
   .jump a:hover { color: var(--ink); background: var(--surface); text-decoration: none; }
 
   .group { scroll-margin-top: 100px; }
-  .group + .group { margin-top: 44px; }
+  .group + .group, .years + .group { margin-top: 44px; }
   .group h2 { display: flex; align-items: baseline; gap: 12px; font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 14px; padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
-  .group h2 span { font: 500 14px 'JetBrains Mono', monospace; color: var(--accent); }
+  .group h2 [data-n] { font: 500 14px 'JetBrains Mono', monospace; color: var(--accent); }
+  .year .yr { font-style: italic; font-weight: 300; }
+  .note { margin: -4px 0 10px; color: var(--muted); font-size: .9rem; }
   ul { list-style: none; margin: 0; padding: 0; }
-  li + li { border-top: 1px solid var(--line); }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 12px; border-radius: 14px; color: var(--ink); transition: background .2s, transform .2s; }
-  a.row:hover { text-decoration: none; background: var(--surface); transform: translateX(6px); }
-  a.row:hover .arrow { color: var(--accent); transform: translateX(4px); }
-  .main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .t { font: 600 1.15rem/1.3 'Fraunces', serif; }
-  .t :global(mark) { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 4px; padding: 0 2px; }
-  .d { color: var(--muted); font-size: .95rem; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .tags i { font: normal 500 11px 'JetBrains Mono', monospace; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 8px; }
-  .side { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-  time { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
-  .arrow { font-size: 1.2rem; color: var(--muted); transition: transform .2s, color .2s; }
-  .badge { font: 500 10px 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
-  .soon { opacity: .65; }
+  ul :global(li + li) { border-top: 1px solid var(--line); }
 
   .empty { padding: 40px 0; }
   .empty .big { font: 600 1.6rem 'Fraunces', serif; margin: 0 0 6px; }
@@ -264,7 +350,5 @@ const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Stream
     .chip { flex-shrink: 0; }
     .head { padding-top: 48px; }
     kbd { display: none; }
-    .row { padding: 14px 6px; }
-    time { display: none; }
   }
 </style>
