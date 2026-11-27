@@ -1,0 +1,7 @@
+<!doctype html><html><body><img id="i" src="C-ligature-playfair.png"><script>
+const im=document.getElementById('i');
+im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+const d=x.getImageData(0,0,c.width,c.height).data;let minx=1e9,miny=1e9,maxx=-1,maxy=-1;
+for(let y=0;y<c.height;y++)for(let X=0;X<c.width;X++){const k=(y*c.width+X)*4;const r=d[k],g=d[k+1],b=d[k+2];if(r>120&&r-b>40){if(X<minx)minx=X;if(X>maxx)maxx=X;if(y<miny)miny=y;if(y>maxy)maxy=y;}}
+document.title=JSON.stringify({minx,maxx,miny,maxy,cx:(minx+maxx)/2,cy:(miny+maxy)/2});};
+</script></body></html>
