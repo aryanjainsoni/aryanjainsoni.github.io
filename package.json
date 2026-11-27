@@ -14,5 +14,9 @@
   },
   "dependencies": {
     "astro": "^7.4.13"
+  },
+  "devDependencies": {
+    "bootstrap-icons": "^1.13.2",
+    "simple-icons": "^16.38.1"
   }
 }

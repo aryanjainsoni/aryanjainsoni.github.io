@@ -1,7 +1,8 @@
 ---
 // Har page isi layout ke andar banta hai: head, menu, footer, light/dark toggle, live effects.
 import '../styles/global.css';
-import { site, nav, links } from '../data/site';
+import { site, nav } from '../data/site';
+import Socials from '../components/Socials.astro';
 
 interface Props {
   title?: string;
@@ -59,9 +60,7 @@ const path = Astro.url.pathname;
         <p class="sign">Built in public, <em class="sun">one day at a time.</em></p>
         <div class="row">
           <span class="muted">© {new Date().getFullYear()} {site.name}</span>
-          <span class="links">
-            {links.map((l) => <a href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
-          </span>
+          <Socials size="sm" />
         </div>
       </div>
     </footer>
@@ -157,9 +156,7 @@ const path = Astro.url.pathname;
 
   footer { border-top: 1px solid var(--line); padding-block: 56px 32px; margin-top: 40px; }
   .sign { font: 700 clamp(1.8rem, 5vw, 3rem)/1.1 'Fraunces', serif; margin: 0 0 32px; letter-spacing: -0.02em; }
-  .row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; font-size: 14px; }
-  .links { display: flex; flex-wrap: wrap; gap: 18px; }
-  .links a { color: var(--ink); font-weight: 500; }
+  .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 14px; }
 
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }

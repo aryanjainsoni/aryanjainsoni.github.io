@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
-import { site, links } from '../data/site';
+import { site } from '../data/site';
+import Socials from '../components/Socials.astro';
 
 const skills = {
   Languages: ['C++', 'Python', 'Java', 'SQL'],
@@ -40,9 +41,7 @@ const campus = [
         I'm interested in AI/ML and problem solving, and I'm building this site as a public record of
         my learning — one day at a time.
       </p>
-      <div class="ctas">
-        {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
-      </div>
+      <Socials />
     </div>
   </section>
 

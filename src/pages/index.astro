@@ -3,7 +3,8 @@ import Base from '../layouts/Base.astro';
 import Heatmap from '../components/Heatmap.astro';
 import Stats from '../components/Stats.astro';
 import TopicCard from '../components/TopicCard.astro';
-import { site, topics, links } from '../data/site';
+import Socials from '../components/Socials.astro';
+import { site, topics } from '../data/site';
 import { getEntries, getStats, streaks } from '../lib/journal';
 import { getLeetCode, leetLevel } from '../lib/leetcode';
 
@@ -39,6 +40,8 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
       <div class="ctas" data-reveal style="--d:.24s">
         <a class="btn primary" href="/journal/">Read the journal →</a>
         <a class="btn" href="/about/">About me</a>
+        <span class="divider" aria-hidden="true"></span>
+        <Socials />
       </div>
       <div class="now" data-reveal style="--d:.32s">
         <span class="muted">Right now</span>
@@ -141,9 +144,6 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
             </a>
           ))}
         </div>
-        <div class="connect" data-reveal>
-          {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
-        </div>
       </div>
     </section>
   )}
@@ -164,7 +164,9 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
   h1 { position: relative; font-size: clamp(3rem, 9vw, 6.6rem); margin: 26px 0 22px; letter-spacing: -0.02em; word-spacing: 0.06em; }
   .lead { position: relative; font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--muted); max-width: 600px; margin: 0 0 32px; }
   .lead b { color: var(--ink); }
-  .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .divider { width: 1px; height: 32px; background: var(--line); margin-inline: 6px; }
+  @media (max-width: 720px) { .divider { flex-basis: 100%; height: 0; margin: 4px 0; } }
   .now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 40px; font-size: 14px; }
   .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-weight: 500; }
 
@@ -204,7 +206,6 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
   .entry:hover { text-decoration: none; border-color: var(--accent); }
   .entry time { font: 500 12px 'JetBrains Mono', monospace; color: var(--accent); }
   .entry i { font: 500 13px 'Inter', sans-serif; color: var(--muted); margin-top: auto; }
-  .connect { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
 
   @media (max-width: 900px) { .topics { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 720px) {
