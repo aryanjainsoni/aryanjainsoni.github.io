@@ -26,7 +26,8 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
   <section class="hero">
     <div class="blob b1" aria-hidden="true"></div>
     <div class="blob b2" aria-hidden="true"></div>
-    <div class="wrap">
+    <div class="wrap hero-grid">
+     <div class="hero-text">
       <p class="issue" data-reveal>
         <span class="live"></span>
         Day <span id="day" data-start={site.startDate}>1</span> · Building in public
@@ -40,14 +41,39 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
       <div class="ctas" data-reveal style="--d:.24s">
         <a class="btn primary" href="/journal/">Read the journal →</a>
         <a class="btn" href="/about/">About me</a>
-        <span class="divider" aria-hidden="true"></span>
-        <Socials />
       </div>
       <div class="now" data-reveal style="--d:.32s">
         <span class="muted">Right now</span>
         {now.map((n) => <span class="chip">{n}</span>)}
       </div>
+     </div>
+
+     <!-- Badi gol photo + neeche saare socials. Click karne par poori photo khulti hai. -->
+     <div class="hero-photo" data-reveal style="--d:.2s">
+       <button class="portrait" type="button" id="open-photo" aria-label="View full photo of Aryan Jain">
+         <span class="halo" aria-hidden="true"></span>
+         <img src="/images/me-big.jpg" alt="Aryan Jain" width="600" height="600" />
+         <span class="hint">View photo ⤢</span>
+       </button>
+       <Socials />
+     </div>
     </div>
+
+    <dialog id="photo-dialog" class="lightbox" aria-label="Full photo of Aryan Jain">
+      <form method="dialog"><button class="close" aria-label="Close">✕</button></form>
+      <img data-src="/images/me-full.jpg" alt="Aryan Jain — full photo" width="900" height="2000" />
+    </dialog>
+    <script is:inline>
+      // Photo click -> poori photo popup mein (pehli baar click par hi load hoti hai)
+      const dlg = document.getElementById('photo-dialog');
+      document.getElementById('open-photo').addEventListener('click', () => {
+        const img = dlg.querySelector('img');
+        if (!img.src) img.src = img.dataset.src;
+        dlg.showModal();
+      });
+      // Photo ke bahar (kaale hisse par) click -> band
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    </script>
     <script is:inline>
       const el = document.getElementById('day');
       el.textContent = Math.max(1, Math.floor((Date.now() - new Date(el.dataset.start)) / 86400000) + 1);
@@ -161,12 +187,58 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
   .issue { display: inline-flex; align-items: center; gap: 10px; font: 500 13px 'JetBrains Mono', monospace; color: var(--muted); border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); border-radius: 999px; padding: 7px 14px; margin: 0; backdrop-filter: blur(6px); }
   .live { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 0 var(--accent-2); animation: pulse 2s infinite; }
   @keyframes pulse { 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-  h1 { position: relative; font-size: clamp(3rem, 9vw, 6.6rem); margin: 26px 0 22px; letter-spacing: -0.02em; word-spacing: 0.06em; }
+  h1 { position: relative; font-size: clamp(2.8rem, 5.4vw, 4.3rem); margin: 26px 0 22px; letter-spacing: -0.02em; word-spacing: 0.06em; }
   .lead { position: relative; font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--muted); max-width: 600px; margin: 0 0 32px; }
   .lead b { color: var(--ink); }
   .ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-  .divider { width: 1px; height: 32px; background: var(--line); margin-inline: 6px; }
-  @media (max-width: 720px) { .divider { flex-basis: 100%; height: 0; margin: 4px 0; } }
+
+  /* Hero: text left, photo right */
+  .hero-grid { position: relative; display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; }
+  .hero-photo { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+  .portrait {
+    position: relative; display: block; width: min(340px, 100%); aspect-ratio: 1; padding: 0;
+    border: none; background: none; border-radius: 50%; cursor: zoom-in;
+  }
+  .portrait img {
+    position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+    border: 6px solid var(--bg); transition: transform 0.5s cubic-bezier(.2,.7,.2,1);
+  }
+  /* Ghoomti sunset ring + glow */
+  .halo {
+    position: absolute; inset: -10px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #ff8a3d, #ff2e7e, #962fbf, #ff8a3d);
+    animation: spin-halo 8s linear infinite;
+    filter: drop-shadow(0 20px 40px color-mix(in srgb, var(--accent-2) 45%, transparent));
+  }
+  @keyframes spin-halo { to { transform: rotate(360deg); } }
+  .portrait:hover img { transform: scale(1.04); }
+  .portrait:hover .halo { animation-duration: 2s; }
+  .portrait:focus-visible { outline: 3px solid var(--accent); outline-offset: 14px; }
+  .hint {
+    position: absolute; z-index: 2; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    font: 600 13px 'Inter', sans-serif; color: #fff; background: rgba(0,0,0,.55); backdrop-filter: blur(6px);
+    padding: 7px 14px; border-radius: 999px; opacity: 0; transition: opacity .25s, transform .25s; white-space: nowrap;
+  }
+  .portrait:hover .hint, .portrait:focus-visible .hint { opacity: 1; transform: translate(-50%, 0); }
+  .hero-photo :global(.socials) { justify-content: center; }
+  @media (max-width: 480px) {
+    .hero-photo :global(.socials) { gap: 7px; flex-wrap: nowrap; }
+    .hero-photo :global(.socials a) { width: 44px; height: 44px; }
+  }
+
+  /* Full photo popup */
+  .lightbox {
+    padding: 0; border: none; background: transparent; max-width: 92vw; max-height: 92vh; overflow: visible;
+  }
+  .lightbox::backdrop { background: rgba(10, 5, 8, 0.85); backdrop-filter: blur(8px); }
+  .lightbox img { display: block; max-width: 92vw; max-height: 90vh; width: auto; height: auto; border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .lightbox[open] { animation: pop .3s cubic-bezier(.2,.7,.2,1); }
+  @keyframes pop { from { opacity: 0; transform: scale(.94); } }
+  .close {
+    position: absolute; top: -14px; right: -14px; z-index: 1; width: 40px; height: 40px; border-radius: 50%;
+    border: none; background: var(--sun); color: #fff; font-size: 16px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.4);
+  }
+  @media (prefers-reduced-motion: reduce) { .halo, .lightbox[open] { animation: none; } }
   .now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 40px; font-size: 14px; }
   .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-weight: 500; }
 
@@ -208,8 +280,13 @@ const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Stre
   .entry i { font: 500 13px 'Inter', sans-serif; color: var(--muted); margin-top: auto; }
 
   @media (max-width: 900px) { .topics { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-photo { order: -1; }
+    .portrait { width: min(260px, 70vw); }
+  }
   @media (max-width: 720px) {
-    .hero { padding-block: 72px 56px; }
+    .hero { padding-block: 56px 56px; }
     .topics { grid-template-columns: 1fr; }
     .feature { grid-template-columns: 1fr; padding: 24px; }
     .b1 { width: 320px; height: 320px; }
