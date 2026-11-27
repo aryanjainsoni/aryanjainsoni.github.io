@@ -1,0 +1,167 @@
+---
+// GOALS — daily & weekly habits from my Habit Tracker.
+// The Google Sheet is the master copy; ticks on this page are a quick checklist saved in this browser.
+import Base from '../layouts/Base.astro';
+import { site } from '../data/site';
+import { goals } from '../data/profile';
+
+const cats = [...new Set(goals.daily.map((g) => g.cat))];
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+---
+<Base title="Goals" description="Aryan Jain's daily and weekly goals — study, health and mind, tracked every day.">
+  <section class="head">
+    <div class="wrap">
+      <p class="kicker">Goals</p>
+      <h1>Small things, <em>every day.</em></h1>
+      <p class="lead">The habits I track daily and weekly. Discipline is the real portfolio — this is where it lives.</p>
+      <div class="cta">
+        {site.trackerUrl ? (
+          <a class="btn primary" href={site.trackerUrl} target="_blank" rel="noopener">Open my tracker ↗</a>
+        ) : (
+          <span class="note">Full tracker: Google Sheet (link coming soon)</span>
+        )}
+        <a class="btn ghost" href="/journal/">Today’s journal →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="board">
+    <div class="wrap grid">
+      <!-- TODAY -->
+      <div class="panel" data-scope="day">
+        <header>
+          <div>
+            <p class="label">Today</p>
+            <h2 id="today-date">—</h2>
+          </div>
+          <div class="ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" /><circle class="fg" cx="22" cy="22" r="19" /></svg><span data-pct>0%</span></div>
+        </header>
+        {cats.map((c) => (
+          <div class="cat">
+            <p class="catname">{c}</p>
+            <ul>
+              {goals.daily.filter((g) => g.cat === c).map((g) => (
+                <li>
+                  <label>
+                    <input type="checkbox" data-id={`d-${key(g.name)}`} />
+                    <span class="box" aria-hidden="true"></span>
+                    <span class="txt">{g.name}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <p class="done" data-done>0 of {goals.daily.length} done</p>
+      </div>
+
+      <!-- THIS WEEK -->
+      <div class="panel" data-scope="week">
+        <header>
+          <div>
+            <p class="label">This week</p>
+            <h2 id="week-label">—</h2>
+          </div>
+          <div class="ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" /><circle class="fg" cx="22" cy="22" r="19" /></svg><span data-pct>0%</span></div>
+        </header>
+        <ul>
+          {goals.weekly.map((g) => (
+            <li>
+              <label>
+                <input type="checkbox" data-id={`w-${key(g.name + '-' + g.when)}`} />
+                <span class="box" aria-hidden="true"></span>
+                <span class="txt">{g.name}</span>
+                <span class="when">{g.when}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+        <p class="done" data-done>0 of {goals.weekly.length} done</p>
+        <p class="fine">Ticks here are saved in this browser only and reset each day / week. The Google Sheet is the master record.</p>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    (() => {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const dayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      // ISO week number
+      const t = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+      const week = Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
+      const weekKey = `${t.getUTCFullYear()}-W${week}`;
+
+      document.getElementById('today-date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+      document.getElementById('week-label').textContent = `Week ${week}`;
+
+      const C = 2 * Math.PI * 19;
+      document.querySelectorAll('.panel').forEach((panel) => {
+        const store = `goals:${panel.dataset.scope === 'day' ? dayKey : weekKey}`;
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem(store) || '{}'); } catch {}
+        const boxes = [...panel.querySelectorAll('input[type=checkbox]')];
+        const update = () => {
+          const n = boxes.filter((b) => b.checked).length;
+          const pct = Math.round((n / boxes.length) * 100);
+          panel.querySelector('[data-pct]').textContent = pct + '%';
+          panel.querySelector('.fg').style.strokeDashoffset = String(C * (1 - n / boxes.length));
+          panel.querySelector('[data-done]').textContent = `${n} of ${boxes.length} done`;
+          panel.classList.toggle('complete', n === boxes.length);
+        };
+        panel.querySelector('.fg').style.strokeDasharray = String(C);
+        boxes.forEach((b) => {
+          b.checked = !!saved[b.dataset.id];
+          b.addEventListener('change', () => {
+            saved[b.dataset.id] = b.checked;
+            try { localStorage.setItem(store, JSON.stringify(saved)); } catch {}
+            update();
+          });
+        });
+        update();
+      });
+    })();
+  </script>
+</Base>
+
+<style>
+  .head { padding-block: 72px 24px; }
+  h1 { font-size: clamp(2.8rem, 7vw, 5.4rem); font-weight: 400; margin: 10px 0 16px; letter-spacing: -.03em; }
+  h1 em { color: var(--accent); }
+  .lead { color: var(--muted); font-size: 1.12rem; max-width: 560px; margin: 0 0 30px; }
+  .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .note { font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .08em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 11px 16px; }
+
+  .board { padding-top: 32px; }
+  .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(22px, 3vw, 34px); box-shadow: var(--shadow); transition: border-color .4s; }
+  .panel.complete { border-color: var(--accent); }
+  .panel header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 20px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .label, .catname { margin: 0 0 6px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .panel h2 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); font-weight: 400; }
+
+  .ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke: var(--line); stroke-width: 3; }
+  .ring .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.2,.7,.2,1); }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px 'JetBrains Mono', monospace; }
+
+  .cat { margin-top: 18px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li + li { border-top: 1px solid var(--line); }
+  label { display: flex; align-items: center; gap: 14px; padding: 13px 4px; cursor: pointer; }
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--muted); flex-shrink: 0; display: grid; place-items: center; transition: all .25s; }
+  .box::after { content: ''; width: 6px; height: 11px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); margin-top: -2px; transition: transform .25s cubic-bezier(.2,.7,.3,1.4); }
+  input:checked + .box { background: var(--accent); border-color: var(--accent); }
+  input:checked + .box::after { transform: rotate(45deg) scale(1); }
+  input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .txt { flex: 1; font: 400 1.08rem 'Fraunces', serif; transition: color .25s; }
+  input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--accent); }
+  .when { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .done { margin: 18px 0 0; font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+  .fine { margin: 14px 0 0; font-size: .85rem; color: var(--muted); }
+
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+</style>

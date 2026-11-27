@@ -77,3 +77,31 @@ export const projects = [
     art: ['#f9844a', '#7a2fbf'],
   },
 ];
+
+// Daily / weekly goals — Habit Tracker (Google Sheet) se.
+// Privacy: medicine aur supplements ki detail jaan-boojh kar public site par nahi.
+export const goals = {
+  daily: [
+    { name: 'Study session', cat: 'Study' },
+    { name: 'Vedantu lecture', cat: 'Study' },
+    { name: '1 LeetCode question', cat: 'Study' },
+    { name: 'GitHub commit', cat: 'Study' },
+    { name: 'Internship learning', cat: 'Study' },
+    { name: 'LinkedIn activity', cat: 'Study' },
+    { name: 'Gym', cat: 'Health' },
+    { name: 'Diet plan followed', cat: 'Health' },
+    { name: 'Protein & creatine', cat: 'Health' },
+    { name: 'Supplements', cat: 'Health' },
+    { name: 'Skin care', cat: 'Health' },
+    { name: '108 Jain mala', cat: 'Mind' },
+    { name: 'Fun time', cat: 'Mind' },
+  ],
+  weekly: [
+    { name: 'Wash clothes', when: 'Any day' },
+    { name: 'Change pillow cover', when: 'Any day' },
+    { name: 'Hair oiling', when: 'Wednesday' },
+    { name: 'Hair oiling', when: 'Sunday' },
+    { name: 'Call friends / relatives', when: 'Any day' },
+    { name: 'Face + neck pack', when: 'Any day' },
+  ],
+};

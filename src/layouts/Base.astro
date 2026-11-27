@@ -125,18 +125,6 @@ const last = [...'Jain'];
           root.style.setProperty('--my', e.clientY + 'px');
         }, { passive: true });
 
-        // Cards ka 3D tilt
-        document.querySelectorAll('[data-tilt]').forEach((card) => {
-          card.addEventListener('pointermove', (e) => {
-            const r = card.getBoundingClientRect();
-            const x = (e.clientX - r.left) / r.width - 0.5;
-            const y = (e.clientY - r.top) / r.height - 0.5;
-            card.style.transform = `perspective(900px) rotateX(${-y * 7}deg) rotateY(${x * 9}deg) translateY(-4px)`;
-            card.style.setProperty('--gx', (x + 0.5) * 100 + '%');
-            card.style.setProperty('--gy', (y + 0.5) * 100 + '%');
-          });
-          card.addEventListener('pointerleave', () => (card.style.transform = ''));
-        });
       }
     </script>
   </body>
@@ -171,9 +159,8 @@ const last = [...'Jain'];
     background: conic-gradient(from 0deg, #ff8a3d, #ff2e7e, transparent 55%, #ff8a3d);
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
             mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
-    animation: spin 6s linear infinite;
+    opacity: .9;
   }
-  .logo:hover .ring { animation-duration: 1.2s; }
   .logo:hover .mark b { transform: scale(1.12); }
 
   .word { display: inline-flex; align-items: baseline; font: 900 26px/1 'Fraunces', serif; letter-spacing: -0.03em; }
@@ -182,7 +169,6 @@ const last = [...'Jain'];
   .word .sun { font-style: italic; padding: 0.1em 0.08em 0.2em 0.12em; margin: -0.1em -0.08em -0.2em -0.12em; }
   .word .gap { width: 0.28em; }
   .word .dot { color: var(--accent-2); }
-  .logo:hover .word i { animation: wave 0.6s cubic-bezier(.3,.7,.3,1.4) both; animation-delay: calc(var(--i) * 35ms); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes wave { 40% { transform: translateY(-7px) rotate(-4deg); } 100% { transform: none; } }

@@ -23,7 +23,6 @@ const Tag = topic.ready ? 'a' : 'div';
   rel={topic.external ? 'noopener' : undefined}
   style={`--a:${topic.art[0]};--b:${topic.art[1]};--d:${delay}s`}
   data-reveal
-  data-tilt
 >
   <div class="cover">
     {photo ? (
@@ -34,7 +33,6 @@ const Tag = topic.ready ? 'a' : 'div';
         <span class="emoji" aria-hidden="true">{topic.emoji}</span>
       </>
     )}
-    <span class="glare" />
   </div>
   <div class="text">
     <h3>{topic.title}{!topic.ready && <span class="badge">soon</span>}{topic.external && <span class="arrow">↗</span>}</h3>
@@ -76,7 +74,7 @@ const Tag = topic.ready ? 'a' : 'div';
     position: relative;
     transition: transform 0.4s cubic-bezier(.2,.7,.2,1);
   }
-  .topic:hover .emoji { transform: scale(1.15) rotate(-6deg); }
+  .topic:hover .emoji { transform: scale(1.06); }
 
   .ring { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.28); }
   .r1 { width: 260px; height: 260px; right: -70px; top: -90px; }

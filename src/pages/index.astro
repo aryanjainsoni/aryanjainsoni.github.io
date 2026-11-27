@@ -2,7 +2,7 @@
 // Home page — "cinematic" version.
 // Structure based on the "3D Jack Portfolio" design (MotionSites), made Aryan's own.
 // Animated pieces from React Bits: Aurora (hero background), SplitText (giant name),
-// Magnet (portrait follows the cursor), ScrollReveal (story text lights up while scrolling).
+// ScrollReveal (story text lights up while scrolling).
 import Base from '../layouts/Base.astro';
 import Heatmap from '../components/Heatmap.astro';
 import Stats from '../components/Stats.astro';
@@ -10,7 +10,6 @@ import TopicCard from '../components/TopicCard.astro';
 import Socials from '../components/Socials.astro';
 import Aurora from '../components/bits/Aurora';
 import SplitText from '../components/bits/SplitText';
-import Magnet from '../components/bits/Magnet';
 import ScrollReveal from '../components/bits/ScrollReveal';
 import { site, topics } from '../data/site';
 import { chapters, projects } from '../data/profile';
@@ -28,60 +27,59 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
 
 const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-// Scroll ke saath ulti dishaon mein chalne wali do lines
-const rowA = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Streamlit', 'Git'];
-const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI', 'LeetCode', 'Journal'];
 
 ---
 <Base>
-  <!-- ================= 1. CINEMATIC HERO ================= -->
+  <!-- ================= 1. HERO — quiet, editorial ================= -->
   <section class="cine" aria-label="Introduction">
     <div class="aurora" aria-hidden="true">
       <Aurora
         client:load
-        colorStops={['#ff8a3d', '#ff2e7e', '#7a2fbf']}
-        amplitude={1.1}
-        blend={0.6}
-        speed={0.55}
-        height={0.6}
-        glow={0.8}
-        layers={2}
+        colorStops={['#c2552f', '#b3365c', '#4b2a6b']}
+        amplitude={0.8}
+        blend={0.7}
+        speed={0.25}
+        height={0.5}
+        glow={0.45}
+        brightness={0.7}
+        layers={1}
+        mouseInteraction={false}
+        opacity={0.55}
       />
     </div>
     <div class="grain" aria-hidden="true"></div>
 
-    <div class="cine-top wrap">
-      <p class="issue"><span class="live"></span>Day <span id="day" data-start={site.startDate}>1</span> · building in public</p>
-      <p class="where">Pune, India · B.Tech CSE ’28</p>
-    </div>
+    <div class="wrap hero">
+      <div class="intro">
+        <p class="issue"><span class="live"></span>Day <span id="day" data-start={site.startDate}>1</span> · Building in public</p>
+        <h1 class="name" aria-label={site.name}>
+          <span class="sr-only">{site.name}</span>
+          <span aria-hidden="true" class="name-row">
+            <SplitText client:load text="Aryan" tag="span" splitType="chars" effect="rise" mask delay={45} duration={1.2} trigger="load" textAlign="left" className="name-a" />
+            <SplitText client:load text="Jain" tag="span" splitType="chars" effect="rise" mask delay={45} duration={1.2} trigger="load" textAlign="left" className="name-b" />
+          </span>
+        </h1>
+        <p class="tagline">Learning out loud — <em>one day at a time.</em></p>
+        <p class="lead">CSE student at ADYPU, problem solver, athlete and artist. A living record of what I learn, build and achieve.</p>
+        <div class="cta">
+          <a class="btn primary" href="/journal/">Read the journal</a>
+          <a class="btn ghost" href="/explore/">Browse the index</a>
+        </div>
+        <dl class="facts">
+          {lc && <div><dt>{lc.solved.all}</dt><dd>LeetCode solved</dd></div>}
+          <div><dt>{journal.total}</dt><dd>days journaled</dd></div>
+          <div><dt>{projects.length}</dt><dd>projects</dd></div>
+        </dl>
+      </div>
 
-    <h1 class="name" aria-label={site.name}>
-      <span class="sr-only">{site.name}</span>
-      <span aria-hidden="true" class="name-row">
-        <SplitText client:load text="Aryan" tag="span" splitType="chars" effect="rise" mask delay={60} duration={1.1} trigger="load" hoverEffect="wave" textAlign="left" className="name-a" />
-        <SplitText client:load text="Jain" tag="span" splitType="chars" effect="rise" mask delay={60} duration={1.1} trigger="load" hoverEffect="wave" textAlign="left" className="name-b" />
-      </span>
-    </h1>
-
-    <div class="portrait-wrap">
-      <Magnet client:load padding={160} magnetStrength={3} tilt={6} scale={1.03}>
+      <figure class="profile">
         <button class="portrait" type="button" data-open-photo aria-label="View full photo of Aryan Jain">
           <span class="halo" aria-hidden="true"></span>
           <img src="/images/me-big.jpg" alt="Aryan Jain" width="600" height="600" />
-          <span class="hint">View photo ⤢</span>
+          <span class="hint">View photo</span>
         </button>
-      </Magnet>
-    </div>
-
-    <div class="cine-bottom wrap">
-      <div class="motto">
-        <p>Learning out loud —<br /><em class="sun">one day at a time.</em></p>
-        <Socials />
-      </div>
-      <div class="cta">
-        <a class="btn primary" href="/journal/">Read the journal →</a>
-        <a class="btn ghost" href="/about/">About me</a>
-      </div>
+        <figcaption><Socials /></figcaption>
+      </figure>
     </div>
 
     <dialog id="photo-dialog" class="lightbox" aria-label="Full photo of Aryan Jain">
@@ -89,10 +87,8 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
       <img data-src="/images/me-full.jpg" alt="Aryan Jain — full photo" width="900" height="2000" />
     </dialog>
     <script is:inline>
-      // Day counter
       const dayEl = document.getElementById('day');
       dayEl.textContent = Math.max(1, Math.floor((Date.now() - new Date(dayEl.dataset.start)) / 86400000) + 1);
-      // Photo click -> full photo popup (event delegation: works before & after React hydration)
       const dlg = document.getElementById('photo-dialog');
       document.addEventListener('click', (e) => {
         if (!e.target.closest('[data-open-photo]')) return;
@@ -104,22 +100,15 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
     </script>
   </section>
 
-  <!-- ================= 2. SCROLL-LINKED MARQUEE ================= -->
-  <div class="rails" aria-hidden="true" data-rails>
-    <div class="rail" data-dir="1">{[...rowA, ...rowA, ...rowA].map((t) => <span>{t}<i>✦</i></span>)}</div>
-    <div class="rail alt" data-dir="-1">{[...rowB, ...rowB, ...rowB].map((t) => <span>{t}<i>✦</i></span>)}</div>
-  </div>
-
   <!-- ================= 3. THE STORY (scroll reveal) ================= -->
   <section class="story">
     <div class="wrap">
       <p class="kicker">The story so far</p>
       <ScrollReveal
         client:visible
-        baseOpacity={0.12}
-        enableBlur
-        blurStrength={6}
-        baseRotation={2}
+        baseOpacity={0.18}
+        enableBlur={false}
+        baseRotation={0}
         splitBy="words"
         textClassName="story-text"
       >
@@ -227,7 +216,7 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
         <p class="kicker" data-reveal>Latest entries</p>
         <div class="latest">
           {latest.map((e, i) => (
-            <a class="card entry" href={`/journal/${e.id}/`} data-reveal data-tilt style={`--d:${i * 0.08}s`}>
+            <a class="card entry" href={`/journal/${e.id}/`} data-reveal style={`--d:${i * 0.08}s`}>
               <time datetime={e.id}>{fmt(e.data.date)}</time>
               <span>{e.data.title}</span>
               <i>Read →</i>
@@ -242,19 +231,11 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
     (() => {
       const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (calm) return;
-      // Marquee rows move in opposite directions as you scroll
-      const rails = document.querySelector('[data-rails]');
-      const rows = [...document.querySelectorAll('[data-rails] .rail')];
       // Project cards scale down slightly as the next one stacks over them
       const cards = [...document.querySelectorAll('[data-stack] .pcard')];
       let ticking = false;
       const update = () => {
         ticking = false;
-        if (rails) {
-          const r = rails.getBoundingClientRect();
-          const off = (innerHeight - r.top) * 0.35;
-          rows.forEach((row) => (row.style.transform = `translate3d(${(row.dataset.dir === '1' ? off - 400 : -(off - 400) - 800)}px,0,0)`));
-        }
         cards.forEach((card, i) => {
           const next = cards[i + 1];
           if (!next) return;
@@ -274,79 +255,77 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
 <style>
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* ================= 1. HERO — always dark & cinematic ================= */
+  /* ================= 1. HERO — dark, quiet, editorial ================= */
   .cine {
-    --ink: #fdf0e8; --muted: #c9aea4; --line: rgba(255,255,255,.12); --surface: rgba(255,255,255,.06);
+    --ink: #f3ece4; --muted: #b3a49a; --line: rgba(255,255,255,.1); --surface: rgba(255,255,255,.04);
     position: relative; isolation: isolate; overflow: hidden;
-    min-height: calc(100svh - 76px); padding: 0; display: flex; flex-direction: column;
-    background: radial-gradient(120% 80% at 50% 110%, #2a0f1c 0%, #0f080b 60%); color: var(--ink);
+    min-height: calc(100svh - 76px); padding: 0; display: flex; align-items: center;
+    background: radial-gradient(110% 70% at 70% 100%, #24110f 0%, #0e0b0a 62%); color: var(--ink);
   }
-  .aurora { position: absolute; inset: 0 0 35% 0; z-index: -1; opacity: .9; }
+  .aurora { position: absolute; inset: 0 0 45% 0; z-index: -1; }
   .grain {
-    position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .18; mix-blend-mode: overlay;
+    position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .14; mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
-  .cine > .wrap { width: 100%; }
-  .cine-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 28px; }
-  .issue { display: inline-flex; align-items: center; gap: 10px; margin: 0; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line); background: rgba(255,255,255,.05); backdrop-filter: blur(10px); border-radius: 999px; padding: 8px 14px; }
-  .live { width: 8px; height: 8px; border-radius: 50%; background: #ff4d8d; box-shadow: 0 0 0 0 #ff4d8d; animation: pulse 2s infinite; }
-  @keyframes pulse { 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-  .where { margin: 0; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .hero { display: grid; grid-template-columns: 1.25fr 1fr; gap: clamp(40px, 6vw, 96px); align-items: center; padding-block: clamp(56px, 8vw, 104px); width: 100%; }
 
-  .name { margin: 3vh 0 0; padding-inline: 2.5vw; line-height: .8; letter-spacing: -.04em; font-weight: 900; }
-  .name-row { display: flex; justify-content: space-between; gap: 2vw; white-space: nowrap; }
-  .name :global(.name-a), .name :global(.name-b) { font: 900 clamp(4.5rem, 19vw, 19rem)/.85 'Fraunces', serif; letter-spacing: -.045em; }
-  .name :global(.name-a) { color: #fdf0e8; }
-  .name :global(.name-b) { color: #ff5a5f; font-style: italic; }
-  /* italic letters ke swash mask mein na katein */
-  .name :global(.name-b .split-char-mask) { padding: 0 .14em .06em; margin: 0 -.14em -.06em; }
-  .name :global(.name-a .split-char-mask) { padding: 0 .03em .04em; margin: 0 -.03em -.04em; }
+  .issue { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 32px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; }
+  .live { width: 6px; height: 6px; border-radius: 50%; background: #f0794c; box-shadow: 0 0 0 0 rgba(240,121,76,.6); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
-  .portrait-wrap { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); z-index: 2; }
-  .portrait { position: relative; display: block; width: clamp(220px, 26vw, 380px); aspect-ratio: 1; padding: 0; border: none; background: none; border-radius: 50%; cursor: zoom-in; }
-  .portrait img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 6px solid #0f080b; }
-  .halo { position: absolute; inset: -9px; border-radius: 50%; background: conic-gradient(from 0deg, #ff8a3d, #ff2e7e, #962fbf, #ff8a3d); animation: spin 8s linear infinite; filter: drop-shadow(0 30px 60px rgba(255,46,126,.45)); }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .portrait:hover .halo { animation-duration: 2s; }
-  .portrait:focus-visible { outline: 3px solid #ff8a3d; outline-offset: 14px; }
-  .hint { position: absolute; z-index: 2; left: 50%; bottom: 14px; transform: translate(-50%, 8px); font: 600 13px 'Inter', sans-serif; color: #fff; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); padding: 7px 14px; border-radius: 999px; opacity: 0; transition: opacity .25s, transform .25s; white-space: nowrap; }
+  .name { margin: 0 0 18px; line-height: .95; }
+  .name-row { display: flex; flex-wrap: wrap; gap: 0 .42em; white-space: nowrap; }
+  .name :global(.name-a), .name :global(.name-b) { font: 400 clamp(3.4rem, 7.2vw, 6.6rem)/.95 'Fraunces', serif; letter-spacing: -.035em; color: #f3ece4; }
+  .name :global(.name-b) { font-style: italic; color: #f0a07e; }
+  .name :global(.name-b .split-char-mask) { padding: 0 .14em .08em; margin: 0 -.14em -.08em; }
+  .name :global(.name-a .split-char-mask) { padding: 0 .03em .06em; margin: 0 -.03em -.06em; }
+
+  .tagline { margin: 0 0 18px; font: 400 clamp(1.2rem, 2vw, 1.6rem)/1.3 'Fraunces', serif; color: #e9ddd2; }
+  .tagline em { color: #f0a07e; }
+  .lead { margin: 0 0 34px; max-width: 470px; color: var(--muted); font-size: 1.02rem; line-height: 1.7; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cine .btn { padding: 13px 22px; font-weight: 500; letter-spacing: .01em; }
+  .cine .btn.primary { background: #f3ece4; color: #14100e; box-shadow: none; }
+  .cine .btn.primary:hover { background: #fff; }
+  .btn.ghost { background: transparent; color: #f3ece4; border-color: rgba(255,255,255,.2); }
+  .btn.ghost:hover { border-color: rgba(255,255,255,.5); }
+
+  .facts { display: flex; gap: clamp(24px, 4vw, 48px); margin: 48px 0 0; padding-top: 24px; border-top: 1px solid var(--line); max-width: 470px; }
+  .facts dt { font: 400 2rem/1 'Fraunces', serif; color: #f3ece4; }
+  .facts dd { margin: 6px 0 0; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+  .profile { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+  .portrait { position: relative; display: block; width: min(380px, 100%); aspect-ratio: 1; padding: 0; border: none; background: none; border-radius: 50%; cursor: zoom-in; }
+  .portrait img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 8px solid #0e0b0a; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+  .portrait:hover img { transform: scale(1.015); }
+  .halo { position: absolute; inset: -1px; border-radius: 50%; background: conic-gradient(from 210deg, #f08a4b, #e23d6d, #6b3a8f, #f08a4b); box-shadow: 0 40px 90px -30px rgba(226,61,109,.45); }
+  .portrait:focus-visible { outline: 2px solid #f0a07e; outline-offset: 10px; }
+  .hint { position: absolute; z-index: 2; left: 50%; bottom: 18px; transform: translate(-50%, 6px); font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: #fff; background: rgba(14,11,10,.6); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 999px; opacity: 0; transition: opacity .3s, transform .3s; white-space: nowrap; }
   .portrait:hover .hint, .portrait:focus-visible .hint { opacity: 1; transform: translate(-50%, 0); }
-
-  .cine-bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding-bottom: 36px; }
-  .motto p { margin: 0 0 18px; font: 600 clamp(1.1rem, 1.8vw, 1.6rem)/1.25 'Fraunces', serif; }
-  .motto :global(.socials a) { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); }
-  .motto :global(.socials) { --mono: #fff; }
-  .cta { display: flex; gap: 10px; flex-wrap: wrap; }
-  .btn.ghost { background: rgba(255,255,255,.06); color: #fdf0e8; border-color: rgba(255,255,255,.18); backdrop-filter: blur(10px); }
+  .profile :global(.socials) { --mono: #fff; justify-content: center; }
+  .profile :global(.socials a) { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.12); }
 
   .lightbox { padding: 0; border: none; background: transparent; max-width: 92vw; max-height: 92vh; overflow: visible; }
-  .lightbox::backdrop { background: rgba(10,5,8,.88); backdrop-filter: blur(8px); }
-  .lightbox img { display: block; max-width: 92vw; max-height: 90vh; width: auto; height: auto; border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
-  .lightbox[open] { animation: pop .3s cubic-bezier(.2,.7,.2,1); }
-  @keyframes pop { from { opacity: 0; transform: scale(.94); } }
-  .close { position: absolute; top: -14px; right: -14px; z-index: 1; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--sun); color: #fff; font-size: 16px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.4); }
-
-  /* ================= 2. RAILS ================= */
-  .rails { overflow: hidden; padding-block: 34px; display: grid; gap: 10px; border-block: 1px solid var(--line); background: var(--surface); }
-  .rail { display: flex; width: max-content; will-change: transform; }
-  .rail span { display: flex; align-items: center; gap: 28px; padding-inline: 14px; font: italic 700 clamp(1.8rem, 4vw, 3.4rem)/1.1 'Fraunces', serif; white-space: nowrap; }
-  .rail.alt span { font-style: normal; color: transparent; -webkit-text-stroke: 1.2px var(--muted); }
-  .rail i { font-style: normal; font-size: .5em; color: var(--accent); -webkit-text-stroke: 0; }
+  .lightbox::backdrop { background: rgba(10,8,7,.9); backdrop-filter: blur(8px); }
+  .lightbox img { display: block; max-width: 92vw; max-height: 90vh; width: auto; height: auto; border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .lightbox[open] { animation: pop .35s cubic-bezier(.2,.7,.2,1); }
+  @keyframes pop { from { opacity: 0; transform: scale(.97); } }
+  .close { position: absolute; top: -14px; right: -14px; z-index: 1; width: 38px; height: 38px; border-radius: 50%; border: none; background: #f3ece4; color: #14100e; font-size: 14px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.4); }
 
   /* ================= 3. STORY ================= */
   .story { padding-block: 120px; }
-  .story :global(.story-text) { font: 600 clamp(1.7rem, 4.2vw, 3.4rem)/1.25 'Fraunces', serif; letter-spacing: -.02em; max-width: 1000px; }
+  .story :global(.story-text) { font: 300 clamp(1.7rem, 4.2vw, 3.4rem)/1.3 'Fraunces', serif; letter-spacing: -.02em; max-width: 1000px; }
 
   /* ================= 4. CHAPTERS — light panel ================= */
-  .chapters { background: #fff6ef; color: #23140f; border-radius: 56px 56px 0 0; padding-block: 96px 140px; }
-  .giant { font: 900 clamp(3.4rem, 13vw, 11rem)/.85 'Fraunces', serif; letter-spacing: -.05em; text-align: center; margin: 0 0 64px; background: var(--sun); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .chapters { background: #f6f0e8; color: #1c1512; border-radius: 56px 56px 0 0; padding-block: 96px 140px; }
+  .giant { font: italic 300 clamp(3.2rem, 10vw, 8.5rem)/.9 'Fraunces', serif; letter-spacing: -.04em; text-align: center; margin: 0 0 72px; color: inherit; }
   .chapters ol { list-style: none; margin: 0 auto; padding: 0; max-width: 980px; }
   .chapters li { display: grid; grid-template-columns: clamp(90px, 14vw, 170px) 1fr; align-items: center; gap: 24px; padding-block: 26px; border-top: 1px solid rgba(35,20,15,.14); }
   .chapters li:last-child { border-bottom: 1px solid rgba(35,20,15,.14); }
-  .chapters .num { font: 900 clamp(2.8rem, 8vw, 6rem)/1 'Fraunces', serif; color: #23140f; letter-spacing: -.04em; transition: color .3s; }
-  .chapters li:hover .num { color: #ff4d5e; }
-  .chapters h3 { margin: 0 0 4px; font: 600 clamp(1.2rem, 2.2vw, 1.9rem)/1.1 'Inter', sans-serif; text-transform: uppercase; letter-spacing: .04em; }
-  .chapters p { margin: 0; color: #7d6158; font-size: clamp(.95rem, 1.5vw, 1.15rem); }
+  .chapters .num { font: 300 clamp(2.4rem, 6vw, 4.6rem)/1 'Fraunces', serif; color: #1c1512; letter-spacing: -.03em; transition: color .3s; }
+  .chapters li:hover .num { color: #c2552f; }
+  .chapters h3 { margin: 0 0 6px; font: 500 clamp(.85rem, 1.2vw, 1rem)/1.1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .2em; }
+  .chapters p { margin: 0; color: #4a3d36; font: 400 clamp(1.1rem, 2vw, 1.5rem)/1.35 'Fraunces', serif; }
 
   /* ================= 5. PROOF — dark panel pulled over the light one ================= */
   .proof { position: relative; z-index: 1; margin-top: -56px; border-radius: 56px 56px 0 0; background: var(--bg); }
@@ -369,7 +348,7 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
   }
   .pcard::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: #000; opacity: var(--dim, 0); pointer-events: none; }
   .pinfo { display: flex; flex-direction: column; }
-  .pinfo .num { font: 900 clamp(3rem, 7vw, 5.5rem)/1 'Fraunces', serif; background: linear-gradient(135deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .pinfo .num { font: 300 clamp(2.6rem, 6vw, 4.6rem)/1 'Fraunces', serif; background: linear-gradient(135deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .kind { margin: 8px 0 4px; font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   .pinfo h3 { margin: 0 0 12px; font-size: clamp(1.8rem, 3.6vw, 2.8rem); }
   .pline { margin: 0 0 22px; color: var(--muted); font-size: 1.05rem; max-width: 460px; }
@@ -389,24 +368,20 @@ const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI'
   .entry time { font: 500 12px 'JetBrains Mono', monospace; color: var(--accent); }
   .entry i { font: 500 13px 'Inter', sans-serif; color: var(--muted); margin-top: auto; }
 
-  @media (prefers-reduced-motion: reduce) { .halo, .live, .lightbox[open] { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .live, .lightbox[open] { animation: none; } }
 
   @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr 0.9fr; gap: 36px; }
     .topics { grid-template-columns: repeat(2, 1fr); }
     .pcard { grid-template-columns: 1fr; min-height: 0; }
   }
   @media (max-width: 720px) {
-    .cine { min-height: auto; }
-    .where { display: none; }
-    .name { margin-top: 28px; }
-    .name-row { flex-direction: column; gap: 0; }
-    .name :global(.name-a), .name :global(.name-b) { font-size: 27vw; }
-    .name :global(.name-b) { align-self: flex-end; }
-    .portrait-wrap { position: static; transform: none; display: grid; place-items: center; margin: 28px 0 8px; }
-    .portrait { width: min(240px, 66vw); }
-    .cine-bottom { flex-direction: column; align-items: flex-start; padding-top: 28px; }
-    .motto :global(.socials) { gap: 7px; flex-wrap: nowrap; }
-    .motto :global(.socials a) { width: 44px; height: 44px; }
+    .hero { grid-template-columns: 1fr; gap: 44px; padding-block: 48px 64px; }
+    .profile { order: -1; }
+    .portrait { width: min(250px, 68vw); }
+    .profile :global(.socials) { gap: 7px; flex-wrap: nowrap; }
+    .profile :global(.socials a) { width: 44px; height: 44px; }
+    .facts { gap: 28px; }
     .topics { grid-template-columns: 1fr; }
     .chapters, .proof { border-radius: 36px 36px 0 0; }
     .chapters li { grid-template-columns: 72px 1fr; gap: 14px; }

@@ -1,31 +1,31 @@
 /* ============ Sunset Editorial theme ============
    Light by default, dark when <html data-theme="dark">. */
 :root {
-  --bg: #fff6ef;
+  --bg: #faf6f1;
   --surface: #ffffff;
-  --ink: #23140f;
-  --muted: #7d6158;
-  --line: #f1dfd3;
-  --accent: #ff5a36;
-  --accent-2: #ff2e7e;
-  --accent-soft: #ffe7dc;
-  --sun: linear-gradient(120deg, #ff8a3d 0%, #ff4d5e 45%, #ff2e7e 100%);
-  --heat: #ff4d5e;
-  --shadow: 0 18px 40px -22px rgba(120, 40, 20, 0.35);
+  --ink: #1c1512;
+  --muted: #7a6a62;
+  --line: #ebe2d9;
+  --accent: #e2552f;
+  --accent-2: #e23d6d;
+  --accent-soft: #fbe8df;
+  --sun: linear-gradient(115deg, #f08a4b 0%, #e2552f 50%, #e23d6d 100%);
+  --heat: #e2552f;
+  --shadow: 0 1px 0 rgba(28, 21, 18, .04), 0 24px 48px -32px rgba(60, 30, 20, .28);
   --radius: 20px;
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --bg: #130b0e;
-  --surface: #1e1317;
-  --ink: #fdf0e8;
-  --muted: #b89c92;
-  --line: #352329;
-  --accent: #ff7a4f;
-  --accent-2: #ff4d8d;
-  --accent-soft: #3a1c22;
-  --heat: #ff6363;
-  --shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.8);
+  --bg: #0e0b0a;
+  --surface: #17120f;
+  --ink: #f3ece4;
+  --muted: #a3958c;
+  --line: #2a221e;
+  --accent: #f0794c;
+  --accent-2: #ef5b84;
+  --accent-soft: #2b1a15;
+  --heat: #f0794c;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .03), 0 24px 48px -30px rgba(0, 0, 0, .9);
   color-scheme: dark;
 }
 
@@ -42,7 +42,7 @@ body {
 ::selection { background: var(--accent-2); color: #fff; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 500; line-height: 1.08; letter-spacing: -0.02em; }
 img { max-width: 100%; height: auto; }
 
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 24px; }
@@ -57,16 +57,16 @@ img { max-width: 100%; height: auto; }
 }
 
 .kicker {
-  font: 500 12px/1 'JetBrains Mono', ui-monospace, monospace;
-  color: var(--accent);
+  font: 500 11px/1 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.22em;
   margin: 0 0 14px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.kicker::before { content: ''; width: 28px; height: 2px; background: var(--sun); border-radius: 2px; }
+.kicker::before { content: ''; width: 28px; height: 1px; background: var(--accent); }
 .muted { color: var(--muted); }
 
 .card {
@@ -104,9 +104,9 @@ img { max-width: 100%; height: auto; }
 .btn.primary { background: var(--sun); border-color: transparent; color: #fff; box-shadow: 0 10px 24px -10px var(--accent-2); }
 .btn.primary:hover { box-shadow: 0 14px 30px -10px var(--accent-2); }
 
-section { padding-block: 72px; }
+section { padding-block: clamp(72px, 10vw, 128px); }
 
-.section-title { font-size: clamp(2rem, 5vw, 3.2rem); margin: 0 0 12px; }
+.section-title { font-size: clamp(2.2rem, 4.6vw, 3.6rem); font-weight: 400; margin: 0 0 18px; letter-spacing: -.025em; }
 
 /* ============ Live effects ============ */
 
@@ -117,13 +117,13 @@ section { padding-block: 72px; }
   pointer-events: none;
   z-index: 0;
   background: radial-gradient(520px circle at var(--mx, 50%) var(--my, -20%),
-    color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
+    color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%);
   transition: opacity 0.3s;
 }
 main, header, footer { position: relative; z-index: 1; }
 
 /* Scroll karne par aate hue elements */
-.reveal-ready [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.8s cubic-bezier(.2,.7,.2,1), transform 0.8s cubic-bezier(.2,.7,.2,1); transition-delay: var(--d, 0s); }
+.reveal-ready [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity 0.9s cubic-bezier(.2,.7,.2,1), transform 0.9s cubic-bezier(.2,.7,.2,1); transition-delay: var(--d, 0s); }
 .reveal-ready [data-reveal].in { opacity: 1; transform: none; }
 
 /* Hover par halka 3D tilt */

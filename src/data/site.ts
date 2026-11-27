@@ -6,6 +6,8 @@ export const site = {
   role: 'B.Tech CSE @ ADYPU · AI/ML · C++ · Python',
   location: 'Pune, India',
   leetcode: 'aryanjainsoni',
+  // Apni Habit Tracker Google Sheet ka link yahan paste karo (Share → Copy link). Khaali ho to button nahi dikhega.
+  trackerUrl: '',
   // Journey shuru hone ki date — isse "Day X" count hota hai
   startDate: '2026-11-27',
 };
@@ -37,7 +39,7 @@ export const topics = [
   { slug: 'swimming', title: 'Swimming', line: 'New skill. Deep end.', href: '/swimming/', ready: false, emoji: '🏊', art: ['#4cc9f0', '#f72585'] },
   { slug: 'gym', title: 'Gym', line: 'Showing up since last year.', href: '/gym/', ready: false, emoji: '🏋️', art: ['#ff6b35', '#1a1a2e'] },
   { slug: 'internship', title: 'Internship', line: 'From zero — documented.', href: '/internship/', ready: false, emoji: '🧭', art: ['#f4a261', '#e76f51'], size: 'wide' },
-  { slug: 'progress', title: 'Progress', line: 'Habits, in numbers.', href: '/progress/', ready: false, emoji: '📈', art: ['#ff9e00', '#ff0054'] },
+  { slug: 'progress', title: 'Goals', line: 'Daily & weekly goals, ticked off.', href: '/goals/', ready: true, emoji: '🎯', art: ['#ff9e00', '#ff0054'] },
 ];
 
 export const nav = [
