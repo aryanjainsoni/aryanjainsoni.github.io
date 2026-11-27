@@ -1,0 +1,142 @@
+---
+import Base from '../layouts/Base.astro';
+import { site, links } from '../data/site';
+
+const skills = {
+  Languages: ['C++', 'Python', 'Java', 'SQL'],
+  'Web & Tools': ['HTML/CSS', 'Git & GitHub', 'Streamlit', 'Canva'],
+  'AI / ML': ['scikit-learn', 'pandas', 'CNN', 'Machine Learning'],
+  'CS Core': ['DSA', 'OOP', 'DBMS', 'MySQL'],
+};
+
+const certificates = [
+  { name: 'Java Concepts', by: 'Infosys Springboard', when: 'Feb 2025' },
+  { name: 'Java Essentials', by: 'Infosys Springboard', when: 'Feb 2025' },
+];
+
+const beyond = [
+  { icon: '🧮', title: 'Abacus', text: 'Learned in class 4–5, certified.' },
+  { icon: '🥇', title: 'School sports', text: 'Consistently first in school sports, with many certificates.' },
+  { icon: '⚽', title: 'Football', text: 'Played in class 7–9; our team won tournaments and was featured in the newspaper.' },
+  { icon: '🎨', title: 'Drawing', text: 'Drawing since childhood; my drawings were published in newspapers.' },
+  { icon: '🏊', title: 'Swimming', text: 'Recently learned to swim.' },
+  { icon: '🏋️', title: 'Gym', text: 'Training consistently since last year.' },
+];
+
+const campus = [
+  '2nd place, carrom tournament — Impetus 2024, ADYPU',
+  "Organised the 'Treasure Hunt' competition — #Tech2025, ADYPU",
+  '3D printing workshop',
+  'Volunteer at #Tech',
+];
+---
+<Base title="About" description="About Aryan Jain — B.Tech CSE student at ADYPU, learning AI/ML and DSA in public.">
+  <section class="intro">
+    <div class="wrap">
+      <p class="kicker">About me</p>
+      <h1>I learn by doing — and I write it all down.</h1>
+      <p class="lead">
+        I'm {site.name}, a B.Tech Computer Science student at Ajeenkya DY Patil University, {site.location}.
+        I'm interested in AI/ML and problem solving, and I'm building this site as a public record of
+        my learning — one day at a time.
+      </p>
+      <div class="ctas">
+        {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div>
+        <p class="kicker">Education</p>
+        <div class="card list">
+          <div><b>B.Tech, Computer Science & IT</b><span class="muted">Ajeenkya DY Patil University · 2024–2028</span></div>
+          <div><b>Class XII</b><span class="muted">St. Joseph Convent School · 2023</span></div>
+          <div><b>Class X</b><span class="muted">St. Joseph Convent School · 2021</span></div>
+        </div>
+      </div>
+      <div>
+        <p class="kicker">Experience</p>
+        <div class="card list">
+          <div><b>Aletheia AI</b><span class="muted">Contributed at an early-stage startup</span></div>
+          <div><b>Internships</b><span class="muted">Journey starting — I'll document it here from day one.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Skills</p>
+      <div class="skills">
+        {Object.entries(skills).map(([group, items]) => (
+          <div>
+            <h3>{group}</h3>
+            <div class="chips">{items.map((s) => <span class="pill">{s}</span>)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div>
+        <p class="kicker">Certificates</p>
+        <div class="card list">
+          {certificates.map((c) => <div><b>{c.name}</b><span class="muted">{c.by} · {c.when}</span></div>)}
+        </div>
+      </div>
+      <div>
+        <p class="kicker">On campus</p>
+        <div class="card list">
+          {campus.map((c) => <div><span>{c}</span></div>)}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Beyond the screen</p>
+      <h2>Discipline didn't start with code</h2>
+      <div class="beyond">
+        {beyond.map((b) => (
+          <div class="card">
+            <span class="icon">{b.icon}</span>
+            <h3>{b.title}</h3>
+            <p class="muted">{b.text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .intro { padding-block: 80px 56px; }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: 14px 0 18px; max-width: 760px; }
+  h2 { font-size: 1.8rem; margin: 0 0 20px; }
+  .lead { font-size: 1.15rem; color: var(--muted); max-width: 680px; margin: 0 0 28px; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .list { display: grid; gap: 14px; }
+  .list div { display: flex; flex-direction: column; }
+  .list div + div { border-top: 1px solid var(--line); padding-top: 14px; }
+
+  .skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 22px; }
+  .skills h3 { font-size: 0.95rem; margin: 0 0 10px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .beyond { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .beyond h3 { margin: 8px 0 4px; font-size: 1.1rem; }
+  .beyond p { margin: 0; }
+  .icon { font-size: 26px; }
+
+  @media (max-width: 720px) {
+    .two { grid-template-columns: 1fr; }
+    .intro { padding-block: 56px 40px; }
+  }
+</style>
