@@ -1,165 +1,217 @@
 ---
 import Base from '../layouts/Base.astro';
-import { site, sections, links } from '../data/site';
 import Heatmap from '../components/Heatmap.astro';
 import Stats from '../components/Stats.astro';
-import { getEntries, getStats } from '../lib/journal';
+import TopicCard from '../components/TopicCard.astro';
+import { site, topics, links } from '../data/site';
+import { getEntries, getStats, streaks } from '../lib/journal';
+import { getLeetCode, leetLevel } from '../lib/leetcode';
 
 const entries = await getEntries();
-const stats = getStats(entries);
+const journal = getStats(entries);
 const latest = entries.slice(0, 3);
+
+const lc = await getLeetCode();
+const lcLevels = new Map([...(lc?.byDay ?? [])].map(([d, n]) => [d, leetLevel(n)]));
+const lcLabels = new Map([...(lc?.byDay ?? [])].map(([d, n]) => [d, `${n} submission${n > 1 ? 's' : ''}`]));
+const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
+
 const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-
-// Ye journey shuru hone ki date hai — isse "Day X" count hota hai.
-const startDate = new Date('2026-11-27');
-const day = Math.floor((Date.now() - startDate.getTime()) / 86_400_000) + 1;
-
-// "Abhi kya chal raha hai" — jab kuch badle, yahan update karo.
-const now = [
-  { icon: '🤖', text: 'AI course on Vedantu — writing daily notes' },
-  { icon: '🧩', text: 'DSA with the Apex DSA Series' },
-  { icon: '🏋️', text: 'Gym — consistent since last year' },
-  { icon: '🏊', text: 'Swimming — recently learned' },
-];
+const now = ['🤖 AI course · Vedantu', '🧩 DSA · Apex series', '🏋️ Gym', '🏊 Swimming'];
+const ticker = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Streamlit', 'Git', 'Football', 'Art', 'Swimming', 'Gym', 'Abacus'];
 ---
 <Base>
+  <!-- ============ HERO ============ -->
   <section class="hero">
+    <div class="blob b1" aria-hidden="true"></div>
+    <div class="blob b2" aria-hidden="true"></div>
     <div class="wrap">
-      <p class="pill"><span class="dot"></span>Day <span id="day" data-start={startDate.toISOString()}>{day}</span> of building in public</p>
-      <script is:inline>
-        const el = document.getElementById('day');
-        el.textContent = Math.floor((Date.now() - new Date(el.dataset.start)) / 86400000) + 1;
-      </script>
-      <h1>Hi, I'm {site.name}.<br /><span class="accent">This is my journey.</span></h1>
-      <p class="lead">
-        A living record of everything I learn, build and achieve — from abacus and football
-        to AI and DSA. Updated every day, so you can see the work, not just the results.
+      <p class="issue" data-reveal>
+        <span class="live"></span>
+        Day <span id="day" data-start={site.startDate}>1</span> · Building in public
       </p>
-      <div class="ctas">
-        <a class="btn primary" href="/about/">About me</a>
-        {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
+      <h1 data-reveal style="--d:.08s">
+        Learning out loud,<br /><em class="sun">one day at a time.</em>
+      </h1>
+      <p class="lead" data-reveal style="--d:.16s">
+        I'm <b>{site.name}</b> — CSE student, problem solver, athlete, artist. This is my whole journey, in one place.
+      </p>
+      <div class="ctas" data-reveal style="--d:.24s">
+        <a class="btn primary" href="/journal/">Read the journal →</a>
+        <a class="btn" href="/about/">About me</a>
+      </div>
+      <div class="now" data-reveal style="--d:.32s">
+        <span class="muted">Right now</span>
+        {now.map((n) => <span class="chip">{n}</span>)}
       </div>
     </div>
+    <script is:inline>
+      const el = document.getElementById('day');
+      el.textContent = Math.max(1, Math.floor((Date.now() - new Date(el.dataset.start)) / 86400000) + 1);
+    </script>
   </section>
 
-  <section>
-    <div class="wrap">
-      <p class="kicker">Consistency</p>
-      <h2>Showing up, every day</h2>
-      <p class="muted">Every green square is a day I wrote down what I learned.</p>
-      <div class="streak">
-        <Stats stats={stats} />
-        <div class="card"><Heatmap byDay={stats.byDay} /></div>
-      </div>
-      <div class="latest">
-        {latest.map((e) => (
-          <a class="card entry" href={`/journal/${e.id}/`}>
-            <time datetime={e.id}>{fmt(e.data.date)}</time>
-            <span>{e.data.title}</span>
-          </a>
-        ))}
-      </div>
-      <a class="btn" href="/journal/">Read the journal →</a>
+  <!-- ============ TICKER ============ -->
+  <div class="ticker" aria-hidden="true">
+    <div class="track">
+      {[...ticker, ...ticker].map((t) => <span>{t}<i>✦</i></span>)}
     </div>
-  </section>
+  </div>
 
+  <!-- ============ CONSISTENCY ============ -->
   <section>
     <div class="wrap">
-      <p class="kicker">Right now</p>
-      <h2>What I'm working on</h2>
-      <div class="now">
-        {now.map((n) => <div class="card now-item"><span class="icon">{n.icon}</span>{n.text}</div>)}
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <p class="kicker">Explore</p>
-      <h2>The journey, in sections</h2>
-      <p class="muted">New sections open as I build them — follow along.</p>
-      <div class="grid">
-        {sections.map((s) =>
-          s.ready ? (
-            <a class="card tile" href={s.href}>
-              <span class="icon">{s.icon}</span>
-              <h3>{s.title}</h3>
-              <p class="muted">{s.desc}</p>
-            </a>
-          ) : (
-            <div class="card tile soon">
-              <span class="icon">{s.icon}</span>
-              <h3>{s.title} <span class="tag">soon</span></h3>
-              <p class="muted">{s.desc}</p>
+      <p class="kicker" data-reveal>Consistency</p>
+      <h2 class="section-title" data-reveal>Showing up, <em class="sun">daily.</em></h2>
+      <Stats
+        items={[
+          { value: journal.current, label: 'journal streak 🔥' },
+          { value: journal.total, label: 'days journaled' },
+          ...(lc ? [
+            { value: lc.solved.all, label: 'LeetCode solved' },
+            { value: lcStreak!.current, label: 'LeetCode streak ⚡' },
+          ] : []),
+        ]}
+      />
+      <div class="maps">
+        <div class="card map" data-reveal>
+          <div class="maphead"><h3>Journal</h3><span class="muted">one square = one day written</span></div>
+          <Heatmap byDay={journal.byDay} empty="no entry" />
+        </div>
+        {lc && (
+          <div class="card map leet" data-reveal>
+            <div class="maphead">
+              <h3>LeetCode</h3>
+              <span class="muted">
+                <b class="e">{lc.solved.easy} easy</b> · <b class="m">{lc.solved.medium} medium</b> · <b class="h">{lc.solved.hard} hard</b> · auto-updated nightly
+              </span>
             </div>
-          )
+            <Heatmap byDay={lcLevels} labels={lcLabels} empty="no submissions" />
+          </div>
         )}
       </div>
     </div>
   </section>
 
+  <!-- ============ TOPICS ============ -->
   <section>
     <div class="wrap">
-      <p class="kicker">Featured project</p>
-      <div class="card feature">
+      <p class="kicker" data-reveal>The journey</p>
+      <h2 class="section-title" data-reveal>Everything I am, <em class="sun">in chapters.</em></h2>
+      <div class="topics">
+        {topics.map((t, i) => <TopicCard topic={t} delay={(i % 3) * 0.08} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURED ============ -->
+  <section>
+    <div class="wrap">
+      <p class="kicker" data-reveal>Featured build</p>
+      <div class="feature card" data-reveal data-tilt>
         <div>
-          <h2>🩺 Breast Cancer Prediction</h2>
-          <p class="muted">
-            Team project (3 members): an ML web app that classifies breast tumours as benign or
-            malignant. I set up and maintained the repo, fixed dependency issues and deployed the
-            Streamlit dashboard.
-          </p>
+          <h2>Breast Cancer <em class="sun">Prediction</em></h2>
+          <p class="muted">ML web app that flags tumours as benign or malignant. Team of 3 — I owned the repo, fixes and deployment.</p>
           <div class="ctas">
-            <a class="btn primary" href="https://breastcancer-gk.streamlit.app/" target="_blank" rel="noopener">Live demo</a>
+            <a class="btn primary" href="https://breastcancer-gk.streamlit.app/" target="_blank" rel="noopener">Live demo ↗</a>
             <a class="btn" href="https://github.com/aryanjainsoni/Breast_cancer_Prediction_model" target="_blank" rel="noopener">Code</a>
           </div>
         </div>
-        <div class="stats">
+        <div class="nums">
           <div><b>96.5%</b><span>accuracy</span></div>
           <div><b>100%</b><span>precision</span></div>
           <div><b>95.1%</b><span>F1-score</span></div>
-          <div><b>569</b><span>patient records</span></div>
+          <div><b>569</b><span>records</span></div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- ============ LATEST ============ -->
+  {latest.length > 0 && (
+    <section>
+      <div class="wrap">
+        <p class="kicker" data-reveal>Latest entries</p>
+        <div class="latest">
+          {latest.map((e, i) => (
+            <a class="card entry" href={`/journal/${e.id}/`} data-reveal data-tilt style={`--d:${i * 0.08}s`}>
+              <time datetime={e.id}>{fmt(e.data.date)}</time>
+              <span>{e.data.title}</span>
+              <i>Read →</i>
+            </a>
+          ))}
+        </div>
+        <div class="connect" data-reveal>
+          {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
+        </div>
+      </div>
+    </section>
+  )}
 </Base>
 
 <style>
-  .hero { padding-block: 88px 64px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 8px; vertical-align: middle; }
-  h1 { font-size: clamp(2.4rem, 6.5vw, 4.2rem); margin: 22px 0 18px; }
-  h1 .accent { color: var(--accent); }
-  .lead { font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: var(--muted); max-width: 640px; margin: 0 0 30px; }
+  /* Hero */
+  .hero { position: relative; padding-block: 110px 80px; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; pointer-events: none; }
+  .b1 { width: 520px; height: 520px; background: #ff8a3d; top: -160px; right: -120px; animation: float 14s ease-in-out infinite; }
+  .b2 { width: 420px; height: 420px; background: #ff2e7e; bottom: -200px; right: 220px; animation: float 18s ease-in-out infinite reverse; }
+  :global(:root[data-theme='dark']) .blob { opacity: 0.35; }
+  @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-60px, 40px) scale(1.12); } }
+
+  .issue { display: inline-flex; align-items: center; gap: 10px; font: 500 13px 'JetBrains Mono', monospace; color: var(--muted); border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); border-radius: 999px; padding: 7px 14px; margin: 0; backdrop-filter: blur(6px); }
+  .live { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 0 var(--accent-2); animation: pulse 2s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  h1 { position: relative; font-size: clamp(3rem, 9vw, 6.6rem); margin: 26px 0 22px; letter-spacing: -0.02em; word-spacing: 0.06em; }
+  .lead { position: relative; font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--muted); max-width: 600px; margin: 0 0 32px; }
+  .lead b { color: var(--ink); }
   .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
-  h2 { font-size: 1.9rem; margin: 0 0 8px; }
+  .now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 40px; font-size: 14px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-weight: 500; }
 
-  .streak { display: grid; gap: 14px; margin: 22px 0 14px; }
-  .latest { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 18px; }
-  .entry { display: flex; flex-direction: column; gap: 4px; color: var(--ink); font-weight: 600; padding: 14px 18px; }
+  /* Ticker */
+  .ticker { border-block: 1px solid var(--line); overflow: hidden; padding-block: 16px; background: var(--surface); }
+  .track { display: flex; width: max-content; animation: slide 40s linear infinite; }
+  .track span { font: italic 600 1.5rem 'Fraunces', serif; padding-inline: 18px; white-space: nowrap; display: flex; align-items: center; gap: 36px; }
+  .track i { font-style: normal; font-size: 1rem; color: var(--accent); }
+  .ticker:hover .track { animation-play-state: paused; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .track, .blob, .live { animation: none; } }
+
+  /* Consistency */
+  .maps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+  .map { --heat: var(--accent-2); min-width: 0; }
+  .leet { --heat: #ffa116; }
+  .maphead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 14px; }
+  .maphead h3 { margin: 0; font-size: 1.3rem; }
+  .maphead .muted { font-size: 13px; }
+  .e { color: #00b8a3; } .m { color: #ffa116; } .h { color: #ff375f; }
+
+  /* Topics bento */
+  .topics { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-flow: dense; gap: 18px; margin-top: 34px; }
+
+  /* Featured */
+  .feature { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: center; padding: 36px; }
+  .feature h2 { font-size: clamp(2rem, 4.5vw, 3rem); margin: 0 0 14px; }
+  .feature p { margin: 0 0 24px; font-size: 1.05rem; }
+  .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .nums div { background: var(--accent-soft); border-radius: 16px; padding: 18px; }
+  .nums b { display: block; font: 700 2rem/1 'Fraunces', serif; background: var(--sun); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 6px; }
+  .nums span { font-size: 0.85rem; color: var(--muted); }
+
+  /* Latest */
+  .latest { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .entry { display: flex; flex-direction: column; gap: 8px; color: var(--ink); font: 600 1.15rem/1.3 'Fraunces', serif; }
   .entry:hover { text-decoration: none; border-color: var(--accent); }
-  .entry time { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+  .entry time { font: 500 12px 'JetBrains Mono', monospace; color: var(--accent); }
+  .entry i { font: 500 13px 'Inter', sans-serif; color: var(--muted); margin-top: auto; }
+  .connect { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
 
-  .now { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 22px; }
-  .now-item { display: flex; align-items: center; gap: 12px; font-weight: 500; padding: 16px 18px; }
-  .icon { font-size: 22px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-top: 22px; }
-  .tile { display: block; color: var(--ink); transition: transform 0.15s, border-color 0.15s; }
-  a.tile:hover { text-decoration: none; transform: translateY(-2px); border-color: var(--accent); }
-  .tile h3 { font-size: 1.15rem; margin: 10px 0 6px; }
-  .tile p { margin: 0; font-size: 0.95rem; }
-  .soon { opacity: 0.75; }
-  .tag { font: 500 11px 'JetBrains Mono', monospace; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; vertical-align: middle; }
-
-  .feature { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; padding: 28px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .stats div { background: var(--accent-soft); border-radius: 12px; padding: 16px; }
-  .stats b { display: block; font: 700 1.6rem 'Space Grotesk', sans-serif; color: var(--accent); }
-  .stats span { font-size: 0.9rem; color: var(--muted); }
-
+  @media (max-width: 900px) { .topics { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 720px) {
-    .feature { grid-template-columns: 1fr; padding: 20px; }
-    .hero { padding-block: 56px 40px; }
+    .hero { padding-block: 72px 56px; }
+    .topics { grid-template-columns: 1fr; }
+    .feature { grid-template-columns: 1fr; padding: 24px; }
+    .b1 { width: 320px; height: 320px; }
+    .b2 { width: 260px; height: 260px; right: -40px; }
   }
 </style>

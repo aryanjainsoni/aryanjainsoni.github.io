@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Roz raat ~12 baje (IST) site dobara banti hai taaki LeetCode ka naya data aa jaye.
+  # Isse koi commit nahi banta — sirf site refresh hoti hai.
+  schedule:
+    - cron: '35 18 * * *'
 
 permissions:
   contents: read

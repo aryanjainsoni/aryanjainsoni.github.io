@@ -19,10 +19,15 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
   <section class="head">
     <div class="wrap">
       <p class="kicker">Journal</p>
-      <h1>One entry a day.</h1>
+      <h1>One entry <em class="sun">a day.</em></h1>
       <p class="lead">What I learned, solved and practised — written down daily. Each square is a day I showed up.</p>
-      <Stats stats={stats} />
-      <div class="card map"><Heatmap byDay={stats.byDay} /></div>
+      <Stats items={[
+        { value: stats.current, label: 'day streak 🔥' },
+        { value: stats.longest, label: 'longest streak' },
+        { value: stats.total, label: 'days logged' },
+        { value: stats.dsa, label: 'DSA solved' },
+      ]} />
+      <div class="card map" data-reveal><Heatmap byDay={stats.byDay} empty="no entry" /></div>
     </div>
   </section>
 
@@ -34,7 +39,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
           <ul>
             {list.map((e) => (
               <li>
-                <a class="card row" href={`/journal/${e.id}/`}>
+                <a class="card row" data-reveal href={`/journal/${e.id}/`}>
                   <time datetime={e.id}>{fmt(e.data.date)}</time>
                   <span class="title">{e.data.title}</span>
                   <span class="tags">{e.data.tags.map((t) => <span class="pill">{t}</span>)}</span>
@@ -50,16 +55,17 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
 
 <style>
   .head { padding-block: 72px 48px; }
-  h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); margin: 12px 0 12px; }
+  h1 { font-size: clamp(2.8rem, 8vw, 5rem); margin: 12px 0 14px; }
   .lead { color: var(--muted); font-size: 1.1rem; max-width: 620px; margin: 0 0 28px; }
-  .map { margin-top: 14px; }
+  .map { margin-top: 14px; --heat: var(--accent-2); }
   .month + .month { margin-top: 36px; }
   h2 { font-size: 1.3rem; margin: 0 0 14px; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
   .row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; color: var(--ink); padding: 14px 18px; }
-  .row:hover { text-decoration: none; border-color: var(--accent); }
+  .row:hover { text-decoration: none; border-color: var(--accent); transform: translateX(4px); }
+  .row { transition: transform .2s, border-color .2s; }
   time { font: 500 13px 'JetBrains Mono', monospace; color: var(--muted); }
-  .title { font-weight: 600; }
+  .title { font: 600 1.15rem 'Fraunces', serif; }
   .tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .tags .pill { font-size: 11px; padding: 4px 8px; }
   @media (max-width: 640px) {

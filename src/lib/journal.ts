@@ -15,7 +15,31 @@ export async function getEntries(): Promise<Entry[]> {
   return all.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 }
 
-// Jitna zyada likha, utna gehra green (1–4)
+// Kisi bhi "active days" list se current aur longest streak
+export function streaks(activeDays: Iterable<string>, today = todayIST()) {
+  const set = new Set(activeDays);
+  const days = [...set].sort();
+  let longest = 0;
+  let run = 0;
+  let prev = 0;
+  for (const k of days) {
+    const t = new Date(k).getTime();
+    run = prev && t - prev === 86_400_000 ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    prev = t;
+  }
+  // Aaj se peeche ginti (aaj abhi kuch nahi kiya to kal se — streak tab tak zinda hai)
+  const cursor = new Date(dayKey(today));
+  if (!set.has(dayKey(cursor))) cursor.setUTCDate(cursor.getUTCDate() - 1);
+  let current = 0;
+  while (set.has(dayKey(cursor))) {
+    current++;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return { current, longest };
+}
+
+// Jitna zyada likha, utna gehra rang (1–4)
 function level(entry: Entry) {
   const words = (entry.body ?? '').split(/\s+/).filter(Boolean).length;
   if (words < 80) return 1;
@@ -24,34 +48,12 @@ function level(entry: Entry) {
   return 4;
 }
 
-export function getStats(entries: Entry[], today = todayIST()) {
+export function getStats(entries: Entry[]) {
   const byDay = new Map<string, number>();
   for (const e of entries) {
     const k = dayKey(e.data.date);
     byDay.set(k, Math.max(byDay.get(k) ?? 0, level(e)));
   }
-
-  const days = [...byDay.keys()].sort();
-  let longest = 0;
-  let run = 0;
-  let prev: Date | null = null;
-  for (const k of days) {
-    const d = new Date(k);
-    run = prev && d.getTime() - prev.getTime() === 86_400_000 ? run + 1 : 1;
-    longest = Math.max(longest, run);
-    prev = d;
-  }
-
-  // Current streak: aaj (ya kal, agar aaj ki entry abhi nahi likhi) se peeche ginti
-  const todayKey = dayKey(today);
-  const cursor = new Date(todayKey);
-  if (!byDay.has(todayKey)) cursor.setUTCDate(cursor.getUTCDate() - 1);
-  let current = 0;
-  while (byDay.has(dayKey(cursor))) {
-    current++;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-
   const dsa = entries.reduce((sum, e) => sum + e.data.dsaSolved, 0);
-  return { byDay, total: byDay.size, current, longest, dsa };
+  return { byDay, total: byDay.size, dsa, ...streaks(byDay.keys()) };
 }

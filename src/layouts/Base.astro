@@ -1,5 +1,5 @@
 ---
-// Har page isi layout ke andar banta hai: head, menu, footer, light/dark toggle.
+// Har page isi layout ke andar banta hai: head, menu, footer, light/dark toggle, live effects.
 import '../styles/global.css';
 import { site, nav, links } from '../data/site';
 
@@ -8,7 +8,7 @@ interface Props {
   description?: string;
 }
 const { title, description = site.tagline } = Astro.props;
-const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — Journey`;
+const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${site.tagline}`;
 const path = Astro.url.pathname;
 ---
 <!doctype html>
@@ -18,11 +18,12 @@ const path = Astro.url.pathname;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#ff5a36" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600;1,9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
     <!-- Page dikhne se pehle hi sahi theme laga do, taaki flash na ho -->
@@ -33,15 +34,17 @@ const path = Astro.url.pathname;
     </script>
   </head>
   <body>
+    <div class="spotlight" aria-hidden="true"></div>
+
     <header class="top">
       <div class="wrap bar">
-        <a class="logo" href="/">aryan<span>.</span>jain</a>
+        <a class="logo" href="/">aryan<span class="sun">.</span>jain</a>
         <nav aria-label="Main">
           {nav.map((item) => (
             <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>{item.label}</a>
           ))}
           <button id="theme-toggle" class="toggle" type="button" aria-label="Toggle light and dark mode">
-            <span class="sun">☀️</span><span class="moon">🌙</span>
+            <span class="sunicon">☀️</span><span class="moon">🌙</span>
           </button>
         </nav>
       </div>
@@ -53,19 +56,68 @@ const path = Astro.url.pathname;
 
     <footer>
       <div class="wrap foot">
-        <span class="muted">© {new Date().getFullYear()} {site.name} · Built in public</span>
-        <span class="links">
-          {links.map((l) => <a href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
-        </span>
+        <p class="sign">Built in public, <em class="sun">one day at a time.</em></p>
+        <div class="row">
+          <span class="muted">© {new Date().getFullYear()} {site.name}</span>
+          <span class="links">
+            {links.map((l) => <a href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
+          </span>
+        </div>
       </div>
     </footer>
 
     <script is:inline>
+      // Light / dark toggle
       document.getElementById('theme-toggle').addEventListener('click', () => {
         const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
         document.documentElement.dataset.theme = next;
         localStorage.setItem('theme', next);
       });
+
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const finePointer = matchMedia('(pointer: fine)').matches;
+
+      // Scroll par elements ka aana.
+      // Safety: JS na chale to sab dikhta hai; screen par jo hai wo turant aata hai;
+      // aur agar observer kabhi fire hi na ho to 2 second baad sab dikha do.
+      const revealEls = [...document.querySelectorAll('[data-reveal]')];
+      if (!calm && 'IntersectionObserver' in window) {
+        document.documentElement.classList.add('reveal-ready');
+        let fired = false;
+        const io = new IntersectionObserver((items) => {
+          fired = true;
+          items.forEach((it) => {
+            if (it.isIntersecting) { it.target.classList.add('in'); io.unobserve(it.target); }
+          });
+        }, { threshold: 0.12 });
+        revealEls.forEach((el) => {
+          if (el.getBoundingClientRect().top < innerHeight) requestAnimationFrame(() => el.classList.add('in'));
+          else io.observe(el);
+        });
+        setTimeout(() => { if (!fired) revealEls.forEach((el) => el.classList.add('in')); }, 2000);
+      }
+
+      if (!calm && finePointer) {
+        // Cursor ke saath glow
+        const root = document.documentElement;
+        addEventListener('pointermove', (e) => {
+          root.style.setProperty('--mx', e.clientX + 'px');
+          root.style.setProperty('--my', e.clientY + 'px');
+        }, { passive: true });
+
+        // Cards ka 3D tilt
+        document.querySelectorAll('[data-tilt]').forEach((card) => {
+          card.addEventListener('pointermove', (e) => {
+            const r = card.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = `perspective(900px) rotateX(${-y * 7}deg) rotateY(${x * 9}deg) translateY(-4px)`;
+            card.style.setProperty('--gx', (x + 0.5) * 100 + '%');
+            card.style.setProperty('--gy', (y + 0.5) * 100 + '%');
+          });
+          card.addEventListener('pointerleave', () => (card.style.transform = ''));
+        });
+      }
     </script>
   </body>
 </html>
@@ -75,17 +127,19 @@ const path = Astro.url.pathname;
     position: sticky;
     top: 0;
     z-index: 10;
-    background: color-mix(in srgb, var(--bg) 85%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   }
-  .bar { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 16px; }
-  .logo { font: 700 19px 'Space Grotesk', sans-serif; color: var(--ink); }
-  .logo span { color: var(--accent); }
+  .bar { display: flex; align-items: center; justify-content: space-between; height: 66px; gap: 16px; }
+  .logo { font: italic 700 22px 'Fraunces', serif; color: var(--ink); letter-spacing: -0.02em; }
   .logo:hover { text-decoration: none; }
-  nav { display: flex; align-items: center; gap: 20px; }
-  nav a { color: var(--muted); font-size: 14px; font-weight: 500; }
+  .logo .sun { font-style: normal; }
+  nav { display: flex; align-items: center; gap: 22px; }
+  nav a { position: relative; color: var(--muted); font-size: 14px; font-weight: 500; }
+  nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: var(--sun); border-radius: 2px; transform: scaleX(0); transition: transform 0.25s; }
   nav a:hover, nav a[aria-current='page'] { color: var(--ink); text-decoration: none; }
+  nav a:hover::after, nav a[aria-current='page']::after { transform: scaleX(1); }
   .toggle {
     border: 1px solid var(--line);
     background: var(--surface);
@@ -94,17 +148,23 @@ const path = Astro.url.pathname;
     height: 38px;
     cursor: pointer;
     font-size: 16px;
+    transition: transform 0.3s;
   }
+  .toggle:hover { transform: rotate(20deg); }
   .toggle .moon { display: none; }
-  :global(:root[data-theme='dark']) .toggle .sun { display: none; }
+  :global(:root[data-theme='dark']) .toggle .sunicon { display: none; }
   :global(:root[data-theme='dark']) .toggle .moon { display: inline; }
-  footer { border-top: 1px solid var(--line); padding-block: 28px; font-size: 14px; }
-  .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-  .links { display: flex; gap: 18px; }
+
+  footer { border-top: 1px solid var(--line); padding-block: 56px 32px; margin-top: 40px; }
+  .sign { font: 700 clamp(1.8rem, 5vw, 3rem)/1.1 'Fraunces', serif; margin: 0 0 32px; letter-spacing: -0.02em; }
+  .row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; font-size: 14px; }
+  .links { display: flex; flex-wrap: wrap; gap: 18px; }
+  .links a { color: var(--ink); font-weight: 500; }
+
   @media (max-width: 480px) {
-    .bar { padding-inline: 14px; gap: 10px; }
-    .logo { font-size: 17px; }
-    nav { gap: 12px; }
+    .bar { padding-inline: 16px; gap: 10px; }
+    .logo { font-size: 19px; }
+    nav { gap: 14px; }
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }
   }
 </style>
