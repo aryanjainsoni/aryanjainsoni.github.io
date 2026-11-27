@@ -1,5 +1,5 @@
 ---
-// Social links ko unke asli logos ke saath dikhata hai.
+// Social links ko unke asli logos aur asli brand colours ke saath dikhata hai.
 // Logos: simple-icons (GitHub, LeetCode, Instagram, X) + bootstrap-icons (LinkedIn).
 import { siGithub, siLeetcode, siInstagram, siX } from 'simple-icons';
 import linkedinSvg from 'bootstrap-icons/icons/linkedin.svg?raw';
@@ -9,33 +9,55 @@ interface Props {
   size?: 'lg' | 'sm';
 }
 const { size = 'lg' } = Astro.props;
+const gid = `ig-${size}`; // Instagram gradient ka id
 
 const linkedinPath = linkedinSvg.match(/ d="([^"]+)"/)![1];
-const icons: Record<string, { path: string; box: string; color: string }> = {
-  GitHub: { path: siGithub.path, box: '0 0 24 24', color: '#6e5494' },
-  LinkedIn: { path: linkedinPath, box: '0 0 16 16', color: '#0a66c2' },
-  LeetCode: { path: siLeetcode.path, box: '0 0 24 24', color: `#${siLeetcode.hex}` },
-  Instagram: { path: siInstagram.path, box: '0 0 24 24', color: '#e1306c' },
-  X: { path: siX.path, box: '0 0 24 24', color: '#111111' },
+const IG = 'linear-gradient(45deg, #feda75, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5)';
+
+// fg = logo ka rang, bg = hover par button ka rang.
+// GitHub aur X ka asli rang black hai — dark mode mein wo white dikhenge (warna gayab ho jate).
+const icons: Record<string, { path: string; box: string; fg: string; bg: string }> = {
+  GitHub: { path: siGithub.path, box: '0 0 24 24', fg: 'var(--mono)', bg: 'var(--mono)' },
+  LinkedIn: { path: linkedinPath, box: '0 0 16 16', fg: '#0a66c2', bg: '#0a66c2' },
+  LeetCode: { path: siLeetcode.path, box: '0 0 24 24', fg: `#${siLeetcode.hex}`, bg: `#${siLeetcode.hex}` },
+  Instagram: { path: siInstagram.path, box: '0 0 24 24', fg: `url(#${gid})`, bg: IG },
+  X: { path: siX.path, box: '0 0 24 24', fg: 'var(--mono)', bg: 'var(--mono)' },
 };
 ---
 <div class:list={['socials', size]}>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id={gid} x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#feda75" />
+        <stop offset=".25" stop-color="#fa7e1e" />
+        <stop offset=".5" stop-color="#d62976" />
+        <stop offset=".75" stop-color="#962fbf" />
+        <stop offset="1" stop-color="#4f5bd5" />
+      </linearGradient>
+    </defs>
+  </svg>
   {links.map((l) => {
     const i = icons[l.label];
     return (
-      <a href={l.href} target="_blank" rel="noopener" aria-label={l.label} title={l.label} style={`--brand:${i?.color ?? 'var(--accent)'}`}>
-        {i ? (
-          <svg viewBox={i.box} aria-hidden="true"><path d={i.path} /></svg>
-        ) : (
-          l.label
-        )}
+      <a
+        href={l.href}
+        target="_blank"
+        rel="noopener"
+        aria-label={l.label}
+        title={l.label}
+        class={l.label.toLowerCase()}
+        style={i ? `--fg:${i.fg};--bg:${i.bg}` : undefined}
+      >
+        {i ? <svg viewBox={i.box} aria-hidden="true"><path d={i.path} /></svg> : l.label}
       </a>
     );
   })}
 </div>
 
 <style>
-  .socials { display: flex; flex-wrap: wrap; gap: 10px; }
+  .socials { --mono: #181717; display: flex; flex-wrap: wrap; gap: 10px; }
+  :global(:root[data-theme='dark']) .socials { --mono: #ffffff; }
+
   a {
     display: grid;
     place-items: center;
@@ -43,20 +65,23 @@ const icons: Record<string, { path: string; box: string; color: string }> = {
     height: 48px;
     border-radius: 50%;
     border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--surface) 80%, transparent);
-    color: var(--ink);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
     backdrop-filter: blur(6px);
-    transition: transform 0.25s cubic-bezier(.2,.7,.2,1), background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s;
+    transition: transform 0.25s cubic-bezier(.2,.7,.2,1), background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
+  svg { width: 22px; height: 22px; fill: var(--fg); transition: fill 0.25s; }
+
   a:hover {
     text-decoration: none;
-    background: var(--brand);
-    border-color: var(--brand);
-    color: #fff;
+    background: var(--bg);
+    border-color: transparent;
     transform: translateY(-4px) scale(1.06);
-    box-shadow: 0 12px 24px -10px var(--brand);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
   }
-  svg { width: 20px; height: 20px; fill: currentColor; }
+  a:hover svg { fill: #fff; }
+  /* GitHub / X: hover par ulte rang (light mein black button, dark mein white button) */
+  a.github:hover svg, a.x:hover svg { fill: var(--surface); }
+
   .sm a { width: 38px; height: 38px; }
-  .sm svg { width: 16px; height: 16px; }
+  .sm svg { width: 17px; height: 17px; }
 </style>
