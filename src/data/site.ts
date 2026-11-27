@@ -16,7 +16,7 @@ export const links = [
 // ready: false wale sections abhi bane nahi hain — menu mein nahi dikhenge,
 // Home par "coming soon" dikhenge. Jaise-jaise banenge, true kar denge.
 export const sections = [
-  { title: 'Journal', href: '/journal/', icon: '📓', desc: 'Daily log — what I learned, solved and practised today.', ready: false },
+  { title: 'Journal', href: '/journal/', icon: '📓', desc: 'Daily log — what I learned, solved and practised today.', ready: true },
   { title: 'Notes', href: '/notes/', icon: '📚', desc: 'My handwritten notes as PDFs — college, AI course, languages.', ready: false },
   { title: 'Projects', href: '/projects/', icon: '🛠️', desc: 'Things I have built, with what I learned from each.', ready: false },
   { title: 'Achievements', href: '/achievements/', icon: '🏆', desc: 'Certificates — academics, sports, abacus, football, art.', ready: false },

@@ -1,6 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
 import { site, sections, links } from '../data/site';
+import Heatmap from '../components/Heatmap.astro';
+import Stats from '../components/Stats.astro';
+import { getEntries, getStats } from '../lib/journal';
+
+const entries = await getEntries();
+const stats = getStats(entries);
+const latest = entries.slice(0, 3);
+const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 // Ye journey shuru hone ki date hai — isse "Day X" count hota hai.
 const startDate = new Date('2026-11-27');
@@ -31,6 +39,27 @@ const now = [
         <a class="btn primary" href="/about/">About me</a>
         {links.map((l) => <a class="btn" href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
       </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Consistency</p>
+      <h2>Showing up, every day</h2>
+      <p class="muted">Every green square is a day I wrote down what I learned.</p>
+      <div class="streak">
+        <Stats stats={stats} />
+        <div class="card"><Heatmap byDay={stats.byDay} /></div>
+      </div>
+      <div class="latest">
+        {latest.map((e) => (
+          <a class="card entry" href={`/journal/${e.id}/`}>
+            <time datetime={e.id}>{fmt(e.data.date)}</time>
+            <span>{e.data.title}</span>
+          </a>
+        ))}
+      </div>
+      <a class="btn" href="/journal/">Read the journal →</a>
     </div>
   </section>
 
@@ -104,6 +133,12 @@ const now = [
   .lead { font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: var(--muted); max-width: 640px; margin: 0 0 30px; }
   .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
   h2 { font-size: 1.9rem; margin: 0 0 8px; }
+
+  .streak { display: grid; gap: 14px; margin: 22px 0 14px; }
+  .latest { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .entry { display: flex; flex-direction: column; gap: 4px; color: var(--ink); font-weight: 600; padding: 14px 18px; }
+  .entry:hover { text-decoration: none; border-color: var(--accent); }
+  .entry time { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
 
   .now { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 22px; }
   .now-item { display: flex; align-items: center; gap: 12px; font-weight: 500; padding: 16px 18px; }

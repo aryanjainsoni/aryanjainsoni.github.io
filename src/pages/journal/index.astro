@@ -1,0 +1,69 @@
+---
+import Base from '../../layouts/Base.astro';
+import Heatmap from '../../components/Heatmap.astro';
+import Stats from '../../components/Stats.astro';
+import { getEntries, getStats } from '../../lib/journal';
+
+const entries = await getEntries();
+const stats = getStats(entries);
+
+// Mahine ke hisaab se group karo: "November 2026" -> [entries]
+const groups = new Map<string, typeof entries>();
+for (const e of entries) {
+  const k = e.data.date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  groups.set(k, [...(groups.get(k) ?? []), e]);
+}
+const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+---
+<Base title="Journal" description="Aryan Jain's daily learning log — what I learned, solved and practised, every day.">
+  <section class="head">
+    <div class="wrap">
+      <p class="kicker">Journal</p>
+      <h1>One entry a day.</h1>
+      <p class="lead">What I learned, solved and practised — written down daily. Each square is a day I showed up.</p>
+      <Stats stats={stats} />
+      <div class="card map"><Heatmap byDay={stats.byDay} /></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      {[...groups].map(([month, list]) => (
+        <div class="month">
+          <h2>{month}</h2>
+          <ul>
+            {list.map((e) => (
+              <li>
+                <a class="card row" href={`/journal/${e.id}/`}>
+                  <time datetime={e.id}>{fmt(e.data.date)}</time>
+                  <span class="title">{e.data.title}</span>
+                  <span class="tags">{e.data.tags.map((t) => <span class="pill">{t}</span>)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .head { padding-block: 72px 48px; }
+  h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); margin: 12px 0 12px; }
+  .lead { color: var(--muted); font-size: 1.1rem; max-width: 620px; margin: 0 0 28px; }
+  .map { margin-top: 14px; }
+  .month + .month { margin-top: 36px; }
+  h2 { font-size: 1.3rem; margin: 0 0 14px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; color: var(--ink); padding: 14px 18px; }
+  .row:hover { text-decoration: none; border-color: var(--accent); }
+  time { font: 500 13px 'JetBrains Mono', monospace; color: var(--muted); }
+  .title { font-weight: 600; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .tags .pill { font-size: 11px; padding: 4px 8px; }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 1fr; gap: 6px; }
+    .tags { justify-content: flex-start; }
+  }
+</style>

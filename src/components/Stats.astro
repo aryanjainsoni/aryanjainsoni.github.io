@@ -1,0 +1,23 @@
+---
+interface Props {
+  stats: { total: number; current: number; longest: number; dsa: number };
+}
+const { stats } = Astro.props;
+const items = [
+  { value: stats.current, label: 'day streak 🔥' },
+  { value: stats.longest, label: 'longest streak' },
+  { value: stats.total, label: 'days logged' },
+  { value: stats.dsa, label: 'DSA solved' },
+];
+---
+<div class="stats">
+  {items.map((i) => <div class="card"><b>{i.value}</b><span>{i.label}</span></div>)}
+</div>
+
+<style>
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card { padding: 16px 18px; }
+  b { display: block; font: 700 1.9rem/1.1 'Space Grotesk', sans-serif; color: var(--green); }
+  span { font-size: 0.9rem; color: var(--muted); }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+</style>

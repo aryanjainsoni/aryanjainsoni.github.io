@@ -1,0 +1,83 @@
+---
+// GitHub jaisa green calendar: pichhle ~1 saal ka har din ek chhota dabba.
+import { dayKey, todayIST } from '../lib/journal';
+
+interface Props {
+  byDay: Map<string, number>;
+  today?: Date;
+}
+const { byDay, today = todayIST() } = Astro.props;
+
+const end = new Date(dayKey(today));
+const start = new Date(end);
+start.setUTCDate(start.getUTCDate() - 364);
+start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // Sunday se shuru
+
+type Cell = { key: string; level: number; future: boolean };
+const weeks: Cell[][] = [];
+const months: { label: string; col: number }[] = [];
+const cursor = new Date(start);
+let col = 0;
+while (cursor <= end) {
+  const week: Cell[] = [];
+  for (let i = 0; i < 7; i++) {
+    const key = dayKey(cursor);
+    if (cursor.getUTCDate() === 1) {
+      months.push({ label: cursor.toLocaleString('en', { month: 'short', timeZone: 'UTC' }), col });
+    }
+    week.push({ key, level: byDay.get(key) ?? 0, future: cursor > end });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  weeks.push(week);
+  col++;
+}
+const fmt = (k: string) =>
+  new Date(k).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+---
+<div class="heatmap" role="img" aria-label="Daily journal activity over the past year">
+  <div class="scroll">
+    <div class="months" style={`grid-template-columns: repeat(${weeks.length}, var(--cell))`}>
+      {months.map((m) => <span style={`grid-column: ${m.col + 1}`}>{m.label}</span>)}
+    </div>
+    <div class="grid" style={`grid-template-columns: repeat(${weeks.length}, var(--cell))`}>
+      {weeks.map((week) => (
+        <div class="week">
+          {week.map((c) => (
+            <span
+              class={`cell l${c.level}`}
+              style={c.future ? 'visibility:hidden' : undefined}
+              title={`${fmt(c.key)} — ${c.level ? 'journal entry' : 'no entry'}`}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+  <div class="legend">
+    <span>Less</span>
+    <span class="cell l0"></span><span class="cell l1"></span><span class="cell l2"></span><span class="cell l3"></span><span class="cell l4"></span>
+    <span>More</span>
+  </div>
+</div>
+<script is:inline>
+  // Mobile par calendar ka aaj wala (right) hissa pehle dikhao
+  document.querySelectorAll('.heatmap .scroll').forEach((el) => (el.scrollLeft = el.scrollWidth));
+</script>
+
+<style>
+  .heatmap { --cell: 12px; --gap: 3px; }
+  .scroll { overflow-x: auto; padding-bottom: 6px; }
+  .months { display: grid; column-gap: var(--gap); font-size: 11px; color: var(--muted); height: 16px; width: max-content; }
+  .months span { white-space: nowrap; }
+  .grid { display: grid; column-gap: var(--gap); width: max-content; }
+  .week { display: grid; grid-template-rows: repeat(7, var(--cell)); row-gap: var(--gap); }
+  .cell { display: inline-block; width: var(--cell); height: var(--cell); border-radius: 3px; }
+  .l0 { background: var(--line); }
+  .l1 { background: color-mix(in srgb, var(--green) 30%, var(--line)); }
+  .l2 { background: color-mix(in srgb, var(--green) 55%, var(--line)); }
+  .l3 { background: color-mix(in srgb, var(--green) 80%, var(--line)); }
+  .l4 { background: var(--green); }
+  .legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend span:first-child { margin-right: 4px; }
+  .legend span:last-child { margin-left: 4px; }
+</style>
