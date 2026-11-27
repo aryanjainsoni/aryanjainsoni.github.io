@@ -1,0 +1,270 @@
+---
+// INDEX — site ki har cheez ek jagah, search ke saath.
+// Naya content (journal entry, project, certificate…) apne aap yahan aa jaata hai,
+// kyunki ye page wahi data padhta hai jo baaki pages padhte hain.
+import Base from '../layouts/Base.astro';
+import { topics, links } from '../data/site';
+import { education, experience, skills, certificates, beyond, campus, projects } from '../data/profile';
+import { getEntries } from '../lib/journal';
+
+type Item = {
+  cat: string; title: string; desc?: string; href?: string; external?: boolean;
+  tags?: string[]; date?: string; text?: string; soon?: boolean;
+};
+
+const entries = await getEntries();
+const plain = (md = '') => md.replace(/```[\s\S]*?```/g, ' ').replace(/[#>*_`\-\[\]\(\)!]/g, ' ').replace(/\s+/g, ' ').trim();
+const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+const items: Item[] = [
+  ...entries.map((e) => {
+    const body = plain(e.body);
+    return {
+      cat: 'Journal', title: e.data.title, href: `/journal/${e.id}/`, tags: e.data.tags, date: fmt(e.data.date),
+      desc: body.slice(0, 140) + (body.length > 140 ? '…' : ''), text: body,
+    };
+  }),
+  ...projects.map((p) => ({
+    cat: 'Projects', title: p.name, desc: p.line, tags: [p.kind, ...p.tags], date: p.year,
+    href: p.links[0]?.[1] ?? '/#work', external: !!p.links[0],
+  })),
+  ...beyond.slice(0, 4).map((b) => ({ cat: 'Achievements', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['school', 'personal'] })),
+  ...campus.map((c) => ({ cat: 'Achievements', title: c.title, desc: c.meta, href: '/about/#campus', tags: ['campus', 'events', 'ADYPU'] })),
+  ...certificates.map((c) => ({ cat: 'Certificates', title: c.name, desc: `${c.by} · ${c.when}`, href: '/about/#certificates', tags: ['Java', 'certificate', c.by] })),
+  ...Object.entries(skills).flatMap(([group, list]) =>
+    list.map((s) => ({ cat: 'Skills', title: s, desc: group, href: '/about/#skills', tags: [group] })),
+  ),
+  ...beyond.slice(4).map((b) => ({ cat: 'Life', title: b.title, desc: b.text, href: '/about/#beyond', tags: ['fitness', 'hobby'] })),
+  ...education.map((e) => ({ cat: 'Education', title: e.title, desc: e.meta, href: '/about/#education', tags: ['study'] })),
+  ...experience.map((e) => ({ cat: 'Experience', title: e.title, desc: e.meta, href: '/about/#experience', tags: ['work', 'internship'] })),
+  ...topics.map((t) => ({
+    cat: 'Sections', title: t.title, desc: t.line, href: t.ready ? t.href : undefined, external: t.external, soon: !t.ready,
+    tags: ['section'],
+  })),
+  ...links.map((l) => ({ cat: 'Profiles', title: l.label, desc: l.href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), href: l.href, external: true, tags: ['social', 'link'] })),
+];
+
+const order = ['Journal', 'Projects', 'Achievements', 'Certificates', 'Skills', 'Life', 'Education', 'Experience', 'Sections', 'Profiles'];
+const groups = order
+  .map((cat) => ({ cat, list: items.filter((i) => i.cat === cat) }))
+  .filter((g) => g.list.length);
+const searchText = (i: Item) => [i.cat, i.title, i.desc, i.date, ...(i.tags ?? []), i.text].filter(Boolean).join(' ').toLowerCase();
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+const suggestions = ['DSA', 'Python', 'Java', 'football', 'certificate', 'Streamlit', 'gym', 'AI'];
+---
+<Base title="Index" description="Everything on Aryan Jain's site — journal, projects, achievements, skills and more — in one searchable index.">
+  <section class="head">
+    <div class="wrap">
+      <p class="kicker">Index</p>
+      <h1>Find <em class="sun">anything.</em></h1>
+      <p class="lead">Every entry, project, achievement and skill — in one place. Scroll the index, or just search.</p>
+
+      <div class="searchbox" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input id="q" type="search" placeholder="Search notes, skills, projects, achievements…" autocomplete="off" spellcheck="false" aria-label="Search the site" />
+        <kbd>/</kbd>
+      </div>
+      <p class="suggest">
+        Try:
+        {suggestions.map((s) => <button type="button" data-suggest={s}>{s}</button>)}
+      </p>
+
+      <div class="chips" role="group" aria-label="Filter by category">
+        <button type="button" class="chip on" data-cat="">All <span>{items.length}</span></button>
+        {groups.map((g) => <button type="button" class="chip" data-cat={g.cat}>{g.cat} <span>{g.list.length}</span></button>)}
+      </div>
+      <p class="count" id="count" aria-live="polite">{items.length} items</p>
+    </div>
+  </section>
+
+  <section class="index">
+    <div class="wrap layout">
+      <nav class="jump" aria-label="Jump to category">
+        <p>Jump to</p>
+        {groups.map((g) => <a href={`#${slug(g.cat)}`} data-jump={g.cat}>{g.cat}</a>)}
+      </nav>
+
+      <div class="groups">
+        {groups.map((g) => (
+          <div class="group" id={slug(g.cat)} data-group={g.cat}>
+            <h2>{g.cat} <span>{g.list.length}</span></h2>
+            <ul>
+              {g.list.map((i) => {
+                const Tag = i.href ? 'a' : 'div';
+                return (
+                  <li data-cat={i.cat} data-text={searchText(i)}>
+                    <Tag class:list={['row', { soon: i.soon }]} href={i.href} target={i.external ? '_blank' : undefined} rel={i.external ? 'noopener' : undefined}>
+                      <div class="main">
+                        <span class="t" data-title>{i.title}</span>
+                        {i.desc && <span class="d">{i.desc}</span>}
+                        {i.tags && i.tags.length > 0 && (
+                          <span class="tags">{i.tags.slice(0, 5).map((t) => <i>{t}</i>)}</span>
+                        )}
+                      </div>
+                      <div class="side">
+                        {i.date && <time>{i.date}</time>}
+                        {i.soon ? <span class="badge">soon</span> : i.href && <span class="arrow" aria-hidden="true">{i.external ? '↗' : '→'}</span>}
+                      </div>
+                    </Tag>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+        <div class="empty" id="empty" hidden>
+          <p class="big">Nothing found for “<span id="empty-q"></span>”.</p>
+          <p class="muted">Try a broader word — like <b>DSA</b>, <b>Python</b> or <b>football</b>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    (() => {
+      const input = document.getElementById('q');
+      const rows = [...document.querySelectorAll('.groups li')];
+      const groups = [...document.querySelectorAll('[data-group]')];
+      const chips = [...document.querySelectorAll('.chip')];
+      const jumps = [...document.querySelectorAll('[data-jump]')];
+      const count = document.getElementById('count');
+      const empty = document.getElementById('empty');
+      let cat = '';
+
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      rows.forEach((r) => { const t = r.querySelector('[data-title]'); t.dataset.raw = t.textContent; });
+
+      const apply = () => {
+        const q = input.value.trim().toLowerCase();
+        const terms = q.split(/\s+/).filter(Boolean);
+        let shown = 0;
+        rows.forEach((r) => {
+          const ok = (!cat || r.dataset.cat === cat) && terms.every((t) => r.dataset.text.includes(t));
+          r.hidden = !ok;
+          if (ok) shown++;
+          const t = r.querySelector('[data-title]');
+          t.innerHTML = terms.length
+            ? t.dataset.raw.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+                .replace(new RegExp(`(${terms.map(esc).join('|')})`, 'gi'), '<mark>$1</mark>')
+            : t.dataset.raw;
+        });
+        groups.forEach((g) => {
+          const n = g.querySelectorAll('li:not([hidden])').length;
+          g.hidden = n === 0;
+          g.querySelector('h2 span').textContent = n;
+        });
+        // Chips par count: search ke hisaab se har category mein kitne milte hain
+        chips.forEach((c) => {
+          const n = rows.filter((r) => (!c.dataset.cat || r.dataset.cat === c.dataset.cat) && terms.every((t) => r.dataset.text.includes(t))).length;
+          c.querySelector('span').textContent = n;
+          c.classList.toggle('zero', n === 0);
+        });
+        jumps.forEach((j) => (j.hidden = !document.querySelector(`[data-group="${j.dataset.jump}"]:not([hidden])`)));
+        count.textContent = `${shown} ${shown === 1 ? 'item' : 'items'}${q ? ` for “${input.value.trim()}”` : ''}`;
+        empty.hidden = shown > 0;
+        document.getElementById('empty-q').textContent = input.value.trim();
+        const url = new URL(location.href);
+        q ? url.searchParams.set('q', input.value.trim()) : url.searchParams.delete('q');
+        cat ? url.searchParams.set('cat', cat) : url.searchParams.delete('cat');
+        url.searchParams.delete('focus');
+        history.replaceState(null, '', url);
+      };
+
+      input.addEventListener('input', apply);
+      chips.forEach((c) => c.addEventListener('click', () => {
+        cat = c.dataset.cat;
+        chips.forEach((x) => x.classList.toggle('on', x === c));
+        apply();
+      }));
+      document.querySelectorAll('[data-suggest]').forEach((b) => b.addEventListener('click', () => {
+        input.value = b.dataset.suggest; input.focus(); apply();
+      }));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { input.value = ''; apply(); }
+        if (e.key === 'Enter') { const first = document.querySelector('.groups li:not([hidden]) .row[href]'); if (first) first.click(); }
+      });
+
+      // URL se shuru: /explore/?q=python&cat=Skills  (link share karne ke liye)
+      const params = new URLSearchParams(location.search);
+      if (params.get('q')) input.value = params.get('q');
+      if (params.get('cat')) { const c = chips.find((x) => x.dataset.cat === params.get('cat')); if (c) c.click(); }
+      const wantFocus = params.has('focus') || !!params.get('q');
+      apply();
+      if (wantFocus) input.focus();
+    })();
+  </script>
+</Base>
+
+<style>
+  .head { padding-block: 72px 24px; }
+  h1 { font-size: clamp(3rem, 9vw, 6rem); margin: 10px 0 14px; letter-spacing: -.03em; }
+  .lead { color: var(--muted); font-size: 1.15rem; max-width: 620px; margin: 0 0 30px; }
+
+  .searchbox {
+    position: relative; display: flex; align-items: center; gap: 12px; max-width: 760px;
+    padding: 6px 10px 6px 20px; border-radius: 999px; background: var(--surface);
+    border: 1.5px solid var(--line); box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s;
+  }
+  .searchbox:focus-within { border-color: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent), var(--shadow); }
+  .searchbox svg { width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex-shrink: 0; }
+  .searchbox input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink); font: 500 1.1rem 'Inter', sans-serif; padding: 14px 0; }
+  .searchbox input::placeholder { color: var(--muted); opacity: .8; }
+  .searchbox input::-webkit-search-cancel-button { cursor: pointer; }
+  kbd { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+
+  .suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 16px 0 26px; font-size: 14px; color: var(--muted); }
+  .suggest button { border: none; background: none; color: var(--accent); font: 500 14px 'Inter', sans-serif; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+  .suggest button:hover { background: var(--accent-soft); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 14px; font: 600 14px 'Inter', sans-serif; cursor: pointer; transition: all .2s; }
+  .chip span { font: 500 11px 'JetBrains Mono', monospace; color: var(--muted); }
+  .chip:hover { border-color: var(--accent); }
+  .chip.on { background: var(--sun); border-color: transparent; color: #fff; }
+  .chip.on span { color: rgba(255,255,255,.85); }
+  .chip.zero:not(.on) { opacity: .45; }
+  .count { margin: 18px 0 0; font: 500 13px 'JetBrains Mono', monospace; color: var(--muted); }
+
+  .index { padding-top: 24px; }
+  .layout { display: grid; grid-template-columns: 180px 1fr; gap: 40px; align-items: start; }
+  .jump { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 2px; }
+  .jump p { margin: 0 0 8px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .jump a { color: var(--muted); font-weight: 500; padding: 6px 10px; border-radius: 10px; }
+  .jump a:hover { color: var(--ink); background: var(--surface); text-decoration: none; }
+
+  .group { scroll-margin-top: 100px; }
+  .group + .group { margin-top: 44px; }
+  .group h2 { display: flex; align-items: baseline; gap: 12px; font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 14px; padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
+  .group h2 span { font: 500 14px 'JetBrains Mono', monospace; color: var(--accent); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li + li { border-top: 1px solid var(--line); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 12px; border-radius: 14px; color: var(--ink); transition: background .2s, transform .2s; }
+  a.row:hover { text-decoration: none; background: var(--surface); transform: translateX(6px); }
+  a.row:hover .arrow { color: var(--accent); transform: translateX(4px); }
+  .main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .t { font: 600 1.15rem/1.3 'Fraunces', serif; }
+  .t :global(mark) { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 4px; padding: 0 2px; }
+  .d { color: var(--muted); font-size: .95rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tags i { font: normal 500 11px 'JetBrains Mono', monospace; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 8px; }
+  .side { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  time { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+  .arrow { font-size: 1.2rem; color: var(--muted); transition: transform .2s, color .2s; }
+  .badge { font: 500 10px 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+  .soon { opacity: .65; }
+
+  .empty { padding: 40px 0; }
+  .empty .big { font: 600 1.6rem 'Fraunces', serif; margin: 0 0 6px; }
+
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    .jump { display: none; }
+    .chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: -24px; padding: 2px 24px 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex-shrink: 0; }
+    .head { padding-top: 48px; }
+    kbd { display: none; }
+    .row { padding: 14px 6px; }
+    time { display: none; }
+  }
+</style>

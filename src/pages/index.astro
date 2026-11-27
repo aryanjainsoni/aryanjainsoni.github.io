@@ -13,6 +13,7 @@ import SplitText from '../components/bits/SplitText';
 import Magnet from '../components/bits/Magnet';
 import ScrollReveal from '../components/bits/ScrollReveal';
 import { site, topics } from '../data/site';
+import { chapters, projects } from '../data/profile';
 import { getEntries, getStats, streaks } from '../lib/journal';
 import { getLeetCode, leetLevel } from '../lib/leetcode';
 
@@ -31,40 +32,6 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
 const rowA = ['C++', 'Python', 'DSA', 'Machine Learning', 'Java', 'SQL', 'Streamlit', 'Git'];
 const rowB = ['Abacus', 'Football', 'Sketching', 'Swimming', 'Gym', 'Vedantu AI', 'LeetCode', 'Journal'];
 
-// "Chapters" — zindagi ke hisse, ek-ek line mein
-const chapters = [
-  { n: '01', title: 'Abacus', line: 'Class 4–5. Where numbers first clicked — and a certificate to prove it.' },
-  { n: '02', title: 'Sport', line: 'First on sports day, again and again. A drawer full of certificates.' },
-  { n: '03', title: 'Football', line: 'Class 7–9. Tournament winners — our photo made the newspaper.' },
-  { n: '04', title: 'Art', line: 'Drawing since I can remember. Published in print.' },
-  { n: '05', title: 'Code', line: 'B.Tech CSE at ADYPU. C++, Python, Java — and DSA, daily.' },
-  { n: '06', title: 'AI', line: 'Vedantu AI course, ML projects, a model that hits 96.5%.' },
-  { n: '07', title: 'Body', line: 'Gym since last year. Swimming, just learned. Discipline travels.' },
-];
-
-const projects = [
-  {
-    n: '01', kind: 'ML · Team of 3', name: 'Breast Cancer Prediction',
-    line: 'Classifies tumours as benign or malignant. I owned the repo, the fixes and the deployment.',
-    stats: [['96.5%', 'accuracy'], ['100%', 'precision'], ['95.1%', 'F1-score'], ['569', 'records']],
-    links: [['Live demo', 'https://breastcancer-gk.streamlit.app/'], ['Code', 'https://github.com/aryanjainsoni/Breast_cancer_Prediction_model']],
-    art: ['#ff8a3d', '#ff2e7e'],
-  },
-  {
-    n: '02', kind: 'Product design · SRS', name: 'MentorLoop',
-    line: 'An AI-enabled smart campus: QR attendance, timetables, notes, real-time chat and push alerts.',
-    stats: [['QR', 'attendance'], ['Live', 'chat'], ['SRS', 'DFD · ER · Use-case'], ['2025', 'year']],
-    links: [],
-    art: ['#962fbf', '#ff4d8d'],
-  },
-  {
-    n: '03', kind: 'System concept · SRS', name: 'Thermal Security System',
-    line: 'Thermal imaging + neural networks to catch suspicious activity and hazards, with instant alerts.',
-    stats: [['ANN', 'detection'], ['SMS', 'email alerts'], ['SRS', 'architecture'], ['2025', 'year']],
-    links: [],
-    art: ['#f9844a', '#7a2fbf'],
-  },
-];
 ---
 <Base>
   <!-- ================= 1. CINEMATIC HERO ================= -->
@@ -162,7 +129,7 @@ const projects = [
   </section>
 
   <!-- ================= 4. CHAPTERS (light editorial panel) ================= -->
-  <section class="chapters">
+  <section class="chapters" id="chapters">
     <div class="wrap">
       <h2 class="giant">Chapters</h2>
       <ol>
@@ -177,7 +144,7 @@ const projects = [
   </section>
 
   <!-- ================= 5. CONSISTENCY ================= -->
-  <section class="proof">
+  <section class="proof" id="consistency">
     <div class="wrap">
       <p class="kicker" data-reveal>Consistency</p>
       <h2 class="section-title" data-reveal>Showing up, <em class="sun">daily.</em></h2>
@@ -212,7 +179,7 @@ const projects = [
   </section>
 
   <!-- ================= 6. PROJECTS (sticky stacking cards) ================= -->
-  <section class="work">
+  <section class="work" id="work">
     <div class="wrap">
       <h2 class="giant">Work</h2>
       <div class="stack" data-stack>

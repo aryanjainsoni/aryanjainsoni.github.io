@@ -43,5 +43,6 @@ export const topics = [
 export const nav = [
   { label: 'Home', href: '/' },
   ...topics.filter((t) => t.ready && !t.external).map((t) => ({ label: t.title, href: t.href })),
+  { label: 'Index', href: '/explore/' },
   { label: 'About', href: '/about/' },
 ];
