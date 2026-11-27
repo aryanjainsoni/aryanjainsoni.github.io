@@ -2,6 +2,8 @@
 
 export const site = {
   name: 'Aryan Jain',
+  // Brand naam — browser tab, app icon aur share preview mein dikhta hai
+  brand: 'Ascent',
   tagline: 'Learning out loud — one day at a time.',
   role: 'B.Tech CSE @ ADYPU · AI/ML · C++ · Python',
   location: 'Pune, India',

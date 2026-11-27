@@ -9,7 +9,8 @@ interface Props {
   description?: string;
 }
 const { title, description = site.tagline } = Astro.props;
-const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${site.tagline}`;
+// Home: "Ascent — Aryan Jain"   Baaki pages: "Journal · Ascent"
+const fullTitle = title ? `${title} · ${site.brand}` : `${site.brand} — ${site.name}`;
 const path = Astro.url.pathname;
 // Logo ke letters alag-alag, taaki hover par lehar (wave) chale
 const first = [...'Aryan'];
