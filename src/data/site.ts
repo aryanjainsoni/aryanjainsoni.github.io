@@ -16,8 +16,8 @@ export const links = [
   { label: 'LeetCode', href: 'https://leetcode.com/u/aryanjainsoni/' },
   { label: 'Instagram', href: 'https://www.instagram.com/aryanjainsoni/' },
   { label: 'X', href: 'https://x.com/Aryanjainsoni' },
-  // ALTA student hub profile — login-only: sirf logged-in user ko profile dikhta hai, baaki sabko login page
-  { label: 'ALTA School of Technology', href: 'https://hub.altaschool.tech/#/studentProfile' },
+  // ALTA student hub dashboard — login-only: logged-in user ko dashboard, baaki sabko login page
+  { label: 'ALTA School of Technology', href: 'https://hub.altaschool.tech/#/dashboard' },
 ];
 
 // Home par dikhne wale visual cards.
