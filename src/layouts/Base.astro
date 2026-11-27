@@ -11,6 +11,9 @@ interface Props {
 const { title, description = site.tagline } = Astro.props;
 const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${site.tagline}`;
 const path = Astro.url.pathname;
+// Logo ke letters alag-alag, taaki hover par lehar (wave) chale
+const first = [...'Aryan'];
+const last = [...'Jain'];
 ---
 <!doctype html>
 <html lang="en">
@@ -24,7 +27,7 @@ const path = Astro.url.pathname;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600;1,9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,600;1,9..144,700;1,9..144,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
     <!-- Page dikhne se pehle hi sahi theme laga do, taaki flash na ho -->
@@ -39,7 +42,12 @@ const path = Astro.url.pathname;
 
     <header class="top">
       <div class="wrap bar">
-        <a class="logo" href="/">aryan<span class="sun">.</span>jain</a>
+        <a class="logo" href="/" aria-label={`${site.name} — home`}>
+          <span class="mark" aria-hidden="true"><span class="ring"></span><b>AJ</b></span>
+          <span class="word" aria-hidden="true">
+            {first.map((c, i) => <i style={`--i:${i}`}>{c}</i>)}<i class="gap"></i>{last.map((c, i) => <i class="sun" style={`--i:${i + 6}`}>{c}</i>)}<i class="dot" style="--i:10">.</i>
+          </span>
+        </a>
         <nav aria-label="Main">
           {nav.map((item) => (
             <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>{item.label}</a>
@@ -130,10 +138,45 @@ const path = Astro.url.pathname;
     backdrop-filter: blur(14px) saturate(1.4);
     border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   }
-  .bar { display: flex; align-items: center; justify-content: space-between; height: 66px; gap: 16px; }
-  .logo { font: italic 700 22px 'Fraunces', serif; color: var(--ink); letter-spacing: -0.02em; }
+  .bar { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 16px; }
+  /* ===== Logo: AJ badge + wave wordmark ===== */
+  .logo { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); }
   .logo:hover { text-decoration: none; }
-  .logo .sun { font-style: normal; }
+
+  .mark { position: relative; display: grid; place-items: center; width: 46px; height: 46px; flex-shrink: 0; }
+  .mark b {
+    position: relative; z-index: 1; display: grid; place-items: center;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--sun); color: #fff;
+    font: 900 15px/1 'Fraunces', serif; letter-spacing: -0.03em;
+    box-shadow: 0 6px 18px -6px var(--accent-2);
+    transition: transform 0.6s cubic-bezier(.2,.7,.2,1);
+  }
+  /* Badge ke chaaron taraf ghoomti gradient ring */
+  .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, #ff8a3d, #ff2e7e, transparent 55%, #ff8a3d);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+    animation: spin 6s linear infinite;
+  }
+  .logo:hover .ring { animation-duration: 1.2s; }
+  .logo:hover .mark b { transform: rotate(360deg) scale(1.08); }
+
+  .word { display: inline-flex; align-items: baseline; font: 900 26px/1 'Fraunces', serif; letter-spacing: -0.03em; }
+  .word i { display: inline-block; font-style: normal; }
+  /* italic letters ka swash gradient se kate nahi — thodi extra jagah */
+  .word .sun { font-style: italic; padding: 0.1em 0.08em 0.2em 0.12em; margin: -0.1em -0.08em -0.2em -0.12em; }
+  .word .gap { width: 0.28em; }
+  .word .dot { color: var(--accent-2); }
+  .logo:hover .word i { animation: wave 0.6s cubic-bezier(.3,.7,.3,1.4) both; animation-delay: calc(var(--i) * 35ms); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes wave { 40% { transform: translateY(-7px) rotate(-4deg); } 100% { transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ring, .logo:hover .word i { animation: none; }
+    .logo:hover .mark b { transform: none; }
+  }
   nav { display: flex; align-items: center; gap: 22px; }
   nav a { position: relative; color: var(--muted); font-size: 14px; font-weight: 500; }
   nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: var(--sun); border-radius: 2px; transform: scaleX(0); transition: transform 0.25s; }
@@ -158,9 +201,12 @@ const path = Astro.url.pathname;
   .sign { font: 700 clamp(1.8rem, 5vw, 3rem)/1.1 'Fraunces', serif; margin: 0 0 32px; letter-spacing: -0.02em; }
   .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 14px; }
 
+  @media (max-width: 420px) { .word { display: none; } }
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }
-    .logo { font-size: 19px; }
+    .word { font-size: 21px; }
+    .mark { width: 40px; height: 40px; }
+    .mark b { width: 33px; height: 33px; font-size: 13px; }
     nav { gap: 14px; }
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }
   }
