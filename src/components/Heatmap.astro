@@ -63,9 +63,11 @@ const fmt = (k: string) =>
 </div>
 <script is:inline>
   // Mobile par calendar ka aaj wala (right) hissa pehle dikhao
-  const toToday = () => document.querySelectorAll('.heatmap .scroll').forEach((el) => (el.scrollLeft = el.scrollWidth));
-  toToday();
-  addEventListener('load', toToday);
+  (() => {
+    const toToday = () => document.querySelectorAll('.heatmap .scroll').forEach((el) => (el.scrollLeft = el.scrollWidth));
+    toToday();
+    addEventListener('load', toToday);
+  })();
 </script>
 
 <style>
