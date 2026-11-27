@@ -16,8 +16,8 @@ export const links = [
   { label: 'LeetCode', href: 'https://leetcode.com/u/aryanjainsoni/' },
   { label: 'Instagram', href: 'https://www.instagram.com/aryanjainsoni/' },
   { label: 'X', href: 'https://x.com/Aryanjainsoni' },
-  // College partner — public website (hub.altaschool.tech sirf login wala portal hai)
-  { label: 'ALTA School of Technology', href: 'https://www.altaschool.tech/' },
+  // ALTA student hub profile — login-only: sirf logged-in user ko profile dikhta hai, baaki sabko login page
+  { label: 'ALTA School of Technology', href: 'https://hub.altaschool.tech/#/studentProfile' },
 ];
 
 // Home par dikhne wale visual cards.
