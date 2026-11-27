@@ -43,7 +43,7 @@ const last = [...'Jain'];
     <header class="top">
       <div class="wrap bar">
         <a class="logo" href="/" aria-label={`${site.name} — home`}>
-          <span class="mark" aria-hidden="true"><span class="ring"></span><b>AJ</b></span>
+          <span class="mark" aria-hidden="true"><span class="ring"></span><b><img src="/images/me.jpg" alt="" width="40" height="40" /></b></span>
           <span class="word" aria-hidden="true">
             {first.map((c, i) => <i style={`--i:${i}`}>{c}</i>)}<i class="gap"></i>{last.map((c, i) => <i class="sun" style={`--i:${i + 6}`}>{c}</i>)}<i class="dot" style="--i:10">.</i>
           </span>
@@ -143,15 +143,15 @@ const last = [...'Jain'];
   .logo { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); }
   .logo:hover { text-decoration: none; }
 
-  .mark { position: relative; display: grid; place-items: center; width: 46px; height: 46px; flex-shrink: 0; }
+  .mark { position: relative; display: grid; place-items: center; width: 54px; height: 54px; flex-shrink: 0; }
   .mark b {
     position: relative; z-index: 1; display: grid; place-items: center;
-    width: 38px; height: 38px; border-radius: 50%;
-    background: var(--sun); color: #fff;
-    font: 900 15px/1 'Fraunces', serif; letter-spacing: -0.03em;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--sun); overflow: hidden;
     box-shadow: 0 6px 18px -6px var(--accent-2);
     transition: transform 0.6s cubic-bezier(.2,.7,.2,1);
   }
+  .mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   /* Badge ke chaaron taraf ghoomti gradient ring */
   .ring {
     position: absolute; inset: 0; border-radius: 50%;
@@ -161,7 +161,7 @@ const last = [...'Jain'];
     animation: spin 6s linear infinite;
   }
   .logo:hover .ring { animation-duration: 1.2s; }
-  .logo:hover .mark b { transform: rotate(360deg) scale(1.08); }
+  .logo:hover .mark b { transform: scale(1.12); }
 
   .word { display: inline-flex; align-items: baseline; font: 900 26px/1 'Fraunces', serif; letter-spacing: -0.03em; }
   .word i { display: inline-block; font-style: normal; }
@@ -205,8 +205,8 @@ const last = [...'Jain'];
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }
     .word { font-size: 21px; }
-    .mark { width: 40px; height: 40px; }
-    .mark b { width: 33px; height: 33px; font-size: 13px; }
+    .mark { width: 46px; height: 46px; }
+    .mark b { width: 39px; height: 39px; }
     nav { gap: 14px; }
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }
   }
