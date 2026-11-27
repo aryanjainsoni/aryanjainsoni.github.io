@@ -7,7 +7,7 @@ export const site = {
   location: 'Pune, India',
   leetcode: 'aryanjainsoni',
   // Apni Habit Tracker Google Sheet ka link yahan paste karo (Share → Copy link). Khaali ho to button nahi dikhega.
-  trackerUrl: '',
+  trackerUrl: 'https://docs.google.com/spreadsheets/d/1Q5VmpzsFNSOjB5v1Y_DjRDtLoPALP2hmfaOsLEB1GLg/edit?gid=1146949084#gid=1146949084',
   // Journey shuru hone ki date — isse "Day X" count hota hai
   startDate: '2026-11-27',
 };
