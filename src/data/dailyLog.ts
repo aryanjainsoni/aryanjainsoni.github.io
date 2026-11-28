@@ -13,7 +13,7 @@ export type Q = {
   options?: string[]; out: 'meta' | 'learned' | 'did' | 'reflect' | 'tomorrow' | 'none';
   prefix?: string; tag?: string; required?: boolean; private?: boolean; unit?: string;
   step?: number; // number input ka step (default 0.5)
-  auto?: 'github'; // 'github' -> us date ke GitHub commits apne aap bhar deta hai
+  auto?: 'github' | 'win' | 'hard' | 'tomorrow'; // auto-filled from the day's data (GitHub, LeetCode, Goals, answers) until you edit it
   fm?: boolean;  // true -> answer journal ke frontmatter mein bhi jaata hai (charts ke liye, e.g. steps)
 };
 export type Section = { id: string; title: string; intro: string; questions: Q[] };
@@ -62,10 +62,11 @@ export const dailyLog: Section[] = [
   {
     id: 'reflect', title: 'Reflect', intro: 'Two minutes of honesty — this is what makes the journal yours.',
     questions: [
-      { id: 'win', label: 'Biggest win today', type: 'long', out: 'reflect', prefix: 'Win' },
-      { id: 'hard', label: 'What was hard / where I got stuck', type: 'long', out: 'reflect', prefix: 'Hard' },
+      { id: 'win', label: 'Biggest win today', hint: 'Auto-drafted from your day — edit to make it yours', type: 'long', out: 'reflect', prefix: 'Win', auto: 'win' },
+      { id: 'hard', label: 'What was hard / where I got stuck', hint: 'Auto-drafted from missed goals, sleep, diet — edit freely', type: 'long', out: 'reflect', prefix: 'Hard', auto: 'hard' },
       { id: 'grateful', label: 'Grateful for (private)', hint: 'Stays in this browser only — never published', type: 'text', out: 'none', private: true },
-      { id: 'tomorrow', label: 'Tomorrow — top 3', hint: 'One per line', type: 'list', out: 'tomorrow' },
+      { id: 'tomorrow', label: 'Tomorrow — top 3', hint: 'Auto-picked from today’s missed goals + tomorrow’s weekly tasks · one per line', type: 'list', out: 'tomorrow', auto: 'tomorrow' },
+      { id: 'extra', label: 'Anything else? (your own words)', hint: 'A thought, a feeling, something that happened — this part is all you', type: 'long', out: 'reflect', prefix: 'Also' },
     ],
   },
 ];

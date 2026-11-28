@@ -5,8 +5,14 @@
 import Base from '../layouts/Base.astro';
 import { dailyLog, repo } from '../data/dailyLog';
 import { getEntries } from '../lib/journal';
+import { getLeetCode } from '../lib/leetcode';
+import { goals } from '../data/profile';
 
 const existing = (await getEntries()).map((e) => e.id);
+// LeetCode submissions per day (last 60 days, as of the last site build) — used by the auto-drafted reflection
+const lc = await getLeetCode();
+const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+const leet = lc ? Object.fromEntries([...lc.byDay].filter(([d]) => d >= since)) : {};
 const all = dailyLog.flatMap((s) => s.questions);
 // Chhote icons multi-select options ke liye (apne design — LinkedIn ke official art nahi)
 const icons: Record<string, string> = {
@@ -25,6 +31,7 @@ const icons: Record<string, string> = {
         <span class="saved" id="saved" aria-live="polite">Draft saves automatically</span>
         <span class="progress" id="progress">0 answered</span>
       </div>
+      <p class="drafts" id="drafts" hidden></p>
       <p class="warn" id="exists" hidden>An entry for this date is already published. Publishing again opens GitHub’s editor for that file — paste the new text there (it’s copied for you).</p>
     </div>
   </section>
@@ -44,6 +51,7 @@ const icons: Record<string, string> = {
                 {q.hint && <p class="hint">{q.hint}</p>}
                 {q.type === 'text' && <input id={`f-${q.id}`} name={q.id} type="text" />}
                 {(q.type === 'long' || q.type === 'list') && <textarea id={`f-${q.id}`} name={q.id} rows={q.type === 'list' ? 3 : 2} placeholder={q.type === 'list' ? 'One per line' : ''}></textarea>}
+                {q.auto && q.auto !== 'github' && <div class="auto"><span class="ad" id={`ad-${q.id}`}>auto</span><button type="button" class="link" data-redraft={q.id}>⟳ Re-draft</button></div>}
                 {q.auto === 'github' && <div class="auto"><button type="button" class="link" id="gh-fetch">⟳ Fetch from GitHub</button><span id="gh-status" aria-live="polite"></span></div>}
                 {q.type === 'number' && <span class="num"><input id={`f-${q.id}`} name={q.id} type="number" min="0" step={q.step ?? 0.5} inputmode={q.step === 1 ? "numeric" : "decimal"} />{q.unit && <em>{q.unit}</em>}</span>}
                 {q.type === 'rate' && (
@@ -85,7 +93,7 @@ const icons: Record<string, string> = {
     </div>
   </section>
 
-  <script type="application/json" id="log-config" set:html={JSON.stringify({ questions: all, repo, existing })} />
+  <script type="application/json" id="log-config" set:html={JSON.stringify({ questions: all, repo, existing, leet, goals })} />
 
   <script is:inline>
     (() => {
@@ -172,10 +180,70 @@ const icons: Record<string, string> = {
         return html;
       };
 
+      // ---------- AUTO-DRAFT: win / hard / tomorrow from the day's data ----------
+      // A field keeps updating itself while it still equals the last auto text. The moment you edit it, it's yours.
+      let autoMem = {};            // id -> last auto text (saved with the draft as "_auto")
+      const ghData = {};           // date -> { n, repos: [[name, count, [msgs]]] }
+      const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const fmt12 = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`; };
+      const isoWeek = (ds) => { const d = new Date(ds + 'T00:00:00Z'); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day + 3); const y = d.getUTCFullYear(); const jan4 = new Date(Date.UTC(y, 0, 4)); const w = 1 + Math.round(((d - jan4) / 864e5 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7); return `${y}-W${pad(w)}`; };
+      const addDay = (ds, n) => { const d = new Date(ds + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+      const goalsCfg = () => { try { const c = JSON.parse(localStorage.getItem('goals:config') || 'null'); if (c?.daily) return c; } catch {} return CFG.goals; };
+      const cut = (s, n = 70) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
+      const drafts = (v) => {
+        const d = dateIn.value, gh = ghData[d], lcN = CFG.leet[d] || 0, cfg = goalsCfg();
+        let ticks = {}; try { ticks = JSON.parse(localStorage.getItem(`goals:${d}`) || '{}'); } catch {}
+        const daily = cfg.daily || [], done = daily.filter((g) => ticks[g.id]), missed = daily.filter((g) => !ticks[g.id]);
+        const goalsLogged = Object.keys(ticks).length > 0;
+        const dsaN = (v.dsa || '').split('\n').filter((l) => l.trim()).length || 0;
+        const sleep = parseFloat(v.sleep), steps = parseFloat(v.steps), energy = Number(v.energy), mood = Number(v.mood);
+        const trained = v.gym && !['Skipped', 'Rest day'].includes(v.gym);
+        // WIN — strongest 2 things that happened
+        const wins = [];
+        if (gh?.n) wins.push([Math.min(30, gh.n * 2), `Shipped ${gh.n} commit${gh.n > 1 ? 's' : ''} to ${gh.repos.map((r) => r[0]).join(', ')} — ${cut(gh.repos[0][2].slice(-1)[0] || '')}`]);
+        if (v.gymNote) wins.push([25, `Gym: ${v.gymNote}`]); else if (trained) wins.push([8, `Trained ${v.gym.toLowerCase()}`]);
+        if (dsaN || lcN) wins.push([Math.max(dsaN, 1) * 6, dsaN ? `Solved ${dsaN} LeetCode problem${dsaN > 1 ? 's' : ''}` : `Kept LeetCode going (${lcN} submission${lcN > 1 ? 's' : ''})`]);
+        if (goalsLogged && done.length >= daily.length * 0.8) wins.push([20, `Hit ${done.length}/${daily.length} daily goals`]);
+        if (steps >= 10000) wins.push([10, `${Math.round(steps).toLocaleString('en-IN')} steps`]);
+        if (v.vedantu) wins.push([6, `Learned: ${cut(v.vedantu, 60)}`]);
+        const win = wins.sort((a, b) => b[0] - a[0]).slice(0, 2).map((w) => w[1]).join('; ');
+        // HARD — honest list of what slipped
+        const hard = [];
+        if (goalsLogged && missed.length) hard.push(`Missed ${missed.slice(0, 3).map((g) => g.name).join(', ')}${missed.length > 3 ? ` +${missed.length - 3} more` : ''}`);
+        if (sleep && sleep < 7) hard.push(`only ${sleep}h sleep`);
+        if (v.diet === 'Off track' || v.diet === 'Mostly') hard.push(`diet ${v.diet.toLowerCase()}`);
+        if (v.gym === 'Skipped') hard.push('skipped the gym');
+        if (steps && steps < 7000) hard.push(`only ${Math.round(steps).toLocaleString('en-IN')} steps`);
+        if ((energy && energy <= 2) || (mood && mood <= 2)) hard.push(`low ${energy && energy <= 2 ? 'energy' : 'mood'}`);
+        if (!dsaN && !lcN) hard.push('no LeetCode today');
+        const hardTxt = hard.length ? hard.join('; ').replace(/^./, (c) => c.toUpperCase()) + '.' : '';
+        // TOMORROW — missed daily goals first, then tomorrow's weekly tasks, then the streak keepers
+        const t = addDay(d, 1), tDay = DAYS[new Date(t + 'T00:00:00Z').getUTCDay()], wk = isoWeek(t);
+        let wt = {}; try { wt = JSON.parse(localStorage.getItem(`goals:${wk}`) || '{}'); } catch {}
+        const weeklyDue = (cfg.weekly || []).filter((w) => (w.days || []).includes(tDay) && Object.keys(wt).filter((k) => k.startsWith(w.id + '@') && wt[k]).length < (Number(w.target) || 1));
+        const label = (g) => g.name + (g.time ? ` · ${fmt12(g.time)}` : '');
+        const picks = [...(goalsLogged ? missed : []).map(label), ...weeklyDue.map(label), '1 LeetCode question', 'GitHub commit', 'Gym · 5:30 PM'];
+        const tomorrow = [...new Set(picks)].slice(0, 3).join('\n');
+        return { win, hard: hardTxt, tomorrow };
+      };
+      const applyAuto = () => {
+        const v = read(), a = drafts(v);
+        Object.keys(a).forEach((id) => {
+          const el = form.elements[id]; if (!el) return;
+          const mine = el.value.trim() && el.value !== (autoMem[id] ?? '');
+          const badge = $(`#ad-${id}`);
+          if (!mine) { el.value = a[id]; autoMem[id] = a[id]; }
+          if (badge) { badge.textContent = mine ? 'your words ✓' : a[id] ? 'auto · updates as your day fills' : 'auto · fills in as you log'; badge.classList.toggle('mine', !!mine); }
+        });
+      };
+      $$('[data-redraft]').forEach((b) => b.addEventListener('click', () => { const id = b.dataset.redraft, el = form.elements[id]; if (el.value.trim() && el.value !== autoMem[id] && !confirm('Replace your text with a fresh auto-draft?')) return; el.value = ''; autoMem[id] = ''; update(); }));
+
       let md = '';
+      const stamp = () => new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
       const update = (persist = true) => {
+        applyAuto();
         const v = read();
-        if (persist) { try { localStorage.setItem(key(), JSON.stringify(v)); $('#saved').textContent = 'Draft saved ✓'; } catch {} }
+        if (persist) { try { localStorage.setItem(key(), JSON.stringify({ ...v, _auto: autoMem, _saved: Date.now() })); $('#saved').textContent = `Saved ✓ ${stamp()}`; } catch {} }
         const answered = Q.filter((q) => v[q.id]).length;
         $('#progress').textContent = `${answered} of ${Q.length} answered`;
         md = toMarkdown(v);
@@ -187,7 +255,7 @@ const icons: Record<string, string> = {
       const ghStatus = (t) => { const el = $('#gh-status'); if (el) el.textContent = t; };
       const ghFetch = async (force) => {
         const el = form.elements['github']; if (!el) return;
-        if (!force && el.value.trim()) return;
+        if (!force && el.value.trim() && ghData[dateIn.value]) return;
         const d = dateIn.value, q = `author:${CFG.repo.owner} author-date:${d}T00:00:00+05:30..${d}T23:59:59+05:30`;
         ghStatus('Fetching your commits…');
         try {
@@ -196,12 +264,13 @@ const icons: Record<string, string> = {
           const j = await r.json();
           if (d !== dateIn.value) return; // date changed while loading
           const items = (j.items || []).filter((i) => !/^Merge /.test(i.commit.message));
-          if (!items.length) { ghStatus(`No public commits on ${d}.`); return; }
+          if (!items.length) { ghData[d] = { n: 0, repos: [] }; ghStatus(`No public commits on ${d}.`); update(); return; }
           const byRepo = new Map();
           items.forEach((i) => { const name = i.repository.name, line = i.commit.message.split('\n')[0].trim(); const list = byRepo.get(name) || []; if (!list.includes(line)) list.push(line); byRepo.set(name, list); });
           const count = (name) => items.filter((i) => i.repository.name === name).length;
           const text = [...byRepo].map(([name, msgs]) => `${name} (${count(name)} commit${count(name) > 1 ? 's' : ''}): ${msgs.slice(0, 8).join('; ')}${msgs.length > 8 ? `; +${msgs.length - 8} more` : ''}`).join('\n');
-          if (!force && el.value.trim()) return; // you started typing meanwhile
+          ghData[d] = { n: items.length, repos: [...byRepo].map(([name, msgs]) => [name, count(name), msgs]) };
+          if (!force && el.value.trim()) { ghStatus(`✓ ${items.length} commits found — box already has your text`); update(); return; } // you started typing meanwhile
           el.value = text; el.dispatchEvent(new Event('input', { bubbles: true }));
           ghStatus(`✓ ${items.length} commit${items.length > 1 ? 's' : ''} from GitHub · edit freely`);
         } catch (e) {
@@ -210,11 +279,23 @@ const icons: Record<string, string> = {
       };
       $('#gh-fetch')?.addEventListener('click', () => { const el = form.elements['github']; if (el?.value.trim() && !confirm('Replace what’s in the GitHub box with your commits?')) return; ghFetch(true); });
 
+      // remind about drafts from other days that were never published
+      const showDrafts = () => {
+        const list = Object.keys(localStorage).filter((k) => k.startsWith('log:draft:')).map((k) => k.slice(10))
+          .filter((d) => d !== dateIn.value && !CFG.existing.includes(d) && /^\d{4}-\d{2}-\d{2}$/.test(d))
+          .filter((d) => { try { const o = JSON.parse(localStorage.getItem('log:draft:' + d) || '{}'); return Object.entries(o).some(([k, x]) => !k.startsWith('_') && k !== 'github' && String(x).trim()); } catch { return false; } })
+          .sort().reverse().slice(0, 5);
+        const el = $('#drafts'); el.hidden = !list.length;
+        el.innerHTML = list.length ? 'Unpublished draft' + (list.length > 1 ? 's' : '') + ': ' + list.map((d) => `<button type="button" class="link" data-open="${d}">${new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} →</button>`).join(' ') : '';
+        $$('[data-open]', el).forEach((b) => b.addEventListener('click', () => { dateIn.value = b.dataset.open; loadDay(); }));
+      };
       const loadDay = () => {
         let v = {};
         try { v = JSON.parse(localStorage.getItem(key()) || '{}'); } catch {}
+        autoMem = v._auto || {}; const savedAt = v._saved; delete v._auto; delete v._saved;
         write(v); update(false);
-        $('#saved').textContent = Object.keys(v).length ? 'Draft restored' : 'Draft saves automatically';
+        showDrafts();
+        $('#saved').textContent = Object.keys(v).length ? `Draft restored${savedAt ? ` · last saved ${new Date(savedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}` : 'Draft saves automatically · even if you close the site';
         const url = new URL(location.href);
         dateIn.value === today ? url.searchParams.delete('date') : url.searchParams.set('date', dateIn.value);
         history.replaceState(null, '', url);
@@ -301,6 +382,9 @@ const icons: Record<string, string> = {
   .rate input:checked + span, .chips input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
   .rate input:focus-visible + span, .chips input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .rate label:hover span, .chips label:hover span { border-color: var(--accent); }
+  .ad { font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 9px; }
+  .ad.mine { color: #2f9e6b; background: color-mix(in srgb, #2f9e6b 14%, transparent); }
+  .drafts { margin: 12px 0 0; font-size: .9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
   .auto { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
   .auto span { font-size: .82rem; color: var(--muted); }
   .link { border: none; background: none; color: var(--accent); font: 600 13px 'Inter', sans-serif; cursor: pointer; justify-self: start; padding: 4px 0; }

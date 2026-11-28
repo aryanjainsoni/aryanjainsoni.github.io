@@ -56,6 +56,10 @@ decisions that are truly mine.
 ## HOW THINGS WORK (don't break these)
 - Daily Log GitHub box auto-fills from my public commits for that date (GitHub search API, IST day,
   grouped by repo; never overwrites typed text unless I press ⟳ Fetch).
+- Daily Log reflection auto-drafts "Biggest win", "What was hard", "Tomorrow top 3" from the day's data
+  (GitHub commits, LeetCode build data, Goals ticks, form answers). Each keeps updating until I edit it
+  (then badge = "your words ✓"); ⟳ Re-draft resets. "Anything else" = my own words. Drafts save on every
+  keystroke per date ("Saved ✓ time"), survive closing the site; unpublished older drafts are listed on top.
 - Daily Log (/log/): answers → markdown entry → "Publish to GitHub" opens github.com/.../new/main/... with
   the file prefilled; I press Commit. Drafts in localStorage ("log:draft:DATE"). "Grateful" is private.
 - Goals (/goals/): ticks + my edited goal list live in the BROWSER only (localStorage "goals:YYYY-MM-DD",
@@ -132,6 +136,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Daily Log: auto-drafted win/hard/tomorrow (live until edited), own-words field, saved time, unpublished-draft reminder.
 - 2026-11-28 Daily Log: GitHub box auto-fills from that date's public commits (+ ⟳ Fetch button).
 - 2026-11-28 Gym Notebook tab: 12 sourced chapters with 11 charts/diagrams (from the 100-day video + research).
 - 2026-11-28 Smart typing site-wide: suggestions, autocorrect + undo, spelling chip, learns my words.
