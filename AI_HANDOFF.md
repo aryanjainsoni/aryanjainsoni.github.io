@@ -19,7 +19,9 @@ decisions that are truly mine.
   learning Git/GitHub. Keep answers clear, not long.
 
 ## THE PROJECT
-- Live site: https://aryanjainsoni.github.io   (brand name: "Ascent", brand mark: "Circle Summit" — peak breaking out of a circle + climbing trail)
+- Live site: https://aryanjainsoni.github.io   (brand name: "Ascent", brand mark: "Circle Summit" — peak breaking out of a circle + climbing trail;
+  header logo = inline SVG mark + "Aryan Jain." wordmark in Base.astro, draws itself on the first page of a visit
+  (sessionStorage logo:seen → html.logo-intro), trail re-climbs on hover, calm/reduced-motion = static)
 - Repo: https://github.com/aryanjainsoni/aryanjainsoni.github.io  (branch: main, public)
 - Local path on my Mac: ~/aryanjainsoni.github.io
 - Stack: Astro 7 + React islands (@astrojs/react), plain CSS, TypeScript. Node 24 via nvm (.nvmrc = 24).
@@ -180,6 +182,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Header logo: photo badge → animated Circle Summit mark (draw-on-load once per visit, hover re-climb).
 - 2026-11-28 New brand mark "Circle Summit": favicon, app icons (incl. maskable), share preview image (og.png).
 - 2026-11-28 Settings v2: My targets, calendar reminders (.ics), privacy screen + auto-lock timer, full backup/restore + reminder dot, install app + offline (service worker), calm mode + text size, units (kg/lb, km/mi, 12/24h, week start), keyboard shortcuts.
 - 2026-11-28 Settings gear: 3D glass button; hover/open = orange fill + orange ring + glow.

@@ -57,6 +57,8 @@ const last = [...'Jain'];
         if (p.privacy) r.classList.add('privacy');
         r.dataset.text = p.text || 'm';
       } catch {}
+      // Logo draws itself only on the first page of a visit (not on every click)
+      try { if (!sessionStorage.getItem('logo:seen')) { document.documentElement.classList.add('logo-intro'); sessionStorage.setItem('logo:seen', '1'); } } catch {}
     </script>
   </head>
   <body>
@@ -65,7 +67,17 @@ const last = [...'Jain'];
     <header class="top">
       <div class="wrap bar">
         <a class="logo" href="/" aria-label={`${site.name} — home`}>
-          <span class="mark" aria-hidden="true"><span class="ring"></span><b><img src="/images/me.jpg" alt="" width="40" height="40" /></b></span>
+          <!-- Brand mark "Circle Summit" — draws itself on the first page of a visit, trail re-climbs on hover -->
+          <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <linearGradient id="lg-peak" gradientUnits="userSpaceOnUse" x1="22" y1="80" x2="70" y2="10"><stop offset="0" stop-color="#e23d6d" /><stop offset=".55" stop-color="#f0794c" /><stop offset="1" stop-color="#ffc46b" /></linearGradient>
+              <mask id="lg-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff" /><path d="M22 76 L50 10 L78 76" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" /></mask>
+            </defs>
+            <g mask="url(#lg-cut)"><circle class="m-ring" cx="50" cy="56" r="34" transform="rotate(90 50 56)" pathLength="1" /></g>
+            <path class="m-peak" d="M22 76 L50 10 L78 76" pathLength="1" />
+            <path class="m-trail" d="M32 62 L42 55 L50 59 L62 48" pathLength="1" />
+            <circle class="m-dot" cx="62" cy="48" r="4.5" />
+          </svg>
           <span class="word" aria-hidden="true">
             {first.map((c, i) => <i style={`--i:${i}`}>{c}</i>)}<i class="gap"></i>{last.map((c, i) => <i class="sun" style={`--i:${i + 6}`}>{c}</i>)}<i class="dot" style="--i:10">.</i>
           </span>
@@ -267,28 +279,27 @@ const last = [...'Jain'];
     border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   }
   .bar { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 16px; }
-  /* ===== Logo: AJ badge + wave wordmark ===== */
+  /* ===== Logo: Circle Summit mark + wave wordmark ===== */
   .logo { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); }
   .logo:hover { text-decoration: none; }
 
-  .mark { position: relative; display: grid; place-items: center; width: 54px; height: 54px; flex-shrink: 0; }
-  .mark b {
-    position: relative; z-index: 1; display: grid; place-items: center;
-    width: 46px; height: 46px; border-radius: 50%;
-    background: var(--sun); overflow: hidden;
-    box-shadow: 0 6px 18px -6px var(--accent-2);
-    transition: transform 0.6s cubic-bezier(.2,.7,.2,1);
-  }
-  .mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  /* Badge ke chaaron taraf ghoomti gradient ring */
-  .ring {
-    position: absolute; inset: 0; border-radius: 50%;
-    background: conic-gradient(from 0deg, #ff8a3d, #ff2e7e, transparent 55%, #ff8a3d);
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
-            mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
-    opacity: .9;
-  }
-  .logo:hover .mark b { transform: scale(1.12); }
+  .mark { width: 50px; height: 50px; flex-shrink: 0; overflow: visible; }
+  .mark :is(.m-ring, .m-peak, .m-trail) { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .m-ring { stroke: var(--ink); stroke-width: 6; }
+  .m-peak { stroke: url(#lg-peak); stroke-width: 9; transform-box: fill-box; transform-origin: 50% 100%; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+  .m-trail { stroke: var(--ink); stroke-width: 4.5; stroke-dasharray: 1; }
+  .m-dot { fill: var(--ink); transform-box: fill-box; transform-origin: center; transition: fill .3s, filter .3s; }
+  /* hover: the summit lifts a touch, the trail re-climbs, the dot catches the sun */
+  .logo:hover .m-peak { transform: translateY(-3px); }
+  .logo:hover .m-trail { animation: lg-draw .6s cubic-bezier(.5,0,.2,1); }
+  .logo:hover .m-dot { fill: #ffc46b; filter: drop-shadow(0 0 4px #f0794c); animation: lg-pop .5s .45s both; }
+  /* first page of a visit: ring → peak → trail → dot (class set in <head>, once per tab session) */
+  :global(html.logo-intro) .m-ring { stroke-dasharray: 1; animation: lg-draw .9s .1s cubic-bezier(.6,0,.2,1) both; }
+  :global(html.logo-intro) .m-peak { stroke-dasharray: 1; animation: lg-draw .8s .35s cubic-bezier(.6,0,.2,1) both; }
+  :global(html.logo-intro) .m-trail { animation: lg-draw .5s 1s cubic-bezier(.5,0,.2,1) both; }
+  :global(html.logo-intro) .m-dot { animation: lg-pop .55s 1.4s cubic-bezier(.3,1.6,.5,1) both; }
+  @keyframes lg-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  @keyframes lg-pop { 0% { transform: scale(0); } 60% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
   .word { display: inline-flex; align-items: baseline; font: 900 26px/1 'Fraunces', serif; letter-spacing: -0.03em; }
   .word i { display: inline-block; font-style: normal; }
@@ -300,8 +311,8 @@ const last = [...'Jain'];
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes wave { 40% { transform: translateY(-7px) rotate(-4deg); } 100% { transform: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .ring, .logo:hover .word i { animation: none; }
-    .logo:hover .mark b { transform: none; }
+    .logo:hover .word i, .mark * { animation: none !important; }
+    .logo:hover .m-peak { transform: none; }
   }
   nav { display: flex; align-items: center; gap: 22px; }
   nav a { position: relative; color: var(--muted); font-size: 14px; font-weight: 500; }
@@ -334,8 +345,7 @@ const last = [...'Jain'];
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }
     .word { font-size: 21px; }
-    .mark { width: 46px; height: 46px; }
-    .mark b { width: 39px; height: 39px; }
+    .mark { width: 42px; height: 42px; }
     nav { gap: 12px; }
     nav > a:first-child { display: none; } /* Home — logo already links home */
     #theme-toggle { display: none; } /* theme lives in Settings on phones */
