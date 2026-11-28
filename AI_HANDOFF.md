@@ -162,6 +162,12 @@ decisions that are truly mine.
   swipe, page corners, Index/Search tabs (sticky-note search → jumps + yellow highlighter), chart tap = zoom.
   Deep links #guide/p-5 and #nb-<chapter-file>; last page remembered (nb:last) → "Continue · p. N" on the cover.
   Paper-flip sound only when Gym sound is on. Calm mode / reduced motion = no 3D turn.
+  THEME (29 Nov): "Explorer's field journal". Closed = a REAL photo of the journal on slate (Aryan's Gemini image,
+  public/images/notebook/journal-scene*.webp, slow breathing + brass glint); tap → photo lifts, the flat cover
+  (leather texture tinted olive, leather spine strip, strap + buckle, brass corners, compass cut from the photo:
+  compass.webp) swings open. Pages: cream aged paper (paper.jpg lightened), sepia graph grid, faint contour lines,
+  brown-black ink; stitched leather spine replaces the spiral. Theme CSS = the "FIELD JOURNAL THEME" block at the
+  end of Notebook.astro's <style>.
 - Bucket list (/bucket/, noindex): header icon = small burgundy book next to Search. PRIVATE: wishes live ONLY in the
   encrypted Gym vault (key "fit:bucket") — never in the repo/HTML. fit-app.ts shows its lock inside [data-fit="bucket"]
   (styled as a brass plate) and, once unlocked, hands src/scripts/bucket.ts a get/set bridge via the 'ascent:vault'
@@ -244,6 +250,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-29 Notebook redesigned as a real explorer's field journal (photo cover, leather, graph paper, stitched spine).
 - 2026-11-29 Basecamp GYM tab: Mon–Sat V-shape plan with form photos; music button moved to the header.
 - 2026-11-28 Projects section (/projects/): document folders — Ascent (SRS, design, stack, security, tests, roadmap) + Parkinson's Disease Detection (overview + planned docs); Home card now live.
 - 2026-11-28 Cleanup: Gym → Basecamp, Goals merged into Today, header = Journal · Basecamp · About, Body → BMI, real padlock photos on the bucket lock.

@@ -195,10 +195,12 @@ function init(root: HTMLElement) {
     } catch { /* no audio, no problem */ }
   }
 
+  let lastInstant = true;
   function go(target: number, o: { instant?: boolean } = {}) {
     target = Math.max(0, Math.min(maxCur(), target));
     if (target === cur && !o.instant) return;
     const from = cur; cur = target;
+    lastInstant = !!o.instant || calm() || reduce.matches;
     if (o.instant || calm() || reduce.matches || from === target) {
       restack(); after();
       if (!o.instant && reduce.matches && !calm()) book.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
@@ -228,9 +230,13 @@ function init(root: HTMLElement) {
 
   function after() {
     const closed = cur === 0, total = pages.length, p = firstPage();
-    book.classList.toggle('closed', closed); root.classList.toggle('is-closed', closed);
+    book.classList.toggle('closed', closed);
+    // the real photo of the closed journal: shown at once when opening, after the cover swings shut when closing
+    if (!closed) root.classList.remove('is-closed', 'lifting');
+    else if (lastInstant) root.classList.add('is-closed');
+    else setTimeout(() => { if (cur === 0) root.classList.add('is-closed'); }, 950);
     prevB.disabled = closed; nextB.disabled = cur >= maxCur();
-    if (closed) ind.textContent = 'Tap the cover to open';
+    if (closed) ind.textContent = 'Tap the journal to open';
     else if (mode === 'spread' && cur > 1 && p + 1 <= total) ind.textContent = `Pages ${p}–${p + 1} / ${total}`;
     else ind.textContent = `Page ${Math.min(p, total)} / ${total}`;
     const last = +(localStorage.getItem('nb:last') || 0);
@@ -277,7 +283,10 @@ function init(root: HTMLElement) {
 
   // ---------------- events ----------------
   function openBook(toPage = 1) {
-    go(curFor(toPage));
+    if (cur === 0 && !calm() && !reduce.matches && root.classList.contains('is-closed')) {
+      root.classList.add('lifting'); // the photo rises toward you, then the journal opens
+      setTimeout(() => go(curFor(toPage)), 420);
+    } else go(curFor(toPage));
     const top = stage.getBoundingClientRect().top;
     if (top < 60 || top > innerHeight * 0.35) stage.scrollIntoView({ behavior: calm() || reduce.matches ? 'auto' : 'smooth', block: 'start' });
   }
@@ -287,6 +296,7 @@ function init(root: HTMLElement) {
   $('[data-close]').addEventListener('click', () => { closeSearch(); go(0); });
   contB.addEventListener('click', () => openBook(+(localStorage.getItem('nb:last') || 1)));
   $('[data-index]').addEventListener('click', () => go(curFor(2)));
+  $('[data-open-photo]').addEventListener('click', () => openBook());
 
   book.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

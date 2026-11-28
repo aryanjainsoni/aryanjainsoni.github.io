@@ -41,6 +41,10 @@ const mark = (id: string) => `<svg viewBox="0 0 100 100" aria-hidden="true"><def
     </button>
     <div class="nbk-desk">
       <div class="nbk-book" data-book role="region" aria-roledescription="notebook" aria-label="Altitude — Aryan Jain's gym notebook"></div>
+      <button type="button" class="nbk-photo" data-open-photo aria-label="Open the Altitude field journal">
+        <img src="/images/notebook/journal-scene-600.webp" srcset="/images/notebook/journal-scene-600.webp 600w, /images/notebook/journal-scene.webp 896w" sizes="(max-width: 700px) 90vw, 420px" alt="" width="896" height="1200" decoding="async" />
+        <span class="nbk-glint" aria-hidden="true"></span>
+      </button>
     </div>
     <button type="button" class="nbk-nav next" data-next aria-label="Next page">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
@@ -62,8 +66,9 @@ const mark = (id: string) => `<svg viewBox="0 0 100 100" aria-hidden="true"><def
     <template data-tpl="cover">
       <div class="cv">
         <span class="cv-band" aria-hidden="true"></span>
+        <span class="cv-corner tr" aria-hidden="true"></span><span class="cv-corner br" aria-hidden="true"></span>
         <p class="cv-series">Ascent <i>·</i> Vol. I</p>
-        <div class="cv-mark" set:html={mark('cv')} />
+        <div class="cv-mark cv-compass"><img src="/images/notebook/compass.webp" alt="" width="176" height="176" /></div>
         <h2 class="cv-title">Altitude</h2>
         <span class="cv-rule" aria-hidden="true"></span>
         <p class="cv-sub">The rules I train by</p>
@@ -381,4 +386,85 @@ const mark = (id: string) => `<svg viewBox="0 0 100 100" aria-hidden="true"><def
   html.calm .nbk-book.closed, .nbk.reduce .nbk-book.closed { animation: none; }
   html.calm .cv::after, .nbk.reduce .cv::after { animation: none; display: none; }
   .nbk.reduce .leaf, .nbk.reduce .nbk-book { transition: none !important; }
+
+  /* ================= FIELD JOURNAL THEME ("Altitude") =================
+     Closed = a real photo of the journal on slate (public/images/notebook/journal-scene*.webp).
+     Open   = a leather-bound expedition notebook: stitched spine, cream aged paper, sepia grid, faint contours. */
+  .nbk-stage { isolation: isolate; }
+  .nbk-stage::before { content: ''; position: absolute; inset: 0 -3vw; z-index: -1; border-radius: 28px; background: url('/images/notebook/journal-scene-600.webp') center / cover; filter: blur(26px) brightness(.3) saturate(.85); opacity: 0; transition: opacity .8s; }
+  .nbk:not(.is-closed) .nbk-stage::before { opacity: 1; }
+  .nbk-photo { position: absolute; left: 50%; top: 50%; height: calc(var(--H) * 1.06); aspect-ratio: 896 / 1200; transform: translate(-50%, -50%); padding: 0; border: 0; background: #111; cursor: pointer; z-index: 6; overflow: hidden; border-radius: 16px; opacity: 0; pointer-events: none;
+    box-shadow: 0 40px 70px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.04); transition: opacity .55s ease, transform .7s cubic-bezier(.3,.7,.2,1); }
+  .nbk.single .nbk-photo { height: auto; width: min(calc(100vw - 32px), calc(var(--H) * .79)); }
+  .nbk-photo img { display: block; width: 100%; height: 100%; object-fit: cover; animation: nb-breathe 16s ease-in-out infinite alternate; }
+  @keyframes nb-breathe { to { transform: scale(1.045) translateY(-1%); } }
+  .nbk-glint { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; background: linear-gradient(115deg, transparent 38%, rgba(255,214,150,.22) 47%, transparent 56%) -150% 0 / 250% 100% no-repeat; animation: nb-glint 8s ease-in-out infinite 1s; }
+  @keyframes nb-glint { 0%, 55% { background-position: -150% 0; } 100% { background-position: 150% 0; } }
+  .nbk-photo:hover img { filter: brightness(1.06); }
+  .nbk-photo:focus-visible { outline: 3px solid #e0b25e; outline-offset: 4px; }
+  .nbk.is-closed .nbk-photo { opacity: 1; pointer-events: auto; }
+  .nbk.is-closed .nbk-book { opacity: 0; pointer-events: none; }
+  .nbk.is-closed .nbk-desk::after { opacity: 0; }
+  .nbk.lifting .nbk-photo { opacity: 0; transform: translate(-50%, -50%) scale(1.1); pointer-events: none; }
+  .nbk-book { transition: transform .9s cubic-bezier(.6,.05,.3,1), opacity .5s .1s; }
+  html.calm .nbk-photo img, html.calm .nbk-glint, .nbk.reduce .nbk-photo img, .nbk.reduce .nbk-glint { animation: none; }
+
+  /* stitched leather spine instead of the spiral */
+  .nbk-spiral { width: 24px; left: calc(var(--W) - 12px); background: linear-gradient(90deg, rgba(30,18,6,0), rgba(30,18,6,.55) 35%, rgba(30,18,6,.55) 65%, rgba(30,18,6,0)); }
+  .nbk-spiral::after { content: ''; position: absolute; left: 50%; top: 10px; bottom: 10px; width: 2px; margin-left: -1px; background: repeating-linear-gradient(to bottom, rgba(214,178,120,.75) 0 7px, transparent 7px 13px); }
+  .nbk.single .nbk-spiral { left: -10px; width: 18px; background: linear-gradient(90deg, #4a2c14, #6b4022 60%, rgba(0,0,0,.35)); border-radius: 4px 0 0 4px; }
+
+  /* flat cover = same field journal: olive-brown leather, leather spine strip, strap + buckle, brass corners */
+  .cv { padding: 13% 12% 9% 24%; color: #e9dcc0;
+    background: radial-gradient(110% 80% at 38% 22%, rgba(255,226,170,.12), transparent 60%), radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0,0,0,.6)), url('/images/bucket/leather.jpg') center / cover, #565035;
+    background-blend-mode: screen, normal, multiply, normal; border-radius: 4px 10px 10px 4px; }
+  .cv::before { left: 0; width: 16%; background: radial-gradient(140% 60% at 30% 30%, rgba(255,220,170,.18), transparent 60%), linear-gradient(90deg, #4c2a12, #8a5330 45%, #6a3c1c); border-right: 2px dashed rgba(230,196,140,.5); box-shadow: inset -3px 0 6px rgba(0,0,0,.4), 3px 0 8px rgba(0,0,0,.35); }
+  .cv-band { top: 50%; bottom: auto; right: -3px; width: 26%; height: 8%; background: linear-gradient(#2a2117, #120d08); border-radius: 5px 0 0 5px; box-shadow: 0 3px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06); }
+  .cv-band::after { content: ''; position: absolute; left: 18%; top: -14%; width: 26%; height: 128%; border: 3px solid #a07a3c; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.6); }
+  .cv-corner { position: absolute; right: 0; width: 14%; aspect-ratio: 1; background: linear-gradient(135deg, #e7c886, #a77d38 55%, #6d4e1c); clip-path: polygon(100% 0, 100% 100%, 72% 100%, 72% 28%, 0 28%, 0 0); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .cv-corner.tr { top: 0; } .cv-corner.br { bottom: 0; transform: scaleY(-1); }
+  .cv-series { color: #c7a868; opacity: .75; }
+  .cv-compass { width: 30%; margin: 11% 0 7%; filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+  .cv-compass img { display: block; width: 100%; height: auto; border-radius: 50%; }
+  .cv-title { font: 800 calc(var(--W) * .11) / 1 'Inter', sans-serif; letter-spacing: .1em; background: linear-gradient(100deg, #9c7a3e, #e2c07a 35%, #b48d48 55%, #e9cf8f 75%, #8e6c34); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 rgba(0,0,0,.65)) drop-shadow(0 -1px 0 rgba(255,230,170,.12)); opacity: .92; }
+  .cv-rule { background: linear-gradient(90deg, transparent, #b89a5c, transparent); }
+  .cv-sub { color: #dccdaa; opacity: .85; }
+  .cv-author { color: #e6d6b2; }
+  .cv-label { color: rgba(230,214,178,.5); }
+  .ic { background: radial-gradient(90% 70% at 60% 30%, rgba(255,226,170,.08), transparent), radial-gradient(120% 100% at 50% 50%, transparent 50%, rgba(0,0,0,.55)), url('/images/bucket/leather.jpg') 30% 60% / 160% auto, #4a4530; background-blend-mode: screen, normal, multiply, normal; color: #e6d8b8; }
+  .ic-hand b { color: #e2c07a; }
+
+  /* pages: cream aged paper, sepia grid, faint topographic contours, brown-black ink */
+  .pg { --ink: #2e2418; --muted: #6b5a44; --line: #d8c9ab; --surface: #fbf4e4; --bg: #f3e8d0; --pen: #2b2116; --red: #8a3324; --accent: #9a4a26; color: var(--ink);
+    background:
+      radial-gradient(130% 100% at 50% 45%, transparent 58%, rgba(90,60,25,.3)),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%237a5a30' stroke-width='.6' opacity='.22'%3E%3Cpath d='M20 150c20-30 50-40 80-36s55 22 80 10'/%3E%3Cpath d='M35 160c18-24 44-32 70-29s48 18 70 9'/%3E%3Cpath d='M50 170c15-18 38-24 58-22s40 14 58 7'/%3E%3Cpath d='M60 120c25-35 60-50 95-40'/%3E%3Cpath d='M80 100c20-25 45-35 70-28'/%3E%3Cpath d='M100 84c14-14 30-19 46-15'/%3E%3C/svg%3E") right -10% bottom -12% / 80% auto no-repeat,
+      linear-gradient(rgba(252,246,232,.66), rgba(244,233,208,.62)),
+      url('/images/bucket/paper.jpg') center / cover,
+      #efe2c4; }
+  .pg::before { display: none; }
+  .pg.right::after { background: linear-gradient(90deg, rgba(70,45,15,.22), rgba(70,45,15,0) 10%), linear-gradient(270deg, rgba(70,45,15,.08), transparent 3%); }
+  .pg.left::after { background: linear-gradient(270deg, rgba(70,45,15,.22), rgba(70,45,15,0) 10%), linear-gradient(90deg, rgba(70,45,15,.08), transparent 3%); }
+  .pg.right { padding-left: calc(var(--r) * 1.6); } .pg.left { padding-right: calc(var(--r) * 1.6); }
+  .pg-body, .pg.left .pg-body { background:
+      repeating-linear-gradient(to bottom, transparent 0 calc(var(--r) - 1px), rgba(120,85,45,.24) calc(var(--r) - 1px) var(--r)),
+      repeating-linear-gradient(to right, transparent 0 calc(var(--r) - 1px), rgba(120,85,45,.09) calc(var(--r) - 1px) var(--r)); }
+  .pg-top { border-bottom-color: rgba(110,75,35,.55); }
+  .pg-run, .pg-date, .pg-no { color: #7d6a50; }
+  .pg-date b { border-bottom-color: #9c8462; }
+  .b-head h3 { color: #3a2a18; }
+  .b-sum span { background: linear-gradient(transparent 58%, rgba(196,146,62,.38) 58% 92%, transparent 92%); }
+  .pg ul.b.src a { color: #6b3a1e; text-decoration-color: rgba(107,58,30,.35); }
+  .pg ul.b li::before { color: #8a3324; }
+  .pg-corner::before { background: linear-gradient(315deg, var(--hole) 50%, #e6d6b4 50%) !important; }
+  .pg.left .pg-corner::before { background: linear-gradient(45deg, var(--hole) 50%, #e6d6b4 50%) !important; }
+  .b-vis { background: #fbf6ea; }
+  /* tools in the same expedition style: leather index tab, paper tag, field-note search card */
+  .nbk-tab.ix { background: linear-gradient(#8a4a26, #5e2f16); color: #f3e2bf; }
+  .nbk-tab.sr { background: linear-gradient(#efe2c2, #d9c69a); color: #3a2a18; }
+  .nbk-note { background: radial-gradient(120% 100% at 50% 40%, rgba(252,246,232,.9), rgba(236,222,190,.95)), url('/images/bucket/paper.jpg') center / cover; color: #2e2418; border-radius: 3px; }
+  .nbk-note input { background: rgba(255,250,238,.7); color: #2e2418; border-bottom-color: rgba(90,60,25,.45); }
+  .nbk-note input:focus { border-bottom-color: #8a3324; }
+  .nbk-res b { color: #8a3324; }
+  .nbk-cont { background: #7a3a1c; border-color: #7a3a1c; }
 </style>
