@@ -147,7 +147,7 @@ function buildIcs(list: Rem[]) {
     const [h, m] = r.time.split(':');
     L.push('BEGIN:VEVENT', `UID:ascent-${r.id}@aryanjainsoni.github.io`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Kolkata:${day}T${h}${m}00`, 'DURATION:PT15M',
       r.days ? `RRULE:FREQ=WEEKLY;BYDAY=${r.days.map((d) => BYDAY[d]).join(',')}` : 'RRULE:FREQ=DAILY',
-      `SUMMARY:${icsText(r.name)}`, `DESCRIPTION:${icsText('Ascent — tick it off at https://aryanjainsoni.github.io/goals/')}`, 'TRANSP:TRANSPARENT',
+      `SUMMARY:${icsText(r.name)}`, `DESCRIPTION:${icsText('Ascent — tick it off at https://aryanjainsoni.github.io/basecamp/#today')}`, 'TRANSP:TRANSPARENT',
       'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(r.name)}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT');
   }
   L.push('END:VCALENDAR');

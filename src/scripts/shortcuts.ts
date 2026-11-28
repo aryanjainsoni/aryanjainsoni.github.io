@@ -6,7 +6,7 @@
 import { prefs, setPrefs } from '../lib/prefs';
 
 const GO: Record<string, [string, string]> = {
-  h: ['/', 'Home'], j: ['/journal/', 'Journal'], g: ['/gym/', 'Gym'], o: ['/goals/', 'Goals'],
+  h: ['/', 'Home'], j: ['/journal/', 'Journal'], g: ['/basecamp/', 'Basecamp'], o: ['/basecamp/#today', 'Goals (Basecamp → Today)'],
   i: ['/explore/', 'Index (search)'], a: ['/about/', 'About'],
 };
 const typing = () => {

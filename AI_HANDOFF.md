@@ -63,6 +63,12 @@ decisions that are truly mine.
   design/ (icon options, not built). Topic card photos: drop public/images/covers/<slug>.jpg.
 
 ## HOW THINGS WORK (don't break these)
+- SITE MAP (28 Nov 2026 cleanup): header = Journal · Basecamp · About (+ search, bucket, theme, settings icons).
+  Home = the logo, Index = the search icon. "Gym" is now BASECAMP at /basecamp/ (src/pages/basecamp.astro);
+  /gym/ and /goals/ are tiny redirect pages that keep the #hash (old links still work). Goals were MERGED into
+  Basecamp → Today: src/components/GoalsBoard.astro (the old goals page, same localStorage keys goals:*) sits
+  above the private fitness "Body today" card. The Body tab is labelled "BMI" (id/hash still "body").
+  Wherever older notes below say /gym/, read /basecamp/.
 - Daily Log GitHub box auto-fills from my public commits for that date (GitHub search API, IST day,
   grouped by repo) and stays LIVE (refetch every 5 min + when the tab is reopened) until I edit it
   (badge "your words ✓"); ⟳ Fetch replaces with the latest.
@@ -219,6 +225,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Cleanup: Gym → Basecamp, Goals merged into Today, header = Journal · Basecamp · About, Body → BMI, real padlock photos on the bucket lock.
 - 2026-11-28 Bucket book: encrypted vintage memory photo + written/fulfilled date ledger on every wish.
 - 2026-11-28 Bucket cove: antique padlock, book-opens-in-photo unlock, stronger water/sun/caustic effects, D debug key.
 - 2026-11-28 Bucket cove: photoreal Gemini scene + WebGL cinemagraph (flowing water, sunbeam, dust, gold glints).

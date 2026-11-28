@@ -37,16 +37,9 @@ import { BOOK } from '../data/bucket';
       <p class="cove-hint" data-hint>The book is sealed.</p>
       <!-- lock (rendered by the Gym vault, styled as an engraved brass plate) -->
       <div class="bq-lock" data-lockwrap>
-        <span class="lk-shackle" aria-hidden="true"></span>
+        <div class="lk-photo" aria-hidden="true"><img class="lk-closed" src="/images/bucket/lock-closed.webp" alt="" width="360" height="540" /><img class="lk-open" src="/images/bucket/lock-open.webp" alt="" width="360" height="540" loading="lazy" /></div>
         <div class="lk-plate" data-plate>
-          <div class="lk-head" aria-hidden="true">
-            <svg class="lk-esc" viewBox="0 0 60 80"><defs><radialGradient id="esc" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#f6dc98" /><stop offset=".45" stop-color="#a77a2c" /><stop offset="1" stop-color="#4a3210" /></radialGradient></defs>
-              <path d="M30 2 C46 2 56 14 56 30 C56 44 48 50 46 60 L42 78 H18 L14 60 C12 50 4 44 4 30 C4 14 14 2 30 2 Z" fill="url(#esc)" stroke="#2c1d07" stroke-width="2" />
-              <circle cx="9" cy="30" r="2.6" fill="#3a2709" /><circle cx="51" cy="30" r="2.6" fill="#3a2709" />
-              <g class="lk-key"><circle cx="30" cy="30" r="8.5" fill="#120b03" /><path d="M25.5 34 L22 62 H38 L34.5 34 Z" fill="#120b03" /></g>
-            </svg>
-            <p class="lk-word">Sealed</p>
-          </div>
+          <div class="lk-head" aria-hidden="true"><p class="lk-word">Sealed</p></div>
           <div data-fit="bucket" class="fit"><p class="bq-wait">Finding the key…</p></div>
         </div>
       </div>
@@ -141,15 +134,16 @@ import { BOOK } from '../data/bucket';
   @keyframes bq-pulse { 50% { opacity: .55; } }
 
   /* ===== the lock: a real antique cast-brass padlock (wraps the Gym vault's form) ===== */
-  .bq-lock { position: absolute; left: clamp(16px, 4vw, 60px); top: 50%; transform: translateY(-46%); width: min(360px, 34vw); min-width: 300px; z-index: 5; padding-top: 58px; transition: opacity .7s .35s, transform .9s .3s cubic-bezier(.5,0,.75,0); filter: drop-shadow(0 26px 30px rgba(0,0,0,.75)); }
+  .bq-lock { position: absolute; left: clamp(16px, 4vw, 60px); top: 54%; transform: translateY(-46%); width: min(360px, 34vw); min-width: 300px; z-index: 5; padding-top: 74px; transition: opacity .7s .35s, transform .9s .3s cubic-bezier(.5,0,.75,0); filter: drop-shadow(0 26px 30px rgba(0,0,0,.75)); }
   .bq:not([data-state='locked']):not([data-state='opening']) .bq-lock { opacity: 0; transform: translateY(-20%); pointer-events: none; }
   .bq[data-state='opening'] .bq-lock { transform: translateY(-40%); opacity: 0; transition: opacity .6s .75s, transform .8s .7s cubic-bezier(.5,0,.75,0); pointer-events: none; }
-  .lk-shackle { position: absolute; left: 22%; right: 22%; top: 0; height: 96px; border: 17px solid transparent; border-bottom: 0; border-radius: 120px 120px 0 0; z-index: -1;
-    background: linear-gradient(90deg, #2a2620, #9d978b 18%, #e8e2d4 30%, #6e695f 48%, #3a3630 62%, #b9b2a3 80%, #2a2620) border-box;
-    -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
-    transition: transform .45s cubic-bezier(.3,1.7,.5,1); }
-  .bq[data-state='opening'] .lk-shackle { transform: translate(26%, -22px) rotate(-14deg); transform-origin: 85% 100%; }
-  .lk-plate { position: relative; border-radius: 22px 22px 30px 30px; padding: 22px 24px 20px; color: #2a1904;
+  /* the real antique padlock (two photos: closed / open) sitting on top of the plate */
+  .lk-photo { position: absolute; left: 50%; top: 0; width: 100px; height: 150px; transform: translateX(-50%); z-index: 2; pointer-events: none; filter: drop-shadow(0 14px 14px rgba(0,0,0,.75)) drop-shadow(0 0 1px rgba(0,0,0,.6)); }
+  .lk-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .35s .15s, transform .5s cubic-bezier(.3,1.6,.5,1); }
+  .lk-open { opacity: 0; }
+  .bq[data-state='opening'] .lk-closed { opacity: 0; }
+  .bq[data-state='opening'] .lk-open { opacity: 1; transform: translateY(-8px) rotate(-3deg); }
+  .lk-plate { position: relative; border-radius: 22px 22px 30px 30px; padding: 84px 24px 20px; color: #2a1904;
     background:
       radial-gradient(60% 40% at 8% 92%, rgba(60,110,90,.42), transparent 70%),
       radial-gradient(40% 30% at 96% 6%, rgba(60,110,90,.32), transparent 70%),
@@ -164,9 +158,6 @@ import { BOOK } from '../data/bucket';
       radial-gradient(circle at 10px calc(100% - 10px), #241504 2px, #f0d48c 2.6px, #8a6420 5px, rgba(0,0,0,.35) 6px, transparent 6.5px) 0 0 / 100% 100% no-repeat,
       radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #241504 2px, #f0d48c 2.6px, #8a6420 5px, rgba(0,0,0,.35) 6px, transparent 6.5px) 0 0 / 100% 100% no-repeat; }
   .lk-head { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 8px; }
-  .lk-esc { width: 34px; height: 46px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
-  .lk-key { transform-box: fill-box; transform-origin: 50% 25%; transition: transform .5s cubic-bezier(.4,1.6,.5,1); }
-  .bq[data-state='opening'] .lk-key { transform: rotate(90deg); }
   .lk-word { margin: 0; font: 400 30px/1 'IM Fell English SC', serif; letter-spacing: .26em; text-indent: .26em; color: #3a2406; text-shadow: 0 1px 0 rgba(255,238,190,.7), 0 -1px 0 rgba(30,16,0,.6); }
   .lk-plate.nope { animation: lk-nope .45s; }
   @keyframes lk-nope { 20% { transform: translateX(-9px) rotate(-.6deg); } 45% { transform: translateX(8px) rotate(.5deg); } 70% { transform: translateX(-5px); } }

@@ -86,7 +86,7 @@ const last = [...'Jain'];
         </a>
         <nav aria-label="Main">
           {nav.map((item) => (
-            <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>{item.label}</a>
+            <a href={item.href} aria-current={path.startsWith(item.href) || (item.href === '/journal/' && path.startsWith('/log/')) ? 'page' : undefined}>{item.label}</a>
           ))}
           <a class="toggle searchbtn" href="/explore/?focus" aria-label="Search the site (press /)" title="Search  ( / or ⌘K )">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -361,7 +361,6 @@ const last = [...'Jain'];
     .word { font-size: 21px; }
     .mark { width: 42px; height: 42px; }
     nav { gap: 12px; }
-    nav > a:first-child { display: none; } /* Home — logo already links home */
     #theme-toggle { display: none; } /* theme lives in Settings on phones */
     nav a[href="/explore/"] { display: none; } /* the search icon opens the Index */
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }

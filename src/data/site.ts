@@ -40,14 +40,15 @@ export const topics = [
   { slug: 'art', title: 'Art', line: 'Drawings, published in print.', href: '/art/', ready: false, emoji: '🎨', art: ['#f15bb5', '#fee440'] },
   { slug: 'abacus', title: 'Abacus', line: 'Where numbers first clicked.', href: '/abacus/', ready: false, emoji: '🧮', art: ['#ff8fa3', '#c9184a'] },
   { slug: 'swimming', title: 'Swimming', line: 'New skill. Deep end.', href: '/swimming/', ready: false, emoji: '🏊', art: ['#4cc9f0', '#f72585'] },
-  { slug: 'gym', title: 'Gym', line: 'Steps, training & diet — tracked daily.', href: '/gym/', ready: true, emoji: '🏋️', art: ['#ff6b35', '#1a1a2e'] },
+  { slug: 'gym', title: 'Basecamp', line: 'Habits, steps, training & diet — every day.', href: '/basecamp/', ready: true, emoji: '🏋️', art: ['#ff6b35', '#1a1a2e'] },
   { slug: 'internship', title: 'Internship', line: 'From zero — documented.', href: '/internship/', ready: false, emoji: '🧭', art: ['#f4a261', '#e76f51'], size: 'wide' },
-  { slug: 'progress', title: 'Goals', line: 'Daily & weekly goals, ticked off.', href: '/goals/', ready: true, emoji: '🎯', art: ['#ff9e00', '#ff0054'] },
+  { slug: 'progress', title: 'Goals', line: 'Daily & weekly goals, ticked off.', href: '/basecamp/#today', ready: true, inNav: false, emoji: '🎯', art: ['#ff9e00', '#ff0054'] },
 ];
 
+// Header: only the 3 places people actually go. Home = the logo, Index = the search icon,
+// Goals live inside Basecamp → Today.
 export const nav = [
-  { label: 'Home', href: '/' },
-  ...topics.filter((t) => t.ready && !t.external).map((t) => ({ label: t.title, href: t.href })),
-  { label: 'Index', href: '/explore/' },
+  { label: 'Journal', href: '/journal/' },
+  { label: 'Basecamp', href: '/basecamp/' },
   { label: 'About', href: '/about/' },
 ];
