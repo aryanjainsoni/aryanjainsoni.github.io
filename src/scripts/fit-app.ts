@@ -4,6 +4,7 @@
 import * as F from '../lib/fit';
 import type { Scan, Goal, DayLog, GoalType, Macros, Targets } from '../lib/fit';
 import { meals, micros } from '../data/meals';
+import { foods, foodById, type Food } from '../data/foods';
 import * as V from '../lib/vault';
 import type { AnyVault, VaultV2, KeySlot } from '../lib/vault';
 
@@ -65,7 +66,36 @@ const kgOn = (d: string) => {
   return scanOn(d)?.weight ?? 65;
 };
 const optionOf = (ref: string) => { const [slot, id] = ref.split(':'); return meals.find((s) => s.id === slot)?.options.find((o) => o.id === id); };
-const eatenOn = (d: string) => F.eaten(logOf(d), (ref) => optionOf(ref));
+// custom foods ("Ate something else?")
+type Item = { id: string; q: number; u?: 'g' };
+const itemMacros = (it: Item): Macros => {
+  const f = foodById.get(it.id); if (!f) return { kcal: 0, p: 0, c: 0, f: 0, fib: 0 };
+  const m = it.u === 'g' && f.g ? it.q / f.g : it.q;
+  return { kcal: f.kcal * m, p: f.p * m, c: f.c * m, f: f.f * m, fib: f.fib * m };
+};
+const qtyLabel = (f: Food, q: number, g?: boolean) => (g ? `${n1(q)} g ${f.name}` : `${n1(q)} × ${f.name}${['piece', 'roti'].includes(f.unit) ? '' : ` · ${f.unit}`}`);
+const itemLabel = (it: Item) => qtyLabel(foodById.get(it.id)!, it.q, it.u === 'g');
+const otherOf = (d: string, slot: string): Item[] => logOf(d)?.other?.[slot] ?? [];
+const refMacros = (d: string, ref: string): (Macros & { name: string }) | undefined => {
+  const [slot, id] = ref.split(':');
+  if (id === 'other') { const its = otherOf(d, slot); if (!its.length) return undefined; return { ...F.sumMacros(its.map(itemMacros)), name: its.map((i) => foodById.get(i.id)?.name).join(' + ') }; }
+  return optionOf(ref);
+};
+const eatenOn = (d: string) => F.eaten(logOf(d), (ref) => refMacros(d, ref));
+const refOf = (d: string, slot: string) => (logOf(d)?.meals ?? []).find((m) => m.startsWith(slot + ':'));
+const planOpt = (d: string, slot: string) => { const s = meals.find((x) => x.id === slot)!; const id = week()[String(F.weekdayIdx(d))]?.[slot]; return s.options.find((o) => o.id === id) ?? s.options[0]; };
+function tickMeal(d: string, slot: string, on: boolean) {
+  const rest = (logOf(d)?.meals ?? []).filter((m) => !m.startsWith(slot + ':'));
+  const ref = otherOf(d, slot).length ? `${slot}:other` : `${slot}:${planOpt(d, slot).id}`;
+  saveLog(d, { meals: on ? [...rest, ref] : rest });
+}
+function setOther(d: string, slot: string, items: Item[]) {
+  const log = logOf(d), other = { ...(log?.other ?? {}) };
+  if (items.length) other[slot] = items; else delete other[slot];
+  const rest = (log?.meals ?? []).filter((m) => !m.startsWith(slot + ':'));
+  saveLog(d, { other: Object.keys(other).length ? other : undefined, meals: items.length ? [...rest, `${slot}:other`] : rest });
+}
+const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 const stepsOn = (d: string) => logOf(d)?.steps ?? journalSteps.get(d);
 
 function tdeeAdj(d: string) {
@@ -129,7 +159,6 @@ function renderToday(root: HTMLElement) {
   const { g, t, L, base } = P, log = logOf(view) ?? { date: view }, food = eatenOn(view), steps = stepsOn(view);
   const actBurn = F.burn({ steps: steps ?? 0, cardioMin: log.cardioMin ?? 0, workoutMin: log.workoutMin ?? 0, kmh: g.cardioKmh, grade: g.cardioGrade }, P.kg).total;
   const dayN = F.diffDays(g.start, view) + 1, phase = Math.min(Math.ceil(dayN / 30), Math.ceil(g.days / 30));
-  const wdPlan = week()[String(F.weekdayIdx(view))] ?? {};
   const fromJournal = log.steps == null && journalSteps.has(view);
   const status = Math.abs(L.net) <= 50 ? `<b>On track.</b> The last 7 days match the plan.` :
     L.net > 0 ? `<b>${n0(L.net)} kcal over plan</b> in the last 7 days → spread over the next ${L.spread} days.` :
@@ -146,6 +175,7 @@ function renderToday(root: HTMLElement) {
     <div class="f-row"><button class="f-nav" data-act="day" data-d="-1" aria-label="Previous day">‹</button><input type="date" class="f-date" data-act="pick" value="${view}" max="${TODAY}"><button class="f-nav" data-act="day" data-d="1" aria-label="Next day" ${view >= TODAY ? 'disabled' : ''}>›</button></div>
   </div>
   ${view === TODAY ? weighCard(log.weight) : ''}
+  ${calcCard(view)}
   <div class="f-rings">
     ${ring(food?.kcal, t.kcal, 'Calories eaten', '')}${ring(food?.p, t.p, 'Protein', ' g')}${ring(steps, t.steps, 'Steps')}${ring(actBurn || undefined, t.burn, 'Activity burn', '')}
   </div>
@@ -174,10 +204,10 @@ function renderToday(root: HTMLElement) {
   <form class="card f-log" data-form="log">
     <div class="f-loghead"><div><p class="label">Check-in</p><h3>What actually happened</h3></div><span class="fine">Saves as you type</span></div>
     <p class="f-sub">Meals from ${WD[F.weekdayIdx(view)]}’s diet plan</p>
-    <div class="f-meals">${meals.map((s) => { const o = s.options.find((x) => x.id === wdPlan[s.id]) ?? s.options[0]; const ref = `${s.id}:${o.id}`; const on = (log.meals ?? []).some((m) => m.startsWith(s.id + ':'));
-      const used = on ? optionOf((log.meals ?? []).find((m) => m.startsWith(s.id + ':'))!) ?? o : o;
-      return `<label class="f-meal${on ? ' on' : ''}"><input type="checkbox" name="meal" value="${on ? esc((log.meals ?? []).find((m) => m.startsWith(s.id + ':'))) : ref}" ${on ? 'checked' : ''}><span class="ck" aria-hidden="true"></span><span class="mn"><i>${s.name}</i>${esc(used.name)}</span><span class="mk">${n0(used.kcal)} kcal · ${n0(used.p)} g P</span></label>`; }).join('')}</div>
-    <p class="f-sub">Anything else you ate</p>
+    <div class="f-meals">${meals.map((s) => { const ref = refOf(view, s.id), m = ref ? refMacros(view, ref) : undefined, o = planOpt(view, s.id), used = m ?? o;
+      return `<label class="f-meal${ref ? ' on' : ''}"><input type="checkbox" name="meal" data-slot="${s.id}" ${ref ? 'checked' : ''}><span class="ck" aria-hidden="true"></span><span class="mn"><i>${s.name} · ${fmt12(s.time)}${ref?.endsWith(':other') ? ' · other' : ''}</i>${esc(used.name)}</span><span class="mk">${n0(used.kcal)} kcal · ${n0(used.p)} g P</span></label>`; }).join('')}</div>
+    <p class="fine">Ate something different? Use <button type="button" class="f-link" data-act="go-diet">“Ate something else?”</button> on the Diet tab — macros are calculated for you.</p>
+    <p class="f-sub">Anything else (quick kcal entry)</p>
     <div class="f-grid4">${inp('extraKcal', 'kcal', log.extraKcal)}${inp('extraP', 'protein g', log.extraP)}${inp('extraC', 'carbs g', log.extraC)}${inp('extraF', 'fat g', log.extraF)}</div>
     <p class="f-sub">Movement & recovery</p>
     <div class="f-grid4">
@@ -213,6 +243,70 @@ function weighCard(w?: number) {
 }
 const sign = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${n0(Math.abs(v))}`;
 const inp = (name: string, label: string, v?: number, step = '1') => `<label class="f-in"><input type="number" inputmode="decimal" min="0" step="${step}" name="${name}" value="${v ?? ''}" placeholder="—"><span>${label}</span></label>`;
+
+
+// ---------------- CALORIE CALCULATOR (live: meals in, body + workout out) ----------------
+function energy(d: string) {
+  const P = plan(d); if (!P) return null;
+  const { g, t, kg } = P, log = logOf(d) ?? { date: d }, food = eatenOn(d), steps = stepsOn(d);
+  const planned = { steps: t.steps, cardioMin: t.cardioMin, workoutMin: g.workoutMin, kmh: g.cardioKmh, grade: g.cardioGrade };
+  const actual = { ...planned, steps: steps ?? planned.steps, cardioMin: log.cardioMin ?? planned.cardioMin, workoutMin: log.workoutMin ?? planned.workoutMin };
+  const a = F.burn(actual, kg), pl = F.burn(planned, kg);
+  const rest = P.base.bmr * F.BASE, eatK = food?.kcal ?? 0, tef = eatK * F.TEF;
+  const extra = a.total - pl.total;                    // did more (+) or less (−) than planned today
+  const canEat = Math.max(P.base.bmr, t.kcal + extra); // today's food target reacts to today's workout
+  return { P, log, food, steps, a, pl, rest, tef, eatK, out: rest + a.total + tef, extra, canEat, remaining: canEat - eatK,
+    logged: { steps: steps != null, cardio: log.cardioMin != null, workout: log.workoutMin != null } };
+}
+function calcCard(d: string, compact = false) {
+  const E = energy(d); if (!E) return '';
+  const { P, a, rest, tef, eatK, out, canEat, remaining, logged, extra } = E;
+  const ex = F.incline(P.kg, P.g.cardioKmh, P.g.cardioGrade), per1k = F.stepsKcal(1000, P.kg);
+  const ticked = (E.log.meals ?? []).length;
+  const unticked = meals.filter((s) => !refOf(d, s.id)).reduce((acc, s) => acc + planOpt(d, s.id).kcal, 0);
+  const msg = remaining > 80
+    ? `<b>You can still eat ~${n0(remaining)} kcal</b> today${unticked ? ` — your remaining planned meals add up to ${n0(unticked)} kcal${unticked > remaining + 150 ? ', so go lighter on one of them' : ''}` : ''}.`
+    : remaining < -80
+      ? `<b>${n0(-remaining)} kcal over.</b> Walk it off: +${Math.ceil(-remaining / ex.net)} min incline (${P.g.cardioKmh} km/h · ${P.g.cardioGrade}%) or +${n0(Math.ceil(-remaining / per1k) * 1000)} steps — or let the 7-day balance spread it.`
+      : `<b>Right on target ✓</b> Food matches today’s burn and goal.`;
+  const part = (label: string, v: number, isPlanned: boolean) => `<span class="${isPlanned ? 'pl' : ''}"><i>${label}${isPlanned ? ' · planned' : ''}</i><b>${n0(v)}</b></span>`;
+  return `<div class="card f-calc${compact ? ' compact' : ''}">
+    <div class="f-loghead"><div><p class="label">Calorie calculator · live</p><h3>${n0(eatK)} <em>in</em> · ${n0(out)} <em>out</em></h3></div>
+      <span class="f-net ${eatK - out > 0 ? 'up' : 'dn'}">${eatK - out > 0 ? '+' : '−'}${n0(Math.abs(eatK - out))} kcal net</span></div>
+    <div class="f-bar big"><div class="h"><span>Eaten · ${ticked} meal${ticked === 1 ? '' : 's'} ticked</span><span><b>${n0(eatK)}</b> / ${n0(canEat)} kcal${Math.abs(extra) > 20 ? ` <em class="${extra > 0 ? 'dn' : 'up'}">(${extra > 0 ? '+' : '−'}${n0(Math.abs(extra))} from workout)</em>` : ''}</span></div>
+      <div class="tr"><span class="${eatK > canEat * 1.04 ? 'over' : eatK >= canEat * 0.96 ? 'ok' : ''}" style="width:${Math.min(100, (eatK / canEat) * 100)}%"></span></div></div>
+    <div class="f-parts">${part('Body at rest + daily life', rest, false)}${part('Steps', a.steps, !logged.steps)}${part('Strength', a.workout, !logged.workout)}${part('Incline walk', a.cardio, !logged.cardio)}${part('Digestion', tef, false)}</div>
+    <p class="f-msg">${msg}</p>
+    ${compact ? '' : '<p class="fine">Tick meals on the Diet tab and log minutes below — this updates instantly. Activity you haven’t logged yet counts as planned.</p>'}
+  </div>`;
+}
+
+// ---------------- MEAL CHECKLIST + DIET STREAK ----------------
+function onTarget(d: string) {
+  const food = eatenOn(d); if (!food) return null;
+  const P = plan(d);
+  if (!P) return (logOf(d)?.meals ?? []).length >= 6;
+  const E = energy(d)!, goalKcal = Math.max(P.base.bmr, P.base.kcal + E.extra); // base plan (not the rebalanced one) + that day's extra workout
+  return Math.abs(food.kcal - goalKcal) / goalKcal <= 0.1 && food.p >= P.base.p * 0.9;
+}
+function dietStreak() {
+  let cur = 0, best = 0, run = 0; const dots: string[] = [];
+  const todayOk = onTarget(TODAY);
+  for (let i = 60; i >= 1; i--) { const ok = onTarget(F.addDays(TODAY, -i)); run = ok ? run + 1 : 0; best = Math.max(best, run); }
+  cur = run + (todayOk ? 1 : 0); best = Math.max(best, cur);
+  for (let i = 13; i >= 0; i--) { const k = F.addDays(TODAY, -i), ok = onTarget(k); dots.push(`<i class="${ok ? 'on' : ok === false ? 'part' : ''}" title="${fmtD(k, { weekday: 'short', day: 'numeric' })} · ${ok ? 'on target' : ok === false ? 'logged, off target' : 'not logged'}"></i>`); }
+  return { cur, best, dots: dots.join('') };
+}
+function checklistCard() {
+  const ticked = meals.filter((s) => refOf(TODAY, s.id)).length, food = eatenOn(TODAY), E = energy(TODAY), st = dietStreak();
+  return `<div class="card f-checklist">
+    <div class="f-loghead"><div><p class="label">Today’s checklist</p><h3><b class="big">${ticked}</b> / ${meals.length} meals</h3></div>
+      <div class="f-streak"><b>🔥 ${st.cur}</b><span>day streak · best ${st.best}</span></div></div>
+    <div class="f-bar"><div class="tr"><span class="${ticked === meals.length ? 'ok' : ''}" style="width:${(ticked / meals.length) * 100}%"></span></div></div>
+    <div class="f-cl-meta"><span>${food ? `${n0(food.kcal)}${E ? ` / ${n0(E.canEat)}` : ''} kcal · P ${n0(food.p)}${E ? ` / ${n0(E.P.t.p)}` : ''} g` : 'Tick each meal as you eat it.'}</span>
+      <span class="f-dots">${st.dots}<em>14 days</em></span></div>
+    <p class="fine">A day counts for the streak when calories land within ±10% of target and protein hits 90%+.</p></div>`;
+}
 
 // ---------------- PLAN ----------------
 function renderPlan(root: HTMLElement) {
@@ -319,12 +413,62 @@ function ensureWeek() {
   set(K.week, out);
   return out;
 }
+
+let otherOpen = '', foodMsg = '';
+function slotCard(s: (typeof meals)[number], day: Record<string, string>, isToday: boolean) {
+  const o = s.options.find((x) => x.id === day[s.id]) ?? s.options[0];
+  const ref = isToday ? refOf(TODAY, s.id) : undefined, its = isToday ? otherOf(TODAY, s.id) : [];
+  const usingOther = ref?.endsWith(':other') && its.length, tot = its.length ? F.sumMacros(its.map(itemMacros)) : null;
+  const open = isToday && otherOpen === s.id;
+  return `<div class="card f-slot${ref ? ' done' : ''}${usingOther ? ' other' : ''}">
+    <div class="st"><span class="tm">${fmt12(s.time)}</span><span class="sn">${s.name}</span>
+      ${isToday ? `<button type="button" class="f-tick${ref ? ' on' : ''}" data-act="tick" data-slot="${s.id}" aria-pressed="${!!ref}" aria-label="Mark ${s.name} as eaten"><span aria-hidden="true">✓</span>${ref ? 'Eaten' : 'Tick'}</button>` : ''}</div>
+    <label class="f-pick"><select data-act="swap" data-slot="${s.id}" aria-label="${s.name} option">${s.options.map((x) => `<option value="${x.id}" ${x.id === o.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <p class="pt">${esc(o.portion)}</p>
+    <p class="mc"><b>${n0(o.kcal)}</b> kcal <span>P ${n1(o.p)}</span><span>C ${n1(o.c)}</span><span>F ${n1(o.f)}</span><span>Fib ${n1(o.fib)}</span></p>
+    ${o.tags?.length ? `<p class="tg">${o.tags.map((x) => `<i>${micros.find((m) => m.tag === x)?.name.replace('Vitamin ', 'Vit ') ?? x}</i>`).join('')}</p>` : ''}
+    ${its.length && !open ? `<div class="f-ate"><p class="label">Ate instead</p><p>${its.map((i) => esc(itemLabel(i))).join(' · ')}</p><p class="mc"><b>${n0(tot!.kcal)}</b> kcal <span>P ${n1(tot!.p)}</span><span>C ${n1(tot!.c)}</span><span>F ${n1(tot!.f)}</span><span>Fib ${n1(tot!.fib)}</span></p></div>` : ''}
+    ${isToday && !open ? `<button type="button" class="f-link f-else" data-act="other-open" data-slot="${s.id}">${its.length ? 'Edit what I ate' : '+ Ate something else?'}</button>` : ''}
+    ${open ? otherBuilder(s.id, its) : ''}
+  </div>`;
+}
+function otherBuilder(slot: string, its: Item[]) {
+  const tot = F.sumMacros(its.map(itemMacros));
+  return `<div class="f-other" data-slot="${slot}">
+    <p class="f-sub">What did you eat instead?</p>
+    <div class="f-addrow">
+      <label class="f-in grow"><input list="f-foods" name="food" placeholder="Search — roti, paneer, samosa…" autocomplete="off" data-food><span>food</span></label>
+      <label class="f-in qty"><input type="number" name="qty" value="1" min="0" step="0.5" inputmode="decimal" data-food><span>qty</span></label>
+      <label class="f-in unit"><select name="unit" data-food><option value="">unit</option></select><span>unit</span></label>
+      <button type="button" class="btn primary sm" data-act="food-add" data-slot="${slot}">Add</button>
+    </div>
+    <p class="f-preview" data-preview>${foodMsg ? esc(foodMsg) : 'Pick a food — its calories and macros appear here.'}</p>
+    ${its.length ? `<ul class="f-items">${its.map((i, n) => { const m = itemMacros(i); return `<li><span>${esc(itemLabel(i))}</span><span>${n0(m.kcal)} kcal · P ${n1(m.p)}</span><button type="button" class="f-x" data-act="food-del" data-slot="${slot}" data-n="${n}" aria-label="Remove">×</button></li>`; }).join('')}</ul>
+      <p class="f-tot">Total <b>${n0(tot.kcal)} kcal</b> · P ${n1(tot.p)} · C ${n1(tot.c)} · F ${n1(tot.f)} · Fib ${n1(tot.fib)}</p>` : ''}
+    <div class="f-row"><button type="button" class="btn ghost sm" data-act="other-done">${its.length ? 'Done ✓' : 'Cancel'}</button>${its.length ? `<button type="button" class="f-link" data-act="other-clear" data-slot="${slot}">Back to the planned meal</button>` : ''}</div>
+  </div>`;
+}
+const findFood = (q: string): Food | undefined => {
+  const v = q.trim().toLowerCase(); if (!v) return undefined;
+  return foods.find((f) => f.name.toLowerCase() === v) ?? foods.find((f) => f.name.toLowerCase().includes(v) || (f.aka ?? '').toLowerCase().split(' ').some((a) => a && (a === v || a.startsWith(v))));
+};
+// live preview while choosing a food (updates the unit list + macros without re-rendering)
+function foodPreview(box: HTMLElement) {
+  const food = findFood((box.querySelector('[name=food]') as HTMLInputElement).value);
+  const qty = num((box.querySelector('[name=qty]') as HTMLInputElement).value) ?? 0;
+  const sel = box.querySelector('[name=unit]') as HTMLSelectElement, out = box.querySelector('[data-preview]') as HTMLElement;
+  if (!food) { sel.innerHTML = '<option value="">unit</option>'; out.textContent = 'Pick a food from the list — 95+ Indian veg foods.'; return; }
+  if (sel.dataset.for !== food.id) { sel.innerHTML = `<option value="">${esc(food.unit)}</option>${food.g ? '<option value="g">grams</option>' : ''}`; sel.dataset.for = food.id; }
+  const m = itemMacros({ id: food.id, q: qty, u: sel.value === 'g' ? 'g' : undefined });
+  out.innerHTML = `<b>${esc(qtyLabel(food, qty, sel.value === 'g'))}</b> = ${n0(m.kcal)} kcal · P ${n1(m.p)} · C ${n1(m.c)} · F ${n1(m.f)} · Fib ${n1(m.fib)}`;
+}
+
 function renderDiet(root: HTMLElement) {
   const w = ensureWeek(), day = w[dietDay], { t, sample, adjusted } = dietTargets(dietDay);
   const chosen = meals.map((s) => s.options.find((o) => o.id === day[s.id]) ?? s.options[0]);
   const tot = F.sumMacros(chosen), tags = new Map<string, number>();
   chosen.forEach((o) => (o.tags ?? []).forEach((x) => tags.set(x, (tags.get(x) ?? 0) + 1)));
-  const todayIdx = String(F.weekdayIdx(TODAY));
+  const todayIdx = String(F.weekdayIdx(TODAY)), isToday = dietDay === todayIdx;
   root.innerHTML = `
   <div class="f-dayhead"><div><p class="label">Pure veg · dairy · Indian</p><h2>Fuel, <em>planned.</em></h2></div>
     <div class="f-row"><button class="btn ghost sm" data-act="build-day">✦ Build my day</button><button class="btn ghost sm" data-act="build-week">Rebuild week</button></div></div>
@@ -334,12 +478,9 @@ function renderDiet(root: HTMLElement) {
     <div class="f-bars">${bar('Calories', tot.kcal, t.kcal, '')}${bar('Protein', tot.p, t.p)}${bar('Carbs', tot.c, t.c)}${bar('Fat', tot.f, t.f)}${bar('Fibre', tot.fib, t.fib, 'g', true)}</div>
     ${tot.p < t.p * 0.95 ? `<p class="fine">Short ${n0(t.p - tot.p)} g protein — add a glass of milk (8 g), 100 g hung curd (10 g) or 50 g paneer (9 g).</p>` : ''}
   </div>
-  <div class="f-slots">${meals.map((s) => { const o = s.options.find((x) => x.id === day[s.id]) ?? s.options[0];
-    return `<div class="card f-slot"><div class="st"><span class="tm">${s.time}</span><span class="sn">${s.name}</span></div>
-      <label class="f-pick"><select data-act="swap" data-slot="${s.id}" aria-label="${s.name} option">${s.options.map((x) => `<option value="${x.id}" ${x.id === o.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
-      <p class="pt">${esc(o.portion)}</p>
-      <p class="mc"><b>${n0(o.kcal)}</b> kcal <span>P ${n1(o.p)}</span><span>C ${n1(o.c)}</span><span>F ${n1(o.f)}</span><span>Fib ${n1(o.fib)}</span></p>
-      ${o.tags?.length ? `<p class="tg">${o.tags.map((x) => `<i>${micros.find((m) => m.tag === x)?.name.replace('Vitamin ', 'Vit ') ?? x}</i>`).join('')}</p>` : ''}</div>`; }).join('')}</div>
+  ${isToday ? checklistCard() + calcCard(TODAY, true) : `<p class="fine f-center">Ticks, “ate something else” and the calorie calculator work on today’s tab (${WD[+todayIdx]}).</p>`}
+  <div class="f-slots">${meals.map((s) => slotCard(s, day, isToday)).join('')}</div>
+  <datalist id="f-foods">${foods.map((f) => `<option value="${esc(f.name)}">${esc(f.unit)}${f.aka ? ' · ' + esc(f.aka) : ''}</option>`).join('')}</datalist>
   <div class="f-two">
     <div class="card f-micro"><p class="label">Vitamins & minerals · ${WD[+dietDay]}</p><ul>${micros.map((m) => { const c = tags.get(m.tag) ?? 0;
       return `<li class="${c >= 2 ? 'ok' : c === 1 ? 'mid' : 'low'}"><span class="dot"></span><div><b>${m.name}</b> <em>${c ? `${c} source${c > 1 ? 's' : ''}` : 'not covered'}</em><p>${esc(c ? m.note : m.food + '. ' + m.note)}</p></div></li>`; }).join('')}</ul></div>
@@ -349,7 +490,7 @@ function renderDiet(root: HTMLElement) {
         <li><b>Creatine monohydrate</b><span>3–5 g daily, any time, no loading needed. Drink enough water.</span></li>
         <li><b>B12 · Vitamin D · Omega-3 (algae)</b><span>Only if a blood test shows you’re low — common for vegetarians. Ask a doctor.</span></li>
       </ul>
-      <p class="fine">Tick what you actually ate in <button class="f-link" data-act="go-today">Today’s check-in</button> — it feeds the rebalancing.</p></div>
+      <p class="fine">Everything you tick feeds the calorie calculator and the 7-day rebalancing.</p></div>
   </div>${NOTE}`;
 }
 
@@ -611,6 +752,10 @@ async function addFinger() {
 // auto-lock after 5 minutes in the background
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (mem && hiddenAt && Date.now() - hiddenAt > 5 * 60_000) lockNow(); });
+document.addEventListener('keydown', (e) => {
+  const el = e.target as HTMLElement;
+  if (e.key === 'Enter' && el.closest('.f-other') && el.hasAttribute('data-food')) { e.preventDefault(); (el.closest('.f-other')!.querySelector('[data-act=food-add]') as HTMLElement).click(); }
+});
 document.addEventListener('submit', (e) => {
   const form = e.target as HTMLFormElement; if (!form.closest('[data-fit]')) return;
   e.preventDefault();
@@ -632,6 +777,7 @@ document.addEventListener('click', (e) => {
   else if (a === 'go-body') goTab('body');
   else if (a === 'go-plan') goTab('plan');
   else if (a === 'go-today') goTab('today');
+  else if (a === 'go-diet') { dietDay = String(F.weekdayIdx(TODAY)); goTab('diet'); }
   else if (a === 'edit-goal') { editingGoal = true; render(); }
   else if (a === 'cancel-goal') { editingGoal = false; render(); }
   else if (a === 'suggest') {
@@ -676,26 +822,37 @@ document.addEventListener('click', (e) => {
   else if (a === 'reset-vault') {
     if (confirm('Erase ALL private fitness data on this device and start over? This cannot be undone.') && confirm('Really erase? Make sure you have a backup file.')) { localStorage.removeItem(VAULT); plainKeys().forEach((k) => localStorage.removeItem(k)); lockMsg = ''; screen = 'unlock'; render(); }
   }
-  else if (a === 'wd') { dietDay = el.dataset.i!; render(); }
+  else if (a === 'wd') { dietDay = el.dataset.i!; otherOpen = ''; render(); }
+  else if (a === 'tick') tickMeal(TODAY, el.dataset.slot!, !refOf(TODAY, el.dataset.slot!));
+  else if (a === 'other-open') { otherOpen = el.dataset.slot!; foodMsg = ''; render(); (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus(); }
+  else if (a === 'other-done') { otherOpen = ''; foodMsg = ''; render(); }
+  else if (a === 'other-clear') { setOther(TODAY, el.dataset.slot!, []); otherOpen = ''; }
+  else if (a === 'food-del') { const its = [...otherOf(TODAY, el.dataset.slot!)]; its.splice(+el.dataset.n!, 1); setOther(TODAY, el.dataset.slot!, its); }
+  else if (a === 'food-add') {
+    const box = el.closest('.f-other') as HTMLElement, q = (box.querySelector('[name=food]') as HTMLInputElement).value;
+    const food = findFood(q), qty = num((box.querySelector('[name=qty]') as HTMLInputElement).value);
+    if (!food) { foodMsg = q ? `“${q}” isn’t in the list yet — use Today → “Anything else” to enter kcal/protein by hand.` : 'Type a food first.'; return render(); }
+    if (!qty || qty <= 0) { foodMsg = 'Enter a quantity.'; return render(); }
+    foodMsg = ''; setOther(TODAY, el.dataset.slot!, [...otherOf(TODAY, el.dataset.slot!), { id: food.id, q: qty, ...((box.querySelector('[name=unit]') as HTMLSelectElement).value === 'g' ? { u: 'g' as const } : {}) }]);
+    (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus();
+  }
   else if (a === 'build-day') { const w = ensureWeek(); w[dietDay] = F.buildDay(meals, dietTargets(dietDay).t, Date.now() % 2147483646, w[dietDay]); put(K.week, w); }
   else if (a === 'build-week') { put(K.week, undefined); }
 });
 document.addEventListener('change', (e) => {
   const el = e.target as HTMLInputElement; if (!el.closest('[data-fit]')) return;
+  if (el.hasAttribute?.('data-food')) { const box = el.closest('.f-other') as HTMLElement | null; if (box) foodPreview(box); return; }
   if (el.name === 'ack') { const b = el.closest('form')?.querySelector('[data-ack-btn]') as HTMLButtonElement | null; if (b) b.disabled = !el.checked; return; }
   if (el.dataset.act === 'import' && el.files?.[0]) return void importData(el.files[0]);
   if (el.dataset.act === 'pick' && el.value) { view = el.value > TODAY ? TODAY : el.value; return render(); }
   if (el.dataset.act === 'swap') { const w = ensureWeek(); w[dietDay] = { ...w[dietDay], [el.dataset.slot!]: el.value }; return put(K.week, w); }
   const form = el.closest('form') as HTMLFormElement | null;
   if (form?.dataset.form === 'log') {
-    if (el.name === 'meal') {
-      const cur = (logOf(view)?.meals ?? []).filter((m) => !m.startsWith(el.value.split(':')[0] + ':'));
-      return saveLog(view, { meals: el.checked ? [...cur, el.value] : cur });
-    }
+    if (el.name === 'meal') return tickMeal(view, el.dataset.slot!, el.checked);
     return saveLog(view, { [el.name]: num(el.value) } as Partial<DayLog>);
   }
   if (form?.dataset.form === 'goal') checkGoal(roots.plan!);
 });
-document.addEventListener('input', (e) => { const el = e.target as HTMLElement; if (el.closest('form[data-form="goal"]')) checkGoal(roots.plan!); });
+document.addEventListener('input', (e) => { const el = e.target as HTMLElement; const box = el.closest('.f-other') as HTMLElement | null; if (box && el.hasAttribute('data-food')) return foodPreview(box); if (el.closest('form[data-form="goal"]')) checkGoal(roots.plan!); });
 
 render();

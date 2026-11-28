@@ -47,6 +47,7 @@ decisions that are truly mine.
 - src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-locks after 5 min away).
 - src/lib/fit.ts → fitness engine (BMR, burn, goals + safety checks, daily targets, adaptive ledger, diet
   builder). src/data/meals.ts → veg+dairy meal options (5 per slot) + micronutrient notes.
+  src/data/foods.ts → ~100 Indian veg foods (per unit + grams) for "Ate something else?" custom meals.
   src/scripts/fit-app.ts renders Today/Plan/Diet/Body; src/styles/fit.css styles them.
 - public/images/ (me-big.jpg, me-full.jpg, me.jpg), public/icons/ + manifest.webmanifest (installable app),
   design/ (icon options, not built). Topic card photos: drop public/images/covers/<slug>.jpg.
@@ -64,6 +65,9 @@ decisions that are truly mine.
   (7D/30D/90D/1Y), streaks, weekday rhythm, lifetime km and heatmap on /gym/.
 - Fitness (/gym/ Today·Plan·Diet·Body): scans → validated goal (recomp/cut/bulk, 30-day phases) → daily
   kcal/macros/steps/incline-walk targets → check-in → 7-day ledger rebalances next 3–7 days within caps.
+  Diet tab (today): tick meals (checklist + diet streak), "Ate something else?" food search with auto
+  macros, live calorie calculator (food in vs rest + steps + strength + incline + digestion) that raises
+  today's food allowance when the logged workout beats the plan.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)

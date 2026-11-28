@@ -21,7 +21,8 @@ export type Goal = {
 };
 export type DayLog = {
   date: string;
-  meals?: string[];                       // diet slot ids ticked as eaten ("breakfast")
+  meals?: string[];                       // eaten: "slot:optionId" (from the plan) or "slot:other" (custom foods)
+  other?: Record<string, { id: string; q: number; u?: 'g' }[]>; // custom foods per slot (src/data/foods.ts ids)
   extraKcal?: number; extraP?: number; extraC?: number; extraF?: number;
   steps?: number; cardioMin?: number; workoutMin?: number; water?: number; sleep?: number; weight?: number;
 };
