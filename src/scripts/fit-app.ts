@@ -1,27 +1,35 @@
-// /gym/ — Today · Plan · Diet · Body tabs. Everything personal stays in THIS browser, ENCRYPTED with the
-// owner's passcode (src/lib/vault.ts -> localStorage "fit:vault"). Decrypted data lives only in memory (`mem`).
+// /gym/ — Today · Plan · Diet · Body tabs. Everything personal stays in THIS browser, ENCRYPTED (src/lib/vault.ts
+// -> localStorage "fit:vault"), unlocked by passcode, fingerprint or recovery key. Decrypted data lives only in
+// memory (`mem`). The owner can turn the lock off per device (then data is plain in "fit:plain").
 import * as F from '../lib/fit';
 import type { Scan, Goal, DayLog, GoalType, Macros, Targets } from '../lib/fit';
 import { meals, micros } from '../data/meals';
-import { seal, unseal, deriveKey, newSalt, ITER, type Vault } from '../lib/vault';
+import * as V from '../lib/vault';
+import type { AnyVault, VaultV2, KeySlot } from '../lib/vault';
 
 // ---------------- store ----------------
 const K = { scans: 'fit:scans', goal: 'fit:goal', week: 'fit:dietweek', log: (d: string) => `fit:log:${d}` };
-const VAULT = 'fit:vault';
-let mem: Record<string, unknown> | null = null;          // null = locked
-let vkey: { key: CryptoKey; salt: Uint8Array; it: number } | null = null;
+const VAULT = 'fit:vault', PLAIN = 'fit:plain';
+let mem: Record<string, unknown> | null = null;   // decrypted data, only in memory (null = locked)
+let dk: Uint8Array | null = null;                 // data key, only in memory while unlocked
 let chain: Promise<void> = Promise.resolve();
-const vault = (): Vault | null => { try { return JSON.parse(localStorage.getItem(VAULT) || 'null'); } catch { return null; } };
+const vault = (): AnyVault | null => { try { return JSON.parse(localStorage.getItem(VAULT) || 'null'); } catch { return null; } };
+const v2 = () => { const v = vault(); return v && v.v === 2 ? v : null; };
+const lockOff = () => localStorage.getItem(PLAIN) != null;
+const saveVault = (v: VaultV2) => localStorage.setItem(VAULT, JSON.stringify(v));
 const persist = () => {
-  if (!mem || !vkey) return;
-  const text = JSON.stringify(mem), k = vkey;
-  chain = chain.then(async () => localStorage.setItem(VAULT, JSON.stringify(await seal(k.key, k.salt, text, k.it)))).catch(() => {});
+  if (!mem) return;
+  const text = JSON.stringify(mem);
+  if (lockOff()) return void localStorage.setItem(PLAIN, text);
+  const k = dk; if (!k || !v2()) return;
+  chain = chain.then(async () => { const data = await V.sealData(k, text); const cur = v2(); if (cur) saveVault({ ...cur, data }); }).catch(() => {});
 };
 const load = <T,>(k: string, d: T): T => ((mem?.[k] as T) ?? d);
 const set = (k: string, v: unknown) => { if (!mem) return; if (v === undefined) delete mem[k]; else mem[k] = v; persist(); };
 const put = (k: string, v: unknown) => { set(k, v); render(); };
-// plaintext fit:* keys from before the lock existed -> moved into the vault on setup
-const plainKeys = () => Object.keys(localStorage).filter((k) => k.startsWith('fit:') && k !== VAULT);
+// loose plaintext fit:* keys from before the lock existed -> moved into the vault on setup
+const plainKeys = () => Object.keys(localStorage).filter((k) => k.startsWith('fit:') && k !== VAULT && k !== PLAIN);
+if (lockOff()) { try { mem = JSON.parse(localStorage.getItem(PLAIN)!); } catch { mem = {}; } }
 
 const scans = (): Scan[] => load<Scan[]>(K.scans, []).filter((s) => s && s.date && s.weight).sort((a, b) => a.date.localeCompare(b.date));
 const goal = (): Goal | null => load<Goal | null>(K.goal, null);
@@ -360,13 +368,9 @@ function renderBody(root: HTMLElement) {
       ${FIELDS.map(([k, l, u]) => `<label class="f-in"><input type="number" inputmode="decimal" step="0.01" min="0" name="${k}" ${['weight', 'fatPct', 'smm'].includes(k) ? 'required' : ''} placeholder="—"><span>${l.toLowerCase()}${u ? ' ' + u : ''}</span></label>`).join('')}
       <button class="btn primary" data-act="add-scan">Save scan</button>
     </form></details>`;
-  const data = `<div class="card f-data"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then, and import it on your phone.</p></div>
-    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div>
-    <details class="f-chg"><summary>Change passcode</summary><form data-form="pass" class="f-grid4" autocomplete="off">
-      <label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>current</span></label>
-      <label class="f-in"><input type="password" name="n1" minlength="6" required autocomplete="new-password"><span>new · 6+</span></label>
-      <label class="f-in"><input type="password" name="n2" minlength="6" required autocomplete="new-password"><span>repeat new</span></label>
-      <button class="btn primary sm" type="submit">Change</button><p class="f-err" role="alert"></p></form></details></div>`;
+  const data = `<div class="card f-data"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then — and import it on your other devices.</p></div>
+    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div></div>
+    ${securityCard()}`;
   if (!last) return (root.innerHTML = locked('Body reports', 'Scan history, trends and progress since your first measurement.', false) + form + data);
   const dAgo = F.diffDays(last.date, TODAY);
   root.innerHTML = `
@@ -388,10 +392,8 @@ function renderBody(root: HTMLElement) {
 // ---------------- events ----------------
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
 function render() {
-  if (!mem) {
-    Object.values(roots).forEach((r) => r && (r.innerHTML = lockCard()));
-    return;
-  }
+  const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
+  if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return; }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
   if (roots.plan) renderPlan(roots.plan);
@@ -425,75 +427,183 @@ async function importData(file: File) {
 }
 
 // ---------------- lock ----------------
-let tries = 0, waitUntil = 0, lockMsg = '';
-function lockCard() {
-  const v = vault(), wait = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
-  if (!v) return `<form class="card f-lock f-vault" data-form="setup" autocomplete="off">
+let tries = 0, waitUntil = 0, lockMsg = '', screen: 'unlock' | 'recover' = 'unlock';
+let pendingCode = '', needNewPass = false, settingUp = false, offerFinger = false, fpAvail = false, secMsg = '';
+V.fingerprintAvailable().then((ok) => { fpAvail = ok; render(); });
+const deviceName = () => { const u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone / iPad' : /Android/.test(u) ? 'Android phone' : /Mac/.test(u) ? 'Mac (Touch ID)' : /Windows/.test(u) ? 'Windows Hello' : 'This device'; };
+const errMsg = (e: unknown) => { const n = (e as Error)?.name, m = (e as Error)?.message;
+  return m === 'no-prf' ? 'This browser can’t use fingerprint for encryption yet — use your passcode. (Latest Chrome or Safari usually can.)'
+    : n === 'NotAllowedError' || m === 'cancelled' ? 'Fingerprint was cancelled or timed out.' : n === 'InvalidStateError' ? 'This device is already added.' : 'Fingerprint didn’t work here — use your passcode.'; };
+const passFields = (a = 'p1', b = 'p2') => `<div class="f-pass">
+  <label class="f-in"><input type="password" name="${a}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · 6+ characters</span></label>
+  <label class="f-in"><input type="password" name="${b}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>repeat passcode</span></label></div>`;
+const msg = () => (lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : '');
+
+function setupCard() {
+  return `<form class="card f-lock f-vault" data-form="setup" autocomplete="off">
     <span class="f-lk" aria-hidden="true">🔐</span><p class="label">Private space</p><h2>Set a <em>passcode.</em></h2>
-    <p class="lead">Body scans, goals and daily logs are encrypted on this device with your passcode (AES-256). Without it, nobody can open them — not even with developer tools.</p>
-    <div class="f-pass">
-      <label class="f-in"><input type="password" name="p1" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · 6+ characters</span></label>
-      <label class="f-in"><input type="password" name="p2" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>repeat passcode</span></label>
-    </div>
-    <label class="f-in f-backup"><input type="file" name="backup" accept="application/json"><span>start from a backup file (optional)</span></label>
-    ${lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : ''}
-    <div class="f-row"><button class="btn primary" type="submit">Create & unlock</button></div>
-    <p class="fine">There’s no “forgot passcode”. If you lose it, the data can’t be recovered — export a backup now and then.</p></form>`;
+    <p class="lead">Body scans, goals and daily logs are encrypted on this device (AES-256). Without the passcode, fingerprint or recovery key, nobody can open them — not even with developer tools.</p>
+    ${passFields()}
+    ${mem ? '' : '<label class="f-in f-backup"><input type="file" name="backup" accept="application/json"><span>start from a backup file (optional)</span></label>'}
+    ${msg()}
+    <div class="f-row"><button class="btn primary" type="submit">Create & unlock</button>${settingUp ? '<button type="button" class="btn ghost" data-act="cancel-setup">Cancel</button>' : ''}</div>
+    <p class="fine">Next you’ll get a one-time recovery key, in case you ever forget the passcode.${mem ? '' : ' <button type="button" class="f-link" data-act="no-lock">Use without a lock</button>'}</p></form>`;
+}
+function lockCard() {
+  const v = vault();
+  if (!v) return setupCard();
+  const wait = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
+  const keys = v.v === 2 ? v.keys ?? [] : [];
+  if (screen === 'recover') return `<form class="card f-lock f-vault" data-form="recover" autocomplete="off">
+    <span class="f-lk" aria-hidden="true">🔑</span><p class="label">Recovery</p><h2>Use your <em>recovery key.</em></h2>
+    <p class="lead">The 32-character key you saved when you set up the lock. Dashes and capitals don’t matter.</p>
+    <div class="f-pass one"><label class="f-in"><input type="text" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-…" class="f-codein" ${wait ? 'disabled' : ''}><span>recovery key</span></label>
+      <button class="btn primary" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${wait}s` : 'Unlock'}</button></div>
+    ${msg()}<p class="fine"><button type="button" class="f-link" data-act="screen-unlock">← Back to passcode</button></p></form>`;
   return `<form class="card f-lock f-vault" data-form="unlock" autocomplete="off">
     <span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private</p><h2>Locked.</h2>
-    <p class="lead">Enter your passcode to open Today, Plan, Diet and Body.</p>
+    <p class="lead">${keys.length && fpAvail ? 'Use your fingerprint, or enter your passcode.' : 'Enter your passcode to open Today, Plan, Diet and Body.'}</p>
+    ${keys.length && fpAvail ? `<button type="button" class="btn primary f-finger" data-act="finger" ${wait ? 'disabled' : ''}><span aria-hidden="true">👆</span> Unlock with fingerprint</button><p class="f-or"><span>or passcode</span></p>` : ''}
     <div class="f-pass one"><label class="f-in"><input type="password" name="p" required autocomplete="current-password" placeholder="••••••" ${wait ? 'disabled' : ''}><span>passcode</span></label>
-      <button class="btn primary" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${wait}s` : 'Unlock'}</button></div>
-    ${lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : ''}
-    <p class="fine">Encrypted on this device. <button type="button" class="f-link" data-act="reset-vault">Forgot it? Erase & start over</button></p></form>`;
+      <button class="btn ${keys.length && fpAvail ? 'ghost' : 'primary'}" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${wait}s` : 'Unlock'}</button></div>
+    ${msg()}
+    <p class="fine">Forgot it? ${v.v === 2 && v.rec ? '<button type="button" class="f-link" data-act="screen-recover">Use recovery key</button> · ' : ''}<button type="button" class="f-link" data-act="reset-vault">Erase & start over</button></p></form>`;
 }
-const lockBar = () => `<div class="f-lockbar"><span>🔓 Unlocked · encrypted on this device</span><button type="button" class="f-link" data-act="lock">Lock</button></div>`;
-function lockNow() { mem = null; vkey = null; editingGoal = false; lockMsg = ''; render(); }
+function codeCard(code: string) {
+  return `<form class="card f-lock f-vault" data-form="code">
+    <span class="f-lk" aria-hidden="true">🔑</span><p class="label">Recovery key · shown once</p><h2>Save this <em>somewhere safe.</em></h2>
+    <p class="lead">If you ever forget your passcode, this key opens your data. Nobody else can reset it for you — not even this website.</p>
+    <div class="f-code" aria-label="Recovery key">${code.split('-').map((g) => `<span>${g}</span>`).join('')}</div>
+    <div class="f-row"><button type="button" class="btn ghost sm" data-act="copy-code">Copy</button><button type="button" class="btn ghost sm" data-act="dl-code">Download .txt</button></div>
+    <label class="f-ack"><input type="checkbox" name="ack"> I’ve saved it (notes app, password manager or on paper)</label>
+    <div class="f-row"><button class="btn primary" type="submit" disabled data-ack-btn>Continue</button></div>
+    <p class="fine">A screenshot is fine — just keep it private. You can make a new key any time from Body → Security.</p></form>`;
+}
+function newPassCard() {
+  return `<form class="card f-lock f-vault" data-form="newpass" autocomplete="off">
+    <span class="f-lk" aria-hidden="true">✦</span><p class="label">Unlocked with recovery key</p><h2>Set a <em>new passcode.</em></h2>
+    <p class="lead">Your data is safe. Pick a new passcode — you’ll also get a fresh recovery key.</p>${passFields()}${msg()}
+    <div class="f-row"><button class="btn primary" type="submit">Save passcode</button></div></form>`;
+}
+function fingerCard() {
+  return `<div class="card f-lock f-vault"><span class="f-lk" aria-hidden="true">👆</span><p class="label">One more thing</p><h2>Unlock with your <em>fingerprint?</em></h2>
+    <p class="lead">Skip typing the passcode in front of people. Your fingerprint never leaves this device — it only unlocks a key stored in its secure chip.</p>${secMsg ? `<p class="f-err" role="alert">${esc(secMsg)}</p>` : ''}
+    <div class="f-row"><button class="btn primary" data-act="add-finger">Set up ${esc(deviceName())}</button><button class="btn ghost" data-act="skip-finger">Not now</button></div></div>`;
+}
+function securityCard() {
+  if (lockOff()) return `<div class="card f-sec"><p class="label">Security</p><h3>Lock is <em>off</em> on this device.</h3>
+    <p class="fine">Anyone using this browser can see your body data. Turn it on to encrypt everything with a passcode${fpAvail ? ' and fingerprint' : ''}.</p>
+    <div class="f-row" style="margin-top:14px"><button class="btn primary sm" data-act="turn-on">Turn on lock</button></div></div>`;
+  const v = v2(), keys = v?.keys ?? [];
+  return `<div class="card f-sec"><p class="label">Security</p>
+    ${secMsg ? `<p class="f-err" role="alert">${esc(secMsg)}</p>` : ''}
+    <div class="f-secrow"><div><b>Fingerprint / Touch ID</b><p>${keys.length ? keys.map((k) => `${esc(k.label)} · added ${fmtD(k.added)} <button class="f-x" data-act="del-finger" data-id="${esc(k.id)}" aria-label="Remove ${esc(k.label)}">×</button>`).join('<br>') : fpAvail ? 'Not set up on this device.' : 'Not available in this browser.'}</p></div>
+      ${fpAvail ? `<button class="btn ghost sm" data-act="add-finger">${keys.length ? 'Add another device' : 'Set up'}</button>` : ''}</div>
+    <div class="f-secrow"><div><b>Recovery key</b><p>${v?.rec ? 'Saved at setup. Lost it? Make a new one — the old one stops working.' : 'None yet.'}</p></div><button class="btn ghost sm" data-act="new-code">New key</button></div>
+    <details class="f-secrow f-chg"><summary><b>Passcode</b><span>Change</span></summary><form data-form="pass" class="f-grid4" autocomplete="off">
+      <label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>current</span></label>
+      <label class="f-in"><input type="password" name="n1" minlength="6" required autocomplete="new-password"><span>new · 6+</span></label>
+      <label class="f-in"><input type="password" name="n2" minlength="6" required autocomplete="new-password"><span>repeat new</span></label>
+      <button class="btn primary sm" type="submit">Change</button><p class="f-err" role="alert"></p></form></details>
+    <details class="f-secrow f-chg"><summary><b>Lock</b><span>On · auto-locks after 5 min away</span></summary><form data-form="lockoff" class="f-grid4" autocomplete="off">
+      <label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>passcode to confirm</span></label>
+      <button class="btn ghost sm" type="submit">Turn off lock</button><p class="f-err" role="alert"></p></form></details></div>`;
+}
+const lockBar = () => lockOff()
+  ? `<div class="f-lockbar"><span>Lock is off on this device</span><button type="button" class="f-link" data-act="turn-on">Turn on</button></div>`
+  : `<div class="f-lockbar"><span>🔓 Unlocked · encrypted on this device</span><button type="button" class="f-link" data-act="lock">Lock</button></div>`;
+
+function lockNow() { if (lockOff()) return; mem = null; dk = null; editingGoal = false; lockMsg = ''; secMsg = ''; screen = 'unlock'; pendingCode = ''; needNewPass = false; offerFinger = false; render(); }
+function failed() {
+  tries++; lockMsg = tries >= 5 ? 'Too many tries — wait 30 seconds.' : `That didn’t match${tries >= 3 ? ` (${5 - tries} tries left before a pause)` : ''}.`;
+  if (tries >= 5) { waitUntil = Date.now() + 30_000; tries = 0; setTimeout(() => { lockMsg = ''; render(); }, 30_500); }
+  render(); (document.querySelector('.panel:not([hidden]) form[data-form] input:not([type=file])') as HTMLInputElement | null)?.focus();
+}
+const busy = (form: HTMLFormElement | null, label: string) => { const b = form?.querySelector('button[type=submit]') as HTMLButtonElement | null; if (b) { b.disabled = true; b.textContent = label; } };
+async function opened(key: Uint8Array) {
+  const v = v2()!; dk = key; mem = JSON.parse(await V.openData(key, v.data)); tries = 0; lockMsg = ''; render();
+}
+async function newVault(pass: string, data: Record<string, unknown>) {
+  const key = V.newDataKey(), code = V.newRecoveryCode();
+  saveVault({ v: 2, data: await V.sealData(key, JSON.stringify(data)), pass: await V.makeSecretSlot(pass, key), rec: await V.makeRecoverySlot(code, key), keys: [] });
+  dk = key; mem = data; pendingCode = code;
+}
 async function unlock(form: HTMLFormElement) {
   if (Date.now() < waitUntil) return;
   const v = vault(); if (!v) return;
-  const p = String(new FormData(form).get('p') || '');
-  const btn = form.querySelector('button[type=submit]') as HTMLButtonElement; btn.disabled = true; btn.textContent = 'Unlocking…';
+  const p = String(new FormData(form).get('p') || ''); busy(form, 'Unlocking…');
   try {
-    const r = await unseal(p, v);
-    mem = JSON.parse(r.text); vkey = { key: r.key, salt: r.salt, it: r.it }; tries = 0; lockMsg = ''; render();
-  } catch {
-    tries++; lockMsg = tries >= 5 ? 'Too many tries — wait 30 seconds.' : `Wrong passcode${tries >= 3 ? ` (${5 - tries} tries left before a pause)` : ''}.`;
-    if (tries >= 5) { waitUntil = Date.now() + 30_000; tries = 0; setTimeout(() => { lockMsg = ''; render(); }, 30_500); }
-    render(); (document.querySelector('.panel:not([hidden]) form[data-form="unlock"] input') as HTMLInputElement | null)?.focus();
-  }
+    if (v.v === 1) { const data = JSON.parse(await V.openV1(p, v)); await newVault(p, data); tries = 0; lockMsg = ''; return render(); } // upgrade old vault
+    await opened(await V.openSecretSlot(p, v.pass));
+  } catch { failed(); }
+}
+async function unlockFinger() {
+  const v = v2(); if (!v?.keys?.length || Date.now() < waitUntil) return;
+  try { await opened(await V.openFingerprint(v.keys)); } catch (e) { lockMsg = errMsg(e); render(); }
+}
+async function recover(form: HTMLFormElement) {
+  if (Date.now() < waitUntil) return;
+  const v = v2(); if (!v?.rec) return;
+  busy(form, 'Checking…');
+  try { await V.openRecoverySlot(String(new FormData(form).get('code') || ''), v.rec).then(async (key) => { needNewPass = true; screen = 'unlock'; await opened(key); }); }
+  catch { failed(); }
+}
+async function setNewPass(form: HTMLFormElement) {
+  const f = new FormData(form), p1 = String(f.get('p1') || ''), p2 = String(f.get('p2') || '');
+  if (p1.length < 6 || p1 !== p2) { lockMsg = p1.length < 6 ? 'Use at least 6 characters.' : 'The two passcodes don’t match.'; return render(); }
+  const v = v2()!, key = dk!, code = V.newRecoveryCode();
+  saveVault({ ...v, pass: await V.makeSecretSlot(p1, key), rec: await V.makeRecoverySlot(code, key) });
+  needNewPass = false; lockMsg = ''; pendingCode = code; render();
 }
 async function setup(form: HTMLFormElement) {
   const f = new FormData(form), p1 = String(f.get('p1') || ''), p2 = String(f.get('p2') || '');
   if (p1.length < 6) { lockMsg = 'Use at least 6 characters.'; return render(); }
   if (p1 !== p2) { lockMsg = 'The two passcodes don’t match.'; return render(); }
-  let data: Record<string, unknown> = {};
+  let data: Record<string, unknown> = { ...(mem ?? {}) };
   plainKeys().forEach((k) => { try { data[k] = JSON.parse(localStorage.getItem(k)!); } catch {} });
-  const file = (form.elements.namedItem('backup') as HTMLInputElement).files?.[0];
+  const file = (form.elements.namedItem('backup') as HTMLInputElement | null)?.files?.[0];
   if (file) { try { data = { ...data, ...(await readBackup(file)) }; } catch { lockMsg = 'That backup file couldn’t be read.'; return render(); } }
-  const salt = newSalt(), key = await deriveKey(p1, salt);
-  vkey = { key, salt, it: ITER }; mem = data; lockMsg = '';
-  localStorage.setItem(VAULT, JSON.stringify(await seal(key, salt, JSON.stringify(mem))));
-  plainKeys().forEach((k) => localStorage.removeItem(k)); // no plaintext left behind
-  render();
+  busy(form, 'Encrypting…');
+  await newVault(p1, data);
+  plainKeys().forEach((k) => localStorage.removeItem(k)); localStorage.removeItem(PLAIN); // no plaintext left behind
+  settingUp = false; lockMsg = ''; render();
 }
 async function changePass(form: HTMLFormElement) {
-  const f = new FormData(form), v = vault(), cur = String(f.get('cur') || ''), p1 = String(f.get('n1') || ''), p2 = String(f.get('n2') || '');
-  const out = form.querySelector('.f-err') as HTMLElement;
-  try { if (v) await unseal(cur, v); } catch { out.textContent = 'Current passcode is wrong.'; return; }
+  const f = new FormData(form), v = v2(), out = form.querySelector('.f-err') as HTMLElement;
+  const cur = String(f.get('cur') || ''), p1 = String(f.get('n1') || ''), p2 = String(f.get('n2') || '');
+  try { await V.openSecretSlot(cur, v!.pass); } catch { out.textContent = 'Current passcode is wrong.'; return; }
   if (p1.length < 6 || p1 !== p2) { out.textContent = p1.length < 6 ? 'Use at least 6 characters.' : 'New passcodes don’t match.'; return; }
-  const salt = newSalt(); vkey = { key: await deriveKey(p1, salt), salt, it: ITER }; persist(); await chain;
-  out.textContent = ''; alert('Passcode changed.'); render();
+  saveVault({ ...v2()!, pass: await V.makeSecretSlot(p1, dk!) }); secMsg = 'Passcode changed ✓'; render();
+}
+async function turnOff(form: HTMLFormElement) {
+  const out = form.querySelector('.f-err') as HTMLElement, v = v2();
+  try { await V.openSecretSlot(String(new FormData(form).get('cur') || ''), v!.pass); } catch { out.textContent = 'Passcode is wrong.'; return; }
+  if (!confirm('Turn off the lock? Your data will be stored on this device without encryption, and anyone using this browser can see it.')) return;
+  await chain; localStorage.setItem(PLAIN, JSON.stringify(mem)); localStorage.removeItem(VAULT); dk = null; secMsg = ''; render();
+}
+async function addFinger() {
+  secMsg = '';
+  try {
+    const slot = await V.addFingerprint(dk!, deviceName());
+    const v = v2()!; saveVault({ ...v, keys: [...(v.keys ?? []), slot] }); offerFinger = false; secMsg = 'Fingerprint added ✓ — use it next time you unlock.';
+  } catch (e) { secMsg = errMsg(e); }
+  render();
 }
 // auto-lock after 5 minutes in the background
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (mem && hiddenAt && Date.now() - hiddenAt > 5 * 60_000) lockNow(); });
 document.addEventListener('submit', (e) => {
   const form = e.target as HTMLFormElement; if (!form.closest('[data-fit]')) return;
+  e.preventDefault();
   const t = form.dataset.form;
-  if (t === 'unlock' || t === 'setup' || t === 'pass') { e.preventDefault(); if (t === 'unlock') unlock(form); else if (t === 'setup') setup(form); else changePass(form); }
-  else if (t === 'weigh') { e.preventDefault(); const w = num(new FormData(form).get('weight')); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: w }); }
-  else e.preventDefault();
+  if (t === 'unlock') unlock(form);
+  else if (t === 'setup') setup(form);
+  else if (t === 'recover') recover(form);
+  else if (t === 'newpass') setNewPass(form);
+  else if (t === 'pass') changePass(form);
+  else if (t === 'lockoff') turnOff(form);
+  else if (t === 'code') { pendingCode = ''; offerFinger = fpAvail && !(v2()?.keys?.length); render(); }
+  else if (t === 'weigh') { const w = num(new FormData(form).get('weight')); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: w }); }
 });
 
 document.addEventListener('click', (e) => {
@@ -522,8 +632,29 @@ document.addEventListener('click', (e) => {
   } else if (a === 'del-scan') { if (confirm(`Delete the scan from ${el.dataset.d}?`)) put(K.scans, scans().filter((x) => x.date !== el.dataset.d)); }
   else if (a === 'export') exportData();
   else if (a === 'lock') lockNow();
+  else if (a === 'finger') unlockFinger();
+  else if (a === 'screen-recover') { screen = 'recover'; lockMsg = ''; render(); }
+  else if (a === 'screen-unlock') { screen = 'unlock'; lockMsg = ''; render(); }
+  else if (a === 'copy-code') { navigator.clipboard?.writeText(pendingCode).then(() => (el.textContent = 'Copied ✓')); }
+  else if (a === 'dl-code') {
+    const b = document.createElement('a');
+    b.href = URL.createObjectURL(new Blob([`Ascent — private fitness recovery key\nCreated ${TODAY} for ${location.host}\n\n${pendingCode}\n\nUse it on the Gym page lock screen → "Use recovery key". Keep it private.\n`], { type: 'text/plain' }));
+    b.download = 'ascent-recovery-key.txt'; b.click(); URL.revokeObjectURL(b.href);
+  }
+  else if (a === 'add-finger') addFinger();
+  else if (a === 'skip-finger') { offerFinger = false; render(); }
+  else if (a === 'del-finger') { if (confirm('Remove this fingerprint device? You can add it again later.')) { const v = v2()!; saveVault({ ...v, keys: (v.keys ?? []).filter((k: KeySlot) => k.id !== el.dataset.id) }); secMsg = ''; render(); } }
+  else if (a === 'new-code') { if (confirm('Make a new recovery key? The old one will stop working.')) { const code = V.newRecoveryCode(); V.makeRecoverySlot(code, dk!).then((rec) => { saveVault({ ...v2()!, rec }); pendingCode = code; render(); }); } }
+  else if (a === 'turn-on') { settingUp = true; lockMsg = ''; render(); }
+  else if (a === 'cancel-setup') { settingUp = false; lockMsg = ''; render(); }
+  else if (a === 'no-lock') {
+    if (confirm('Use without a lock? Your body data will be stored on this device without encryption. You can turn the lock on later.')) {
+      const data: Record<string, unknown> = {}; plainKeys().forEach((k) => { try { data[k] = JSON.parse(localStorage.getItem(k)!); } catch {} });
+      localStorage.setItem(PLAIN, JSON.stringify(data)); plainKeys().forEach((k) => localStorage.removeItem(k)); mem = data; render();
+    }
+  }
   else if (a === 'reset-vault') {
-    if (confirm('Erase ALL private fitness data on this device and start over? This cannot be undone.') && confirm('Really erase? Make sure you have a backup file.')) { localStorage.removeItem(VAULT); plainKeys().forEach((k) => localStorage.removeItem(k)); lockMsg = ''; render(); }
+    if (confirm('Erase ALL private fitness data on this device and start over? This cannot be undone.') && confirm('Really erase? Make sure you have a backup file.')) { localStorage.removeItem(VAULT); plainKeys().forEach((k) => localStorage.removeItem(k)); lockMsg = ''; screen = 'unlock'; render(); }
   }
   else if (a === 'wd') { dietDay = el.dataset.i!; render(); }
   else if (a === 'build-day') { const w = ensureWeek(); w[dietDay] = F.buildDay(meals, dietTargets(dietDay).t, Date.now() % 2147483646, w[dietDay]); put(K.week, w); }
@@ -531,6 +662,7 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('change', (e) => {
   const el = e.target as HTMLInputElement; if (!el.closest('[data-fit]')) return;
+  if (el.name === 'ack') { const b = el.closest('form')?.querySelector('[data-ack-btn]') as HTMLButtonElement | null; if (b) b.disabled = !el.checked; return; }
   if (el.dataset.act === 'import' && el.files?.[0]) return void importData(el.files[0]);
   if (el.dataset.act === 'pick' && el.value) { view = el.value > TODAY ? TODAY : el.value; return render(); }
   if (el.dataset.act === 'swap') { const w = ensureWeek(); w[dietDay] = { ...w[dietDay], [el.dataset.slot!]: el.value }; return put(K.week, w); }

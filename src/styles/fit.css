@@ -237,3 +237,26 @@
   .f-weigh { grid-template-columns: minmax(0, 1fr); }
   .f-weigh .wr .f-in { flex: 1; width: auto; }
 }
+
+/* fingerprint + recovery key + security */
+.f-finger { width: 100%; justify-content: center; gap: 10px; padding-block: 14px; font-size: 15px; }
+.f-finger span { font-size: 1.15rem; }
+.f-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.f-or::before, .f-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.f-code { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 6px 0 16px; padding: 18px; border-radius: 18px; background: var(--bg); border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line)); user-select: all; }
+.f-code span { font: 600 clamp(14px, 3.6vw, 18px) 'JetBrains Mono', monospace; letter-spacing: .12em; text-align: center; color: var(--ink); }
+.f-ack { display: flex; align-items: center; gap: 10px; margin: 18px 0 14px; font-size: .92rem; cursor: pointer; }
+.f-ack input { width: 18px; height: 18px; accent-color: var(--accent); }
+.f-codein { font-family: 'JetBrains Mono', monospace !important; letter-spacing: .08em !important; text-transform: uppercase; font-size: 15px !important; }
+.f-sec h3 { margin-bottom: 6px; }
+.f-secrow { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.f-sec .label + .f-secrow, .f-sec .f-err + .f-secrow { border-top: none; }
+.f-secrow > div { min-width: 0; flex: 1 1 260px; }
+.f-secrow b { font-weight: 600; font-size: .95rem; }
+.f-secrow p { margin: 3px 0 0; font-size: .86rem; color: var(--muted); }
+details.f-secrow { display: block; }
+details.f-secrow summary { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+details.f-secrow summary span { font-size: .86rem; color: var(--muted); }
+details.f-secrow summary span::after { content: ' +'; color: var(--accent); }
+details.f-secrow[open] summary span::after { content: ' −'; }
+@media (max-width: 560px) { .f-code { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

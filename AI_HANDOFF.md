@@ -44,7 +44,7 @@ decisions that are truly mine.
 - Pages: / (home) · /journal/ · /journal/[date]/ · /log/ (Daily Log form) · /post/ (weekly LinkedIn post
   generator) · /goals/ (habits) · /gym/ (Steps · Today · Plan · Diet · Body) · /explore/ (searchable Index + timeline) · /about/
 - src/lib/steps.ts → steps stats for /gym/ (goal = site.stepGoal, 10,000).
-- src/lib/vault.ts → passcode encryption for the private Gym tabs (auto-locks after 5 min in background).
+- src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-locks after 5 min away).
 - src/lib/fit.ts → fitness engine (BMR, burn, goals + safety checks, daily targets, adaptive ledger, diet
   builder). src/data/meals.ts → veg+dairy meal options (5 per slot) + micronutrient notes.
   src/scripts/fit-app.ts renders Today/Plan/Diet/Body; src/styles/fit.css styles them.
@@ -94,8 +94,10 @@ decisions that are truly mine.
    (PDFs, searchable) → Week 3 Achievements gallery (certificate/newspaper photos) → Week 4 GitHub README
    polish + SEO/OG share image + sitemap.
 3. Gym fitness system is built. My body scans, goal and daily logs live ONLY in the browser, encrypted with
-   my passcode (src/lib/vault.ts: PBKDF2 → AES-256-GCM, stored as "fit:vault"; Export/Import + Change
-   passcode on the Body tab). No passcode recovery exists by design. NEVER commit my data. Still to add: my old diet plan + exact
+   a random data key (src/lib/vault.ts, "fit:vault" v2). That key is wrapped 3 ways: passcode (PBKDF2),
+   one-time recovery key, and fingerprint/Touch ID (WebAuthn passkey PRF → HKDF). Body tab → Security:
+   add fingerprint, new recovery key, change passcode, turn lock off ("fit:plain") / on. Old v1 vaults
+   auto-upgrade on unlock. Nobody (not even the AI) can reset a lost passcode. NEVER commit my data. Still to add: my old diet plan + exact
    supplements, and my workout plan (V-shape focus).
 4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
