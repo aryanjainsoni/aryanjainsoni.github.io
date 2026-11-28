@@ -156,6 +156,10 @@ decisions that are truly mine.
   target month/date), Fulfilled gallery. Wishes: add/edit/delete (editor dialog), steps checklist + gold progress,
   tick = red wax seal + gold dust + chime. Search + filters (year, kind, status). Deep links #p-N after unlock.
   Included automatically in Settings → Full backup (fit:vault) and Gym export.
+  Real textures (Pexels, free licence): public/images/bucket/leather.jpg (#18786378, tinted burgundy via
+  multiply) and paper.jpg (#235985, toned dark golden-brown, shifted per page). Cover says "Ascent · Vol. II"
+  (Gym notebook "Altitude" = Vol. I). NEXT: Aryan will generate a photoreal cove image in Gemini (16:9 + 9:16)
+  → replace the SVG scene with it as a living cinemagraph (WebGL water flow, lantern flicker, rays, dust).
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -199,6 +203,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Bucket book: real leather cover + real aged-paper pages (Pexels textures), "Ascent · Vol. II".
 - 2026-11-28 Private bucket list book "Rahasya" (/bucket/): treasure-cove scene, vault lock, wishes, wax seals, search.
 - 2026-11-28 Gym Notebook → real spiral notebook "Altitude": green cover, ruled pages, page flip, index, search.
 - 2026-11-28 Header logo: photo badge → animated Circle Summit mark (draw-on-load once per visit, hover re-climb).

@@ -279,7 +279,7 @@ function init(root: HTMLElement) {
 
     out.forEach((p, i) => {
       p.dataset.page = String(i + 1); p.querySelector('.pp-no')!.textContent = String(i + 1); p.classList.remove('right');
-      p.style.setProperty('--fox', fox(i));
+      p.style.setProperty('--fox', fox(i)); { const R = rng(500 + i * 37); p.style.setProperty('--ppos', `${(R() * 100).toFixed(0)}% ${(R() * 100).toFixed(0)}%`); }
     });
     out.forEach((p) => p.querySelectorAll<HTMLElement>('.toc-row').forEach((row) => { row.querySelector('.n')!.textContent = String(wishPage.get(row.dataset.gotoWish!) ?? ''); }));
     return out;
@@ -287,7 +287,7 @@ function init(root: HTMLElement) {
 
   // ---------------- leaves ----------------
   const blank = (back = false) => { const p = page('blank'); p.classList.add('blank'); if (back) p.classList.add('backside'); return p; };
-  const coverHtml = () => `<div class="bk-cover"><p class="bkc-dev">${esc(BOOK.dev)}</p><p class="bkc-title">${esc(BOOK.title)}</p><span class="bkc-rule"></span><p class="bkc-sub">${esc(BOOK.subtitle)}</p>
+  const coverHtml = () => `<div class="bk-cover"><p class="bkc-series">Ascent · Vol. II</p><p class="bkc-dev">${esc(BOOK.dev)}</p><p class="bkc-title">${esc(BOOK.title)}</p><span class="bkc-rule"></span><p class="bkc-sub">${esc(BOOK.subtitle)}</p>
     <div class="bkc-mark">${MARK}</div><p class="bkc-author">${esc(BOOK.author)}</p><span class="bkc-clasp"></span><span class="bkc-ribbon"></span>
     <button type="button" class="bkc-open" data-opencover aria-label="Open the book"></button></div>`;
   const MARK = `<svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="#2a0810" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="56" r="34" stroke-width="5" stroke-dasharray="70 18 140"/><path d="M22 76 L50 10 L78 76" stroke-width="8"/><path d="M32 62 L42 55 L50 59 L62 48" stroke-width="4"/></svg>`;
