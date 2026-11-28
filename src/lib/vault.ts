@@ -85,7 +85,9 @@ type PrfResults = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer }
 // Throws Error('no-prf') when the browser can't derive a secret from the passkey (older browsers).
 export async function addFingerprint(dk: Uint8Array, label: string): Promise<KeySlot> {
   const salt = rand(32);
-  const cred = (await navigator.credentials.create({
+  // Some Android credential managers fail when asked for the PRF value during registration
+  // (NotReadableError / UnknownError) — retry asking only "is PRF supported", then read it at sign-in.
+  const create = async (evalFirst: boolean) => (await navigator.credentials.create({
     publicKey: {
       rp: { name: 'Ascent', id: location.hostname },
       user: { id: rand(16), name: 'Ascent · private fitness', displayName: 'Ascent' },
@@ -93,9 +95,12 @@ export async function addFingerprint(dk: Uint8Array, label: string): Promise<Key
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
       timeout: 60_000,
-      extensions: { prf: { eval: { first: salt } } } as AuthenticationExtensionsClientInputs,
+      extensions: { prf: evalFirst ? { eval: { first: salt } } : {} } as AuthenticationExtensionsClientInputs,
     },
   })) as PublicKeyCredential | null;
+  let cred: PublicKeyCredential | null;
+  try { cred = await create(true); }
+  catch (e) { if (['NotReadableError', 'UnknownError', 'NotSupportedError', 'TypeError'].includes((e as Error).name)) cred = await create(false); else throw e; }
   if (!cred) throw new Error('cancelled');
   const ext = cred.getClientExtensionResults() as PrfResults;
   if (!ext.prf?.enabled && !ext.prf?.results?.first) throw new Error('no-prf');

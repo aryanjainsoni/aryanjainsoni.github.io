@@ -350,3 +350,18 @@ details.f-secrow[open] summary span::after { content: ' −'; }
 .f-alert ul, .f-log-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
 .f-alert li, .f-log-list li { padding: 7px 10px; border-radius: 10px; background: color-mix(in srgb, var(--line) 40%, transparent); overflow-wrap: anywhere; }
 .f-log-list + .f-link { margin-top: 10px; font-size: .84rem; }
+
+/* food suggestions + new food */
+.f-sugg { display: flex; flex-wrap: wrap; gap: 6px; }
+.f-sugg:empty { display: none; }
+.f-sugg button { display: grid; gap: 1px; text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); cursor: pointer; max-width: 100%; transition: border-color .15s, background .15s; }
+.f-sugg button:hover, .f-sugg button:focus-visible { border-color: var(--accent); outline: none; }
+.f-sugg button.top { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: var(--accent-soft); }
+.f-sugg button b { font-weight: 600; font-size: .9rem; }
+.f-sugg button span { font: 500 10.5px 'JetBrains Mono', monospace; color: var(--muted); }
+.f-sugg button.new { border-style: dashed; }
+.f-sugg button.new b { color: var(--accent); }
+.f-newfood { display: grid; gap: 10px; padding: 14px; border-radius: 16px; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.f-newfood .f-sub { margin: 0; }
+.f-newfood .nf-name { grid-column: span 2; }
+@media (max-width: 560px) { .f-newfood .nf-name { grid-column: 1 / -1; } }

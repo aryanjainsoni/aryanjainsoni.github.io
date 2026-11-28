@@ -70,17 +70,20 @@ const kgOn = (d: string) => {
 const optionOf = (ref: string) => { const [slot, id] = ref.split(':'); return meals.find((s) => s.id === slot)?.options.find((o) => o.id === id); };
 // custom foods ("Ate something else?")
 type Item = { id: string; q: number; u?: 'g' };
+const myFoods = (): Food[] => load<Food[]>('fit:foods', []);          // your own foods (private, in the vault)
+const allFoods = (): Food[] => [...myFoods(), ...foods];
+const getFood = (id: string) => foodById.get(id) ?? myFoods().find((f) => f.id === id);
 const itemMacros = (it: Item): Macros => {
-  const f = foodById.get(it.id); if (!f) return { kcal: 0, p: 0, c: 0, f: 0, fib: 0 };
+  const f = getFood(it.id); if (!f) return { kcal: 0, p: 0, c: 0, f: 0, fib: 0 };
   const m = it.u === 'g' && f.g ? it.q / f.g : it.q;
   return { kcal: f.kcal * m, p: f.p * m, c: f.c * m, f: f.f * m, fib: f.fib * m };
 };
 const qtyLabel = (f: Food, q: number, g?: boolean) => (g ? `${n1(q)} g ${f.name}` : `${n1(q)} × ${f.name}${['piece', 'roti'].includes(f.unit) ? '' : ` · ${f.unit}`}`);
-const itemLabel = (it: Item) => qtyLabel(foodById.get(it.id)!, it.q, it.u === 'g');
+const itemLabel = (it: Item) => { const f = getFood(it.id); return f ? qtyLabel(f, it.q, it.u === 'g') : `${n1(it.q)} × (deleted food)`; };
 const otherOf = (d: string, slot: string): Item[] => logOf(d)?.other?.[slot] ?? [];
 const refMacros = (d: string, ref: string): (Macros & { name: string }) | undefined => {
   const [slot, id] = ref.split(':');
-  if (id === 'other') { const its = otherOf(d, slot); if (!its.length) return undefined; return { ...F.sumMacros(its.map(itemMacros)), name: its.map((i) => foodById.get(i.id)?.name).join(' + ') }; }
+  if (id === 'other') { const its = otherOf(d, slot); if (!its.length) return undefined; return { ...F.sumMacros(its.map(itemMacros)), name: its.map((i) => getFood(i.id)?.name ?? '?').join(' + ') }; }
   return optionOf(ref);
 };
 const eatenOn = (d: string) => F.eaten(logOf(d), (ref) => refMacros(d, ref));
@@ -422,7 +425,24 @@ function ensureWeek() {
   return out;
 }
 
-let otherOpen = '', foodMsg = '';
+let otherOpen = '', foodMsg = '', newFood: { slot: string; name: string } | null = null;
+function newFoodForm(name: string) {
+  return `<div class="f-newfood" data-newfood>
+    <p class="f-sub">New food · saved to your private list</p>
+    <div class="f-grid4">
+      <label class="f-in nf-name"><input name="nf-name" value="${esc(name)}" maxlength="60"><span>name</span></label>
+      <label class="f-in"><input name="nf-unit" value="serving" maxlength="20"><span>unit (glass, plate, piece…)</span></label>
+      <label class="f-in"><input name="nf-kcal" type="number" inputmode="decimal" min="0" step="1" placeholder="—"><span>kcal per unit *</span></label>
+      <label class="f-in"><input name="nf-p" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"><span>protein g</span></label>
+      <label class="f-in"><input name="nf-c" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"><span>carbs g</span></label>
+      <label class="f-in"><input name="nf-f" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"><span>fat g</span></label>
+      <label class="f-in"><input name="nf-fib" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"><span>fibre g</span></label>
+      <label class="f-in"><input name="nf-g" type="number" inputmode="decimal" min="0" step="1" placeholder="—"><span>grams per unit</span></label>
+    </div>
+    <p class="fine">Numbers from the pack label, or search “${esc(name || 'food')} calories per ${'serving'}”. Only kcal is required.</p>
+    <div class="f-row"><button type="button" class="btn primary sm" data-act="nf-save">Save & add</button><button type="button" class="f-link" data-act="nf-cancel">Cancel</button></div>
+  </div>`;
+}
 function slotCard(s: (typeof meals)[number], day: Record<string, string>, canLog: boolean) {
   const D = dietDate;
   const o = s.options.find((x) => x.id === day[s.id]) ?? s.options[0];
@@ -446,27 +466,42 @@ function otherBuilder(slot: string, its: Item[]) {
   return `<div class="f-other" data-slot="${slot}">
     <p class="f-sub">What did you eat instead?</p>
     <div class="f-addrow">
-      <label class="f-in grow"><input list="f-foods" name="food" placeholder="Search — roti, paneer, samosa…" autocomplete="off" data-food><span>food</span></label>
+      <label class="f-in grow"><input name="food" placeholder="Type — roti, paneer, strawberry shake…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-food><span>food</span></label>
       <label class="f-in qty"><input type="number" name="qty" value="1" min="0" step="0.5" inputmode="decimal" data-food><span>qty</span></label>
       <label class="f-in unit"><select name="unit" data-food><option value="">unit</option></select><span>unit</span></label>
       <button type="button" class="btn primary sm" data-act="food-add" data-slot="${slot}">Add</button>
     </div>
-    <p class="f-preview" data-preview>${foodMsg ? esc(foodMsg) : 'Pick a food — its calories and macros appear here.'}</p>
+    <div class="f-sugg" data-sugg role="listbox" aria-label="Suggestions"></div>
+    <p class="f-preview" data-preview>${foodMsg ? esc(foodMsg) : 'Start typing — suggestions appear as you type.'}</p>
+    ${newFood?.slot === slot ? newFoodForm(newFood.name) : ''}
     ${its.length ? `<ul class="f-items">${its.map((i, n) => { const m = itemMacros(i); return `<li><span>${esc(itemLabel(i))}</span><span>${n0(m.kcal)} kcal · P ${n1(m.p)}</span><button type="button" class="f-x" data-act="food-del" data-slot="${slot}" data-n="${n}" aria-label="Remove">×</button></li>`; }).join('')}</ul>
       <p class="f-tot">Total <b>${n0(tot.kcal)} kcal</b> · P ${n1(tot.p)} · C ${n1(tot.c)} · F ${n1(tot.f)} · Fib ${n1(tot.fib)}</p>` : ''}
     <div class="f-row"><button type="button" class="btn ghost sm" data-act="other-done">${its.length ? 'Done ✓' : 'Cancel'}</button>${its.length ? `<button type="button" class="f-link" data-act="other-clear" data-slot="${slot}">Back to the planned meal</button>` : ''}</div>
   </div>`;
 }
-const findFood = (q: string): Food | undefined => {
-  const v = q.trim().toLowerCase(); if (!v) return undefined;
-  return foods.find((f) => f.name.toLowerCase() === v) ?? foods.find((f) => f.name.toLowerCase().includes(v) || (f.aka ?? '').toLowerCase().split(' ').some((a) => a && (a === v || a.startsWith(v))));
-};
+// WhatsApp-style suggestions: best matches first (exact > starts with > word starts with > Hindi/other name > contains)
+function rankFoods(q: string, n = 6): Food[] {
+  const v = q.trim().toLowerCase(); if (!v) return [];
+  const score = (f: Food) => {
+    const name = f.name.toLowerCase(), words = name.split(/[\s/()+·-]+/), aka = (f.aka ?? '').toLowerCase().split(' ');
+    if (name === v) return 100; if (name.startsWith(v)) return 80;
+    if (v.split(/\s+/).every((t) => words.some((w) => w.startsWith(t)))) return 60;
+    if (aka.some((a) => a && a.startsWith(v))) return 50;
+    if (name.includes(v)) return 30; return 0;
+  };
+  return allFoods().map((f) => [f, score(f) + (f.mine ? 5 : 0)] as const).filter(([, sc]) => sc > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([f]) => f);
+}
+const findFood = (q: string): Food | undefined => { const v = q.trim().toLowerCase(); return allFoods().find((f) => f.name.toLowerCase() === v) ?? rankFoods(q, 1)[0]; };
 // live preview while choosing a food (updates the unit list + macros without re-rendering)
 function foodPreview(box: HTMLElement) {
-  const food = findFood((box.querySelector('[name=food]') as HTMLInputElement).value);
+  const q = (box.querySelector('[name=food]') as HTMLInputElement).value, list = rankFoods(q);
+  const sugg = box.querySelector('[data-sugg]') as HTMLElement | null, exact = list[0] && list[0].name.toLowerCase() === q.trim().toLowerCase();
+  if (sugg) sugg.innerHTML = !q.trim() || exact ? '' : list.map((f, i) => `<button type="button" role="option" class="${i === 0 ? 'top' : ''}" data-act="food-pick" data-id="${esc(f.id)}"><b>${esc(f.name)}</b><span>${esc(f.unit)} · ${n0(f.kcal)} kcal${f.mine ? ' · yours' : ''}</span></button>`).join('')
+    + (q.trim().length > 1 && !exact ? `<button type="button" class="new" data-act="food-new"><b>＋ New food</b><span>“${esc(q.trim())}”</span></button>` : '');
+  const food = exact ? list[0] : undefined;
   const qty = num((box.querySelector('[name=qty]') as HTMLInputElement).value) ?? 0;
   const sel = box.querySelector('[name=unit]') as HTMLSelectElement, out = box.querySelector('[data-preview]') as HTMLElement;
-  if (!food) { sel.innerHTML = '<option value="">unit</option>'; out.textContent = 'Pick a food from the list — 95+ Indian veg foods.'; return; }
+  if (!food) { sel.innerHTML = '<option value="">unit</option>'; sel.dataset.for = ''; out.textContent = q.trim() ? (list.length ? 'Tap a suggestion — or add it as a new food.' : 'Not in the list yet — tap “＋ New food” to add it once and reuse it.') : 'Start typing — suggestions appear as you type.'; return; }
   if (sel.dataset.for !== food.id) { sel.innerHTML = `<option value="">${esc(food.unit)}</option>${food.g ? '<option value="g">grams</option>' : ''}`; sel.dataset.for = food.id; }
   const m = itemMacros({ id: food.id, q: qty, u: sel.value === 'g' ? 'g' : undefined });
   out.innerHTML = `<b>${esc(qtyLabel(food, qty, sel.value === 'g'))}</b> = ${n0(m.kcal)} kcal · P ${n1(m.p)} · C ${n1(m.c)} · F ${n1(m.f)} · Fib ${n1(m.fib)}`;
@@ -503,7 +538,6 @@ function renderDiet(root: HTMLElement) {
   ${canLog ? checklistCard(D) + calcCard(D, true) : `<p class="fine f-center">This day is ahead — plan it now; ticks open on the day.</p>`}
   <div class="f-slots">${meals.map((s) => slotCard(s, day, canLog)).join('')}</div>
   ${historyCard()}
-  <datalist id="f-foods">${foods.map((f) => `<option value="${esc(f.name)}">${esc(f.unit)}${f.aka ? ' · ' + esc(f.aka) : ''}</option>`).join('')}</datalist>
   <div class="f-two">
     <div class="card f-micro"><p class="label">Vitamins & minerals · ${fmtD(D, { weekday: 'short', day: 'numeric', month: 'short' })}</p><ul>${micros.map((m) => { const c = tags.get(m.tag) ?? 0;
       return `<li class="${c >= 2 ? 'ok' : c === 1 ? 'mid' : 'low'}"><span class="dot"></span><div><b>${m.name}</b> <em>${c ? `${c} source${c > 1 ? 's' : ''}` : 'not covered'}</em><p>${esc(c ? m.note : m.food + '. ' + m.note)}</p></div></li>`; }).join('')}</ul></div>
@@ -883,7 +917,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) hidde
 document.addEventListener('keydown', (e) => {
   const el = e.target as HTMLElement;
   if (e.key === 'Enter' && el.classList.contains('f-hrow')) { e.preventDefault(); el.click(); return; }
-  if (e.key === 'Enter' && el.closest('.f-other') && el.hasAttribute('data-food')) { e.preventDefault(); (el.closest('.f-other')!.querySelector('[data-act=food-add]') as HTMLElement).click(); }
+  if (e.key === 'Enter' && el.closest('.f-other') && el.hasAttribute('data-food')) { e.preventDefault(); const top = el.closest('.f-other')!.querySelector('[data-sugg] [data-act=food-pick]') as HTMLElement | null; if (el.getAttribute('name') === 'food' && top) top.click(); else (el.closest('.f-other')!.querySelector('[data-act=food-add]') as HTMLElement).click(); }
 });
 document.addEventListener('submit', (e) => {
   const form = e.target as HTMLFormElement; if (!form.closest('[data-fit]')) return;
@@ -968,13 +1002,29 @@ document.addEventListener('click', (e) => {
   else if (a === 'dweek') { dietDate = F.addDays(dietDate, +el.dataset.d!); otherOpen = ''; render(); }
   else if (a === 'tick') tickMeal(dietDate, el.dataset.slot!, !refOf(dietDate, el.dataset.slot!));
   else if (a === 'other-open') { otherOpen = el.dataset.slot!; foodMsg = ''; render(); (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus(); }
-  else if (a === 'other-done') { otherOpen = ''; foodMsg = ''; render(); }
+  else if (a === 'other-done') { otherOpen = ''; foodMsg = ''; newFood = null; render(); }
+  else if (a === 'food-pick') {
+    const box = el.closest('.f-other') as HTMLElement, f = getFood(el.dataset.id!); if (!f) return;
+    const inp = box.querySelector('[name=food]') as HTMLInputElement; inp.value = f.name; foodPreview(box);
+    (box.querySelector('[name=qty]') as HTMLInputElement).select();
+  }
+  else if (a === 'food-new') { const box = el.closest('.f-other') as HTMLElement; newFood = { slot: box.dataset.slot!, name: (box.querySelector('[name=food]') as HTMLInputElement).value.trim() }; render(); (document.querySelector('[data-newfood] [name=nf-kcal]') as HTMLInputElement | null)?.focus(); }
+  else if (a === 'nf-cancel') { newFood = null; render(); }
+  else if (a === 'nf-save') {
+    const box = el.closest('[data-newfood]') as HTMLElement, v = (k: string) => (box.querySelector(`[name=${k}]`) as HTMLInputElement).value.trim();
+    const name = v('nf-name'), kcal = num(v('nf-kcal'));
+    if (!name || kcal == null) { (box.querySelector(kcal == null ? '[name=nf-kcal]' : '[name=nf-name]') as HTMLInputElement).focus(); return; }
+    const f: Food = { id: `c-${Date.now().toString(36)}`, name, unit: v('nf-unit') || 'serving', kcal, p: num(v('nf-p')) ?? 0, c: num(v('nf-c')) ?? 0, f: num(v('nf-f')) ?? 0, fib: num(v('nf-fib')) ?? 0, mine: true, ...(num(v('nf-g')) ? { g: num(v('nf-g')) } : {}) };
+    const slot = newFood!.slot, qty = num((el.closest('.f-other')?.querySelector('[name=qty]') as HTMLInputElement | null)?.value) || 1;
+    set('fit:foods', [...myFoods(), f]); newFood = null;
+    setOther(dietDate, slot, [...otherOf(dietDate, slot), { id: f.id, q: qty }]);
+  }
   else if (a === 'other-clear') { setOther(dietDate, el.dataset.slot!, []); otherOpen = ''; }
   else if (a === 'food-del') { const its = [...otherOf(dietDate, el.dataset.slot!)]; its.splice(+el.dataset.n!, 1); setOther(dietDate, el.dataset.slot!, its); }
   else if (a === 'food-add') {
     const box = el.closest('.f-other') as HTMLElement, q = (box.querySelector('[name=food]') as HTMLInputElement).value;
     const food = findFood(q), qty = num((box.querySelector('[name=qty]') as HTMLInputElement).value);
-    if (!food) { foodMsg = q ? `“${q}” isn’t in the list yet — use Today → “Anything else” to enter kcal/protein by hand.` : 'Type a food first.'; return render(); }
+    if (!food) { if (!q.trim()) { foodMsg = 'Type a food first.'; return render(); } newFood = { slot: el.dataset.slot!, name: q.trim() }; foodMsg = ''; render(); (document.querySelector('[data-newfood] [name=nf-kcal]') as HTMLInputElement | null)?.focus(); return; }
     if (!qty || qty <= 0) { foodMsg = 'Enter a quantity.'; return render(); }
     foodMsg = ''; setOther(dietDate, el.dataset.slot!, [...otherOf(dietDate, el.dataset.slot!), { id: food.id, q: qty, ...((box.querySelector('[name=unit]') as HTMLSelectElement).value === 'g' ? { u: 'g' as const } : {}) }]);
     (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus();

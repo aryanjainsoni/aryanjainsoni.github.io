@@ -3,7 +3,7 @@
 // IFCT 2017 / standard nutrition data. Home recipes vary ±15% (oil is the big one).
 // g = grams in one unit -> lets you enter grams instead. aka = other names for search (Hindi / spellings).
 // Naya food jodna ho to ek line add karo.
-export type Food = { id: string; name: string; unit: string; g?: number; kcal: number; p: number; c: number; f: number; fib: number; aka?: string };
+export type Food = { id: string; name: string; unit: string; g?: number; kcal: number; p: number; c: number; f: number; fib: number; aka?: string; mine?: boolean };
 
 const x = (id: string, name: string, unit: string, kcal: number, p: number, c: number, f: number, fib = 0, g?: number, aka?: string): Food => ({ id, name, unit, kcal, p, c, f, fib, g, aka });
 
@@ -83,6 +83,14 @@ export const foods: Food[] = [
   x('grapes', 'Grapes', 'katori', 69, 0.7, 18, 0.2, 0.9, 100, 'angoor'),
   x('watermelon', 'Watermelon', 'katori', 45, 0.9, 11, 0.2, 0.6, 150, 'tarbooz'),
   x('pomegranate', 'Pomegranate', 'katori', 83, 1.7, 19, 1.2, 4, 100, 'anar'),
+  x('strawberry', 'Strawberry', 'katori', 32, 0.7, 7.7, 0.3, 2, 100),
+  x('pineapple', 'Pineapple', 'katori', 75, 0.8, 20, 0.2, 2.1, 150, 'ananas'),
+  x('chikoo', 'Chikoo', 'piece', 83, 0.4, 20, 1.1, 5.3, 100, 'sapota sapodilla'),
+  x('kiwi', 'Kiwi', 'piece', 46, 0.9, 11, 0.4, 2.3, 75),
+  x('pear', 'Pear', 'piece', 100, 0.6, 27, 0.2, 5.5, 180, 'nashpati'),
+  x('muskmelon', 'Muskmelon', 'katori', 51, 1.3, 12, 0.3, 1.4, 150, 'kharbuja'),
+  x('mosambi', 'Sweet lime', 'piece', 50, 1, 12, 0.2, 2.5, 150, 'mosambi'),
+  x('sweet-corn', 'Sweet corn', 'cup', 130, 4.5, 27, 1.8, 3.6, 150, 'bhutta corn chaat'),
   x('dates', 'Dates', 'piece', 23, 0.2, 6, 0, 0.7, 8, 'khajur'),
   x('juice', 'Fresh fruit juice', 'glass', 110, 1, 26, 0.3, 0.5, 250),
   x('coconut-water', 'Coconut water', 'glass', 45, 0.5, 9, 0.5, 0, 250, 'nariyal pani'),
@@ -113,6 +121,46 @@ export const foods: Food[] = [
   x('chips', 'Chips', 'small pack', 160, 2, 15, 10, 1, 30),
   x('namkeen', 'Namkeen / bhujia', 'serving', 165, 4, 13, 11, 2, 30),
   x('biscuits', 'Biscuits (Marie)', '2 pcs', 60, 1, 10, 1.5, 0.3, 14),
+  // shakes & drinks (glass ≈ 300 ml, toned milk + sugar)
+  x('strawberry-shake', 'Strawberry shake', 'glass', 260, 9, 40, 7, 1.5, 300, 'milkshake'),
+  x('banana-shake', 'Banana shake', 'glass', 300, 10, 50, 7, 3, 300, 'milkshake'),
+  x('mango-shake', 'Mango shake', 'glass', 320, 9, 55, 7, 2.5, 300, 'milkshake aam'),
+  x('chocolate-shake', 'Chocolate shake', 'glass', 350, 10, 55, 10, 2, 300, 'milkshake'),
+  x('cold-coffee', 'Cold coffee', 'glass', 230, 8, 32, 7, 0.5, 300),
+  x('whey-milk', 'Whey shake in milk', 'glass', 270, 32, 15, 9, 0, 280, 'protein shake'),
+  x('smoothie', 'Banana-oats smoothie', 'glass', 350, 13, 58, 8, 5, 350, 'smoothie'),
+  x('falooda', 'Falooda', 'glass', 400, 8, 62, 13, 1, 300),
+  x('soy-milk', 'Soy milk', 'glass', 100, 7, 8, 4, 1, 250, 'soya milk'),
+  x('almond-milk', 'Almond milk (unsweetened)', 'glass', 40, 1, 2, 3, 0.5, 250),
+  x('nimbu-pani', 'Nimbu pani (with sugar)', 'glass', 60, 0, 15, 0, 0, 250, 'lemonade shikanji'),
+  x('sugarcane', 'Sugarcane juice', 'glass', 180, 0, 45, 0, 0, 250, 'ganne ka ras'),
+  x('green-tea', 'Green tea', 'cup', 2, 0, 0, 0, 0, 200),
+  // more snacks & meals
+  x('bhel', 'Bhel puri', 'plate', 280, 6, 45, 8, 3, 150),
+  x('sev-puri', 'Sev puri', 'plate', 300, 5, 38, 14, 3, 150),
+  x('aloo-tikki', 'Aloo tikki', 'piece', 150, 2.5, 20, 7, 2, 70),
+  x('dahi-vada', 'Dahi vada', '2 pcs', 280, 9, 30, 13, 3, 200, 'dahi bhalla'),
+  x('misal', 'Misal pav', 'plate', 450, 15, 55, 18, 10, 350),
+  x('sabudana', 'Sabudana khichdi', 'plate', 400, 3, 65, 14, 1, 200),
+  x('thepla', 'Thepla', 'piece', 120, 3.5, 16, 5, 2.5, 40),
+  x('khakhra', 'Khakhra', 'piece', 60, 2, 9, 1.5, 1.5, 15),
+  x('curd-rice', 'Curd rice', 'katori', 220, 6, 34, 6, 1, 200),
+  x('pasta-white', 'White sauce pasta', 'plate', 450, 13, 55, 19, 3, 250),
+  x('pasta-red', 'Red sauce pasta', 'plate', 380, 11, 60, 10, 4, 250),
+  x('garlic-bread', 'Garlic bread', '2 pcs', 200, 5, 25, 9, 1, 60),
+  x('kathi-roll', 'Paneer kathi roll', 'piece', 380, 14, 40, 18, 3, 200, 'wrap frankie'),
+  x('spring-roll', 'Spring roll', 'piece', 150, 3, 18, 7, 1.5, 60),
+  x('popcorn', 'Popcorn (butter)', 'bowl', 150, 2.5, 17, 8, 3, 30),
+  x('chikki', 'Peanut chikki', 'piece', 130, 4, 13, 7, 1.5, 25),
+  x('granola-bar', 'Granola bar', 'bar', 120, 2.5, 18, 4.5, 1.5, 30),
+  // more sweets
+  x('rasgulla', 'Rasgulla', 'piece', 120, 2, 26, 1, 0, 50),
+  x('kheer', 'Kheer', 'katori', 250, 7, 38, 8, 0.5, 150),
+  x('gajar-halwa', 'Gajar halwa', 'katori', 320, 6, 40, 15, 2, 150),
+  x('besan-ladoo', 'Besan ladoo', 'piece', 180, 3.5, 20, 10, 1, 40),
+  x('motichoor', 'Motichoor ladoo', 'piece', 160, 2, 22, 7, 0.5, 40),
+  x('kaju-katli', 'Kaju katli', 'piece', 70, 1.5, 8, 3.5, 0.3, 15),
+  x('kulfi', 'Kulfi', 'piece', 200, 5, 22, 10, 0, 80),
   // sweets & drinks
   x('gulab-jamun', 'Gulab jamun', 'piece', 150, 2, 22, 6, 0, 50),
   x('jalebi', 'Jalebi', '2 pcs', 300, 2, 45, 13, 0, 80),

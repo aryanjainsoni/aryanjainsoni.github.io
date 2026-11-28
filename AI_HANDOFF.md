@@ -47,7 +47,8 @@ decisions that are truly mine.
 - src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-locks after 5 min away).
 - src/lib/fit.ts → fitness engine (BMR, burn, goals + safety checks, daily targets, adaptive ledger, diet
   builder). src/data/meals.ts → veg+dairy meal options (5 per slot) + micronutrient notes.
-  src/data/foods.ts → ~100 Indian veg foods (per unit + grams) for "Ate something else?" custom meals.
+  src/data/foods.ts → ~150 Indian veg foods (per unit + grams) for "Ate something else?"; WhatsApp-style
+  suggestions while typing; foods not in the list → "＋ New food" saved privately in the vault ("fit:foods").
   src/scripts/fit-app.ts renders Today/Plan/Diet/Body; src/styles/fit.css styles them.
 - public/images/ (me-big.jpg, me-full.jpg, me.jpg), public/icons/ + manifest.webmanifest (installable app),
   design/ (icon options, not built). Topic card photos: drop public/images/covers/<slug>.jpg.
@@ -113,11 +114,13 @@ decisions that are truly mine.
 3. Gym — status: built and live. Lock/encryption details are under "HOW THINGS WORK → Gym lock".
    Still to add: my old diet plan (photo) merged into src/data/meals.ts; my exact supplements; my workout
    plan as a new Workout section (aesthetic V-shape, 60-min strength + incline walk); fingerprint on my
-   Android phone failed once (errors now show name + browser — ask me for the screenshot);
+   Android phone failed (NotReadableError from Android credential manager, Chrome 158) — added a retry
+   that registers without PRF eval and reads PRF at sign-in; ask me if it works now;
 4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Diet: food suggestions while typing, +45 foods (shakes, fruits, sweets, snacks), private "New food"; fingerprint retry for Android.
 - 2026-11-28 Gym lock: escalating lockout (survives refresh) + wrong-attempt log & alert after unlock.
 - 2026-11-28 Gym Diet tab date-based: week strip with dates, past-day ticks, per-date plan snapshots, History.
 - 2026-11-28 Owner-only lock gate (public/owner.json) + "Publish owner key" shortcut; clearer fingerprint errors.
