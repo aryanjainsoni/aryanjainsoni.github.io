@@ -1,0 +1,138 @@
+---
+// BASECAMP → GYM tab: Mon–Sat V-shape plan. Data: src/data/workout.ts. Photos alternate start ↔ end position
+// (a living "form loop"); hover / tap to hold. Day chips open today's day automatically.
+import { WEEK, SUNDAY, CARDIO, RULES } from '../data/workout';
+---
+<div class="wo" data-wo>
+  <header class="wo-head">
+    <p class="kicker">Gym · Mon – Sat</p>
+    <h2>The <em>V-shape</em> plan.</h2>
+    <p class="lead">Aesthetic, not bodybuilder: a wide back, round shoulders and a tight waist. Every day runs warm-up → strength → incline walk → cool-down.</p>
+  </header>
+
+  <div class="wo-days" role="tablist" aria-label="Day">
+    {WEEK.map((d) => <button type="button" role="tab" class="wo-chip" data-day={d.key} aria-selected="false"><b>{d.day.slice(0, 3)}</b><span>{d.focus.split(' · ')[0]}</span></button>)}
+    <button type="button" role="tab" class="wo-chip rest" data-day="sun" aria-selected="false"><b>Sun</b><span>Rest</span></button>
+  </div>
+
+  {WEEK.map((d) => (
+    <section class="wo-day" data-panel={d.key} hidden aria-label={`${d.day} — ${d.focus}`}>
+      <div class="wo-title"><h3>{d.day}</h3><p>{d.focus}</p></div>
+
+      <div class="wo-block">
+        <p class="wo-step"><span>1</span>Warm-up · 8–10 min</p>
+        <ul class="wo-list">{d.warmup.map((w) => <li>{w}</li>)}</ul>
+      </div>
+
+      <div class="wo-block">
+        <p class="wo-step"><span>2</span>Strength · {d.lifts.length} exercises</p>
+        <ol class="wo-lifts">
+          {d.lifts.map((x, i) => (
+            <li class="wo-ex">
+              <figure class="wo-ph" tabindex="0" aria-label={`${x.name} — correct form, start and end position`}>
+                <img src={`/images/workout/${x.id}__0.webp`} alt={`${x.name} — start position`} loading="lazy" decoding="async" width="520" height="347" />
+                <img class="end" src={`/images/workout/${x.id}__1.webp`} alt={`${x.name} — end position`} loading="lazy" decoding="async" width="520" height="347" />
+                <span class="wo-n">{String(i + 1).padStart(2, '0')}</span>
+              </figure>
+              <div class="wo-info">
+                <p class="wo-mus">{x.muscle}</p>
+                <h4>{x.name}</h4>
+                <p class="wo-sr"><b>{x.sets}</b> sets × <b>{x.reps}</b> <i>rest {x.rest}</i></p>
+                <p class="wo-cue"><span>Key point</span>{x.cue}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="wo-block wo-cardio">
+        <p class="wo-step"><span>3</span>Cardio · {CARDIO.title}</p>
+        <p class="wo-big">{CARDIO.detail}</p>
+        <p class="wo-tip">{CARDIO.tip}</p>
+      </div>
+
+      <div class="wo-block">
+        <p class="wo-step"><span>4</span>Cool-down &amp; stretch · 8–10 min</p>
+        <ul class="wo-list">{d.cooldown.map((w) => <li>{w}</li>)}</ul>
+      </div>
+    </section>
+  ))}
+  <section class="wo-day" data-panel="sun" hidden aria-label="Sunday — rest">
+    <div class="wo-title"><h3>{SUNDAY.day}</h3><p>{SUNDAY.focus}</p></div>
+    <ul class="wo-list">{SUNDAY.items.map((w) => <li>{w}</li>)}</ul>
+  </section>
+
+  <details class="wo-rules">
+    <summary>Imp baatein — the rules behind the plan</summary>
+    <dl>{RULES.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    <p class="wo-fine">Exercise photos: free-exercise-db (public domain). General guidance for healthy adults, not medical advice.</p>
+  </details>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-wo]');
+  if (root) {
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('[data-day]')];
+    const show = (k: string) => {
+      chips.forEach((c) => c.setAttribute('aria-selected', String(c.dataset.day === k)));
+      root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== k));
+    };
+    chips.forEach((c) => c.addEventListener('click', () => show(c.dataset.day!)));
+    show(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()]);
+    // tap a photo on phones = hold the end position
+    root.addEventListener('click', (e) => { const f = (e.target as HTMLElement).closest('.wo-ph'); if (f) f.classList.toggle('hold'); });
+  }
+</script>
+
+<style>
+  .wo { display: grid; gap: 18px; }
+  .wo-head h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 6px 0 8px; }
+  .wo-head h2 em { color: var(--accent); }
+  .wo-head .lead { color: var(--muted); max-width: 640px; margin: 0; }
+  .wo-days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .wo-chip { flex: 1 0 auto; min-width: 84px; display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; transition: border-color .2s, transform .2s; }
+  .wo-chip b { font: 600 15px 'Inter', sans-serif; }
+  .wo-chip span { font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .wo-chip[aria-selected='true'] { border-color: var(--accent); background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface)); transform: translateY(-1px); }
+  .wo-chip.rest b { color: var(--muted); }
+  .wo-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wo-day { display: grid; gap: 14px; padding: 0; }
+  .wo-day[hidden] { display: none; }
+  .wo-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .wo-title h3 { margin: 0; font-size: 1.6rem; }
+  .wo-title p { margin: 0; color: var(--accent); font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+  .wo-block { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px clamp(16px, 3vw, 24px); box-shadow: var(--shadow); }
+  .wo-step { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .wo-step span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; letter-spacing: 0; }
+  .wo-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink); }
+  .wo-list li::marker { color: var(--accent); }
+  .wo-lifts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .wo-ex { display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--surface) 80%, var(--bg)); }
+  .wo-ph { position: relative; margin: 0; aspect-ratio: 3 / 2; background: #fff; cursor: pointer; overflow: hidden; }
+  .wo-ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  /* living form loop: start ↔ end */
+  .wo-ph .end { animation: wo-loop 3.2s ease-in-out infinite; }
+  @keyframes wo-loop { 0%, 38% { opacity: 0; } 50%, 88% { opacity: 1; } 100% { opacity: 0; } }
+  .wo-ph:hover .end, .wo-ph:focus-visible .end, .wo-ph.hold .end { animation: none; opacity: 1; }
+  .wo-ph:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .wo-n { position: absolute; left: 10px; top: 8px; font: 600 12px 'JetBrains Mono', monospace; color: #fff; background: rgba(20,12,8,.7); padding: 2px 7px; border-radius: 999px; }
+  .wo-info { padding: 12px 14px 14px; display: grid; gap: 6px; align-content: start; }
+  .wo-mus { margin: 0; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .wo-info h4 { margin: 0; font: 600 1.02rem/1.25 'Inter', sans-serif; }
+  .wo-sr { margin: 0; color: var(--ink); }
+  .wo-sr b { font-size: 1.05rem; }
+  .wo-sr i { font-style: normal; color: var(--muted); font-size: .85rem; margin-left: 8px; }
+  .wo-cue { margin: 2px 0 0; font-size: .9rem; color: var(--muted); line-height: 1.45; }
+  .wo-cue span { display: block; font: 600 10px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+  .wo-cardio .wo-big { margin: 0; font: 400 clamp(1.4rem, 3vw, 1.9rem)/1.2 'Fraunces', serif; }
+  .wo-tip { margin: 6px 0 0; color: var(--muted); font-size: .92rem; }
+  .wo-rules { border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px; background: var(--surface); }
+  .wo-rules summary { cursor: pointer; font: 600 13px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
+  .wo-rules dl { display: grid; gap: 10px; margin: 14px 0 0; }
+  .wo-rules dt { font-weight: 650; }
+  .wo-rules dd { margin: 2px 0 0; color: var(--muted); }
+  .wo-fine { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .wo-ph .end { animation: none; } }
+  :global(html.calm) .wo-ph .end { animation: none; }
+  @media (max-width: 420px) { .wo-lifts { grid-template-columns: minmax(0, 1fr); } }
+</style>

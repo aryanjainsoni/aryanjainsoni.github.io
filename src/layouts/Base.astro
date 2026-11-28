@@ -95,6 +95,7 @@ const last = [...'Jain'];
           <a class="toggle bucketbtn" href="/bucket/" aria-label="Bucket list — private, locked" title="Bucket list (private)" aria-current={path === '/bucket/' ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path class="bk" d="M5.5 4.2c0-.9.7-1.6 1.6-1.6h10.4c.6 0 1 .4 1 1v16.8c0 .6-.4 1-1 1H7.1c-.9 0-1.6-.7-1.6-1.6V4.2Z" /><path class="sp" d="M8.2 2.8v18.4" /><path class="cl" d="M18.5 10.2h1.6c.5 0 .9.4.9.9v1.8c0 .5-.4.9-.9.9h-1.6" /><circle class="cl" cx="13.4" cy="10.4" r="2.1" /></svg>
           </a>
+          <slot name="navtool" /> <!-- page-specific header tool (Basecamp: music) -->
           <button id="theme-toggle" class="toggle" type="button" aria-label="Toggle light and dark mode">
             <span class="sunicon">☀️</span><span class="moon">🌙</span>
           </button>
@@ -355,7 +356,7 @@ const last = [...'Jain'];
   .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 14px; }
 
   @media (max-width: 420px) { .word { display: none; } }
-  @media (max-width: 400px) { nav { gap: 9px !important; } nav a { font-size: 13px; } .toggle { width: 32px !important; height: 32px !important; } .bar { gap: 8px !important; padding-inline: 12px !important; } }
+  @media (max-width: 400px) { nav { gap: 7px !important; } nav a { font-size: 13px; } .toggle { width: 30px !important; height: 30px !important; } .bar { gap: 6px !important; padding-inline: 10px !important; } .mark { width: 36px !important; height: 36px !important; } }
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }
     .word { font-size: 21px; }

@@ -11,6 +11,7 @@ import { stepStats, milestones, KM_PER_STEP, KCAL_PER_STEP } from '../lib/steps'
 import '../styles/fit.css';
 import Notebook from '../components/Notebook.astro';
 import GoalsBoard from '../components/GoalsBoard.astro';
+import WorkoutPlan from '../components/WorkoutPlan.astro';
 import { getCollection, render } from 'astro:content';
 
 // Gym Notebook chapters (src/content/guide/*.md)
@@ -25,6 +26,7 @@ const orbs: [string, string, string, string, string][] = [
   ['plan', 'Plan', 'plan', '#d9dee8', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/>'],
   ['diet', 'Diet', 'diet', '#ff9ec4', '<path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19c3-4 6-7 10-9"/>'],
   ['body', 'BMI', 'body', '#e9a64f', '<rect x="3.5" y="4" width="17" height="16" rx="4"/><path d="M8 9.5a5 5 0 0 1 8 0"/><path d="M12 9.6l1.6-2.1"/><path d="M8.5 15.5h7"/>'],
+  ['gym', 'Gym', 'body', '#ff8a5c', '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>'],
   ['guide', 'Notebook', 'notebook', '#f3efe6', '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>'],
 ];
 
@@ -52,6 +54,9 @@ const wdNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s.weekday))] : '';
 ---
 <Base title="Basecamp" description="Aryan Jain's basecamp — daily habits, steps, training, diet and the notes behind them.">
+  <button slot="navtool" type="button" class="toggle sound" id="gym-sound" aria-pressed="false" aria-label="Music off — turn on" title="Background music (each Basecamp tab has its own)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5V6.5l10-2.5v12"/><circle class="note" cx="6.5" cy="18.5" r="2.5"/><circle class="note" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg>
+  </button>
   <section class="head">
     <div class="wrap">
       <p class="kicker">Basecamp</p>
@@ -70,9 +75,6 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
             </button>
           ))}
         </div>
-        <button type="button" class="sound" id="gym-sound" aria-pressed="false" aria-label="Music off — turn on" title="Background music (each tab has its own)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5V6.5l10-2.5v12"/><circle class="note" cx="6.5" cy="18.5" r="2.5"/><circle class="note" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg>
-        </button>
       </div>
     </div>
   </section>
@@ -196,6 +198,11 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   ))}
 
   <!-- ================= NOTEBOOK (public guidelines) ================= -->
+  <!-- ================= GYM (public V-shape workout plan) ================= -->
+  <section class="panel" id="p-gym" role="tabpanel" aria-labelledby="tab-gym" hidden>
+    <div class="wrap"><WorkoutPlan /></div>
+  </section>
+
   <section class="panel" id="p-guide" role="tabpanel" aria-labelledby="tab-guide" hidden>
     <div class="wrap nb"><Notebook chapters={chapters} /></div>
   </section>
@@ -468,8 +475,8 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   .orbs button[aria-selected='true'] { color: var(--ink); }
   .orbs button[aria-selected='true'] .orb { filter: saturate(1.15) brightness(1.05); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--tint), 0 10px 32px -8px var(--tint); }
   .orbs button[aria-selected='true'] .orb-label::after { content: ''; display: block; width: 14px; height: 2px; margin: 4px auto 0; border-radius: 2px; background: var(--tint); }
-  .sound { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; transition: border-color .25s, color .25s, box-shadow .25s; }
-  .sound svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+  .sound { position: relative; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; transition: border-color .25s, color .25s, box-shadow .25s; }
+  .sound svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
   .sound .slash { stroke-dasharray: 24; stroke-dashoffset: 0; transition: stroke-dashoffset .35s ease; }
   .sound:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
   .sound.on { color: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
@@ -582,6 +589,8 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
     .tile { min-height: 120px; padding: 18px; }
     .tabs:not(.orbs) { gap: 1px; padding: 3px; }
     .tabs:not(.orbs) button { padding: 7px 8px; font-size: 12.5px; }
-    .orbs button { font-size: 11px; gap: 6px; }
+    .orbs button { font-size: 10.5px; gap: 5px; letter-spacing: 0; }
+    .tabs.orbs { gap: 3px; width: 100%; justify-content: space-between; }
+    .orbs .orb { width: 42px; }
   }
 </style>

@@ -73,6 +73,12 @@ decisions that are truly mine.
   Basecamp → Today: src/components/GoalsBoard.astro (the old goals page, same localStorage keys goals:*) sits
   above the private fitness "Body today" card. The Body tab is labelled "BMI" (id/hash still "body").
   Wherever older notes below say /gym/, read /basecamp/.
+- Basecamp tabs: Steps · Today · Plan · Diet · BMI · GYM · Notebook. GYM = public Mon–Sat V-shape plan
+  (src/data/workout.ts → src/components/WorkoutPlan.astro): warm-up → strength (sets × reps, rest, key point,
+  muscle) → incline walk 30 min (incline 15, speed 4) → cool-down per day; Sunday rest. Form photos (start/end,
+  auto-looping) in public/images/workout/*.webp from free-exercise-db (public domain, Unlicense). The Gym orb
+  reuses the "body" video + music until a new one is chosen. Music button moved to the HEADER (Basecamp only,
+  via Base.astro <slot name="navtool">).
 - Daily Log GitHub box auto-fills from my public commits for that date (GitHub search API, IST day,
   grouped by repo) and stays LIVE (refetch every 5 min + when the tab is reopened) until I edit it
   (badge "your words ✓"); ⟳ Fetch replaces with the latest.
@@ -238,6 +244,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-29 Basecamp GYM tab: Mon–Sat V-shape plan with form photos; music button moved to the header.
 - 2026-11-28 Projects section (/projects/): document folders — Ascent (SRS, design, stack, security, tests, roadmap) + Parkinson's Disease Detection (overview + planned docs); Home card now live.
 - 2026-11-28 Cleanup: Gym → Basecamp, Goals merged into Today, header = Journal · Basecamp · About, Body → BMI, real padlock photos on the bucket lock.
 - 2026-11-28 Bucket book: encrypted vintage memory photo + written/fulfilled date ledger on every wish.
