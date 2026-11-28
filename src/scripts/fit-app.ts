@@ -600,7 +600,12 @@ V.fingerprintAvailable().then((ok) => { fpAvail = ok; render(); });
 const deviceName = () => { const u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone / iPad' : /Android/.test(u) ? 'Android phone' : /Mac/.test(u) ? 'Mac (Touch ID)' : /Windows/.test(u) ? 'Windows Hello' : 'This device'; };
 const errMsg = (e: unknown) => { const n = (e as Error)?.name, m = (e as Error)?.message;
   return m === 'no-prf' ? 'This browser can’t use fingerprint for encryption yet — use your passcode. (Latest Chrome or Safari usually can.)'
-    : n === 'NotAllowedError' || m === 'cancelled' ? 'Fingerprint was cancelled or timed out.' : n === 'InvalidStateError' ? 'This device is already added.' : 'Fingerprint didn’t work here — use your passcode.'; };
+    : n === 'NotAllowedError' || m === 'cancelled' ? 'Fingerprint was cancelled or timed out.' : n === 'InvalidStateError' ? 'This device is already added.'
+    : n === 'NotSupportedError' ? 'This phone’s passkey provider can’t do fingerprint encryption. Update Chrome and use Google Password Manager for passkeys.'
+    : `Fingerprint didn’t work here — use your passcode. (${n || 'Error'}: ${String(m || '').slice(0, 120)} · ${browserTag()})`; };
+// shown in errors so problems on a specific phone can be diagnosed
+const browserTag = () => { const u = navigator.userAgent, c = u.match(/(?:Chrome|CriOS)\/(\d+)/)?.[1], sam = /SamsungBrowser\/(\d+)/.exec(u)?.[1], mi = /MiuiBrowser|XiaoMi/.test(u), ff = /Firefox\/(\d+)/.exec(u)?.[1], sf = !c && /Version\/(\d+).*Safari/.exec(u)?.[1];
+  return sam ? `Samsung Internet ${sam}` : mi ? 'Mi Browser' : ff ? `Firefox ${ff}` : sf ? `Safari ${sf}` : c ? `Chrome ${c}` : 'unknown browser'; };
 const passFields = (a = 'p1', b = 'p2') => `<div class="f-pass">
   <label class="f-in"><input type="password" name="${a}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · ${owner === null ? '10' : '6'}+ characters</span></label>
   <label class="f-in"><input type="password" name="${b}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>repeat passcode</span></label></div>`;
