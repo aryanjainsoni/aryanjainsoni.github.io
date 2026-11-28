@@ -149,7 +149,8 @@ import { goals } from '../data/profile';
         const w = Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
         return { key: `${t.getUTCFullYear()}-W${w}`, week: w };
       };
-      const fmtTime = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`; };
+      const PREF = () => { try { return JSON.parse(localStorage.getItem('pref:settings') || '{}'); } catch { return {}; } }; // Settings (src/lib/prefs.ts)
+      const fmtTime = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return PREF().clock === '24' ? `${pad(h)}:${pad(m)}` : `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`; };
       const load = (k) => { try { return JSON.parse(localStorage.getItem(`goals:${k}`) || '{}'); } catch { return {}; } };
       const save = (k, v) => { try { localStorage.setItem(`goals:${k}`, JSON.stringify(v)); } catch {} };
 
@@ -210,35 +211,40 @@ import { goals } from '../data/profile';
       const renderWeekly = (d, readOnly) => {
         const w = isoWeek(d);
         const mon = monday(d);
-        const v = load(w.key);
-        const dates = DAYS.map((_, i) => addDays(mon, i));
-        $('#week-title').textContent = `${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${dates[6].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+        // Settings -> Week starts: Sunday shows Sun..Sat. Ticks are still stored per ISO week (Mon-Sun) + day name.
+        let start = mon;
+        if (PREF().weekStart === 'sun') { start = new Date(d); while (start.getDay() !== 0) start.setDate(start.getDate() - 1); }
+        const dates = DAYS.map((_, i) => addDays(start, i));
+        const cell = dates.map((dt) => ({ wk: isoWeek(dt).key, dd: DAYS[(dt.getDay() + 6) % 7] }));
+        const has = (id, i) => !!load(cell[i].wk)[`${id}@${cell[i].dd}`];
+        $('#week-title').textContent = `${dates[0].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${dates[6].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
         $('[data-week-label]').textContent = `Week ${w.week}${ymd(monday(today)) === ymd(mon) ? ' · this week' : ''}`;
-        const head = `<thead><tr><th class="tname">Task</th>${DAYS.map((dd, i) => `<th class="${ymd(dates[i]) === todayKey ? 'today' : ''}">${DAYLBL[dd]}<small>${dates[i].getDate()}</small></th>`).join('')}<th class="tcount">Done</th></tr></thead>`;
+        const head = `<thead><tr><th class="tname">Task</th>${cell.map((c, i) => `<th class="${ymd(dates[i]) === todayKey ? 'today' : ''}">${DAYLBL[c.dd]}<small>${dates[i].getDate()}</small></th>`).join('')}<th class="tcount">Done</th></tr></thead>`;
         const body = CFG.weekly.map((t) => {
-          const ticks = DAYS.filter((dd) => v[`${t.id}@${dd}`]).length;
+          const ticks = cell.filter((_, i) => has(t.id, i)).length;
           const target = Math.max(1, Number(t.target) || 1);
           return `<tr class="${ticks >= target ? 'met' : ''}">
             <th class="tname" scope="row">${esc(t.name)}<span class="tmeta">${(t.days && t.days.length ? t.days.map((x) => DAYLBL[x]).join(' & ') : 'Any day')}${t.time ? ' · ' + fmtTime(t.time) : ''}</span></th>
-            ${DAYS.map((dd, i) => {
+            ${cell.map(({ wk, dd }, i) => {
               const fut = dates[i] > today;
               const planned = t.days && t.days.includes(dd);
               return `<td class="${planned ? 'planned' : ''}"><label class="cell-chk" title="${esc(t.name)} — ${DAYLBL[dd]}">
-                <input type="checkbox" data-wid="${esc(t.id)}@${dd}" ${v[`${t.id}@${dd}`] ? 'checked' : ''} ${readOnly || fut ? 'disabled' : ''}/>
+                <input type="checkbox" data-wk="${wk}" data-wid="${esc(t.id)}@${dd}" ${has(t.id, i) ? 'checked' : ''} ${readOnly || fut ? 'disabled' : ''}/>
                 <span class="box" aria-hidden="true"></span><span class="sr">${esc(t.name)} ${DAYLBL[dd]}</span></label></td>`;
             }).join('')}
             <td class="tcount">${Math.min(ticks, target)}/${target}</td></tr>`;
         }).join('');
         $('[data-weekly]').innerHTML = head + `<tbody>${body}</tbody>`;
         const total = CFG.weekly.reduce((s, t) => s + Math.max(1, Number(t.target) || 1), 0);
-        const doneCount = () => { const cur = load(w.key); return CFG.weekly.reduce((s, t) => s + Math.min(DAYS.filter((dd) => cur[`${t.id}@${dd}`]).length, Math.max(1, Number(t.target) || 1)), 0); };
+        const doneCount = () => CFG.weekly.reduce((s, t) => s + Math.min(cell.filter((_, i) => has(t.id, i)).length, Math.max(1, Number(t.target) || 1)), 0);
         $$('input[data-wid]', weekPanel).forEach((b) => b.addEventListener('change', () => {
-          const cur = load(w.key); cur[b.dataset.wid] = b.checked; save(w.key, cur);
+          const k = b.dataset.wk, cur = load(k); cur[b.dataset.wid] = b.checked; save(k, cur);
           renderWeekly(d, readOnly);
         }));
         ring(weekPanel, doneCount(), total, 'times ');
       };
 
+      addEventListener('ascent:prefs', () => renderDay()); // clock / week start changed in Settings
       const renderDay = () => {
         const k = ymd(sel);
         const future = sel > today;

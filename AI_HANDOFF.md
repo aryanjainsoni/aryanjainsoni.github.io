@@ -44,7 +44,12 @@ decisions that are truly mine.
 - Pages: / (home) · /journal/ · /journal/[date]/ · /log/ (Daily Log form) · /post/ (weekly LinkedIn post
   generator) · /goals/ (habits) · /gym/ (Steps · Today · Plan · Diet · Body) · /explore/ (searchable Index + timeline) · /about/
 - src/lib/steps.ts → steps stats for /gym/ (goal = site.stepGoal, 10,000).
-- src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-locks after 5 min away).
+- src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-lock time is a Setting, default 5 min).
+- src/lib/prefs.ts → ALL Settings preferences in one localStorage JSON "pref:settings" (only non-default values stored):
+  targets (steps 10000, sleep 7.5 h, water 4 L, protein g/kg 0 = auto, weigh-in 07:00), privacy, autolock (min, 0 = never),
+  units (kg|lb, km|mi, 12|24 h clock, week start mon|sun), calm, text s|m|l, lastBackup. setPrefs() fires 'ascent:prefs';
+  pages listen and redraw. Inline scripts (gym/goals/log/Base head) read the same key directly.
+- src/scripts/shortcuts.ts → keyboard shortcuts + "?" cheat sheet. src/scripts/pwa.ts + public/sw.js → install button + offline.
 - src/lib/fit.ts → fitness engine (BMR, burn, goals + safety checks, daily targets, adaptive ledger, diet
   builder). src/data/meals.ts → veg+dairy meal options (5 per slot) + micronutrient notes.
   src/data/foods.ts → ~150 Indian veg foods (per unit + grams) for "Ate something else?"; WhatsApp-style
@@ -94,6 +99,22 @@ decisions that are truly mine.
   clear learned words, and Security & data on EVERY page: settings.ts lazy-loads fit-app.ts on non-Gym pages
   so you can unlock (passcode / fingerprint / owner gate / recovery) right inside the drawer, then export /
   import, manage security, or "Lock now" (fit-app renders gates + controls into [data-sd-gym]). Phones: theme toggle + Index link hidden in the header (Settings / search cover them).
+  Settings v2 sections: Appearance (theme, text size S/M/L, Calm mode = html.calm kills every animation, freezes
+  the home Aurora, pauses Gym videos) · My targets (steps, sleep, water, protein g/kg, weigh-in time → used by the
+  Steps tab ring/streak/goal line, Today rings, Diet water+protein, Daily Log "Hard" draft) · Reminders (tick goals
+  that have a time → downloads ascent-reminders.ics, daily/weekly RRULE, Asia/Kolkata, alarm at the time; ticks in
+  "pref:reminders") · Units (weight kg/lb converts display + daily weigh inputs, stored in kg; scan & goal forms stay
+  kg; km/mi on Steps; 12/24 h in Diet, Goals, reminders; Sunday week start reorders Diet strip, Goals weekly table
+  (still stored per ISO week) and Steps rhythm) · Privacy (html.privacy blurs numbers in the private Gym tabs,
+  hover/tap to peek, shortcut P; Auto-lock 1/5/15/30 min/never) · Backup (one JSON: goals:*, log:draft:*, pref:*,
+  smart:*, theme, gym:sound, fit:vault (still encrypted) / fit:plain; restore asks first; orange dot on the gear
+  when data exists and the last backup is 7+ days old) · App (Install via beforeinstallprompt, iPhone steps; offline
+  status) · Keyboard shortcuts.
+- Offline/PWA: public/sw.js — HTML + owner.json network-first (cached copy offline), /_astro/ + images + Google
+  Fonts cache-first, videos/audio + GitHub/LeetCode APIs never cached. Not registered on localhost. Bump VERSION
+  in sw.js if caching ever looks stale.
+- Shortcuts (never while typing): / search · G then H/J/G/O/I/A = Home/Journal/Gym/Goals/Index/About · L Daily Log ·
+  , Settings · P privacy · 1–6 Gym tabs · ? cheat sheet.
 - Smart typing (every text box, loaded in Base.astro → src/scripts/smart-type.ts + src/data/words.ts):
   word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
   spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
@@ -154,11 +175,13 @@ decisions that are truly mine.
    plan as a new Workout section (aesthetic V-shape, 60-min strength + incline walk); fingerprint on my
    Android phone failed (NotReadableError from Android credential manager, Chrome 158) — added a retry
    that registers without PRF eval and reads PRF at sign-in; ask me if it works now;
-4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
+4. Settings v2 is live — ask me if the phone install / offline / calendar reminders work on my phone.
+5. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
 - 2026-11-28 New brand mark "Circle Summit": favicon, app icons (incl. maskable), share preview image (og.png).
+- 2026-11-28 Settings v2: My targets, calendar reminders (.ics), privacy screen + auto-lock timer, full backup/restore + reminder dot, install app + offline (service worker), calm mode + text size, units (kg/lb, km/mi, 12/24h, week start), keyboard shortcuts.
 - 2026-11-28 Settings gear: 3D glass button; hover/open = orange fill + orange ring + glow.
 - 2026-11-28 Settings gear moved to the right corner; Security & data usable from any page (unlock inside Settings).
 - 2026-11-28 Settings drawer (gear icon): theme, music, motion, glow, typing, Gym backups + security; phone header fixed.

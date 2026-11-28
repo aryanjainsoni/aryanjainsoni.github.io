@@ -198,22 +198,24 @@ const icons: Record<string, string> = {
         const dsaN = (v.dsa || '').split('\n').filter((l) => l.trim()).length || 0;
         const sleep = parseFloat(v.sleep), steps = parseFloat(v.steps), energy = Number(v.energy), mood = Number(v.mood);
         const trained = v.gym && !['Skipped', 'Rest day'].includes(v.gym);
+        // Settings → My targets (src/lib/prefs.ts)
+        const T = (() => { try { return { sleep: 7.5, steps: 10000, ...JSON.parse(localStorage.getItem('pref:settings') || '{}') }; } catch { return { sleep: 7.5, steps: 10000 }; } })();
         // WIN — strongest 2 things that happened
         const wins = [];
         if (gh?.n) wins.push([Math.min(30, gh.n * 2), `Shipped ${gh.n} commit${gh.n > 1 ? 's' : ''} to ${gh.repos.map((r) => r[0]).join(', ')} — ${cut(gh.repos[0][2].slice(-1)[0] || '')}`]);
         if (v.gymNote) wins.push([25, `Gym: ${v.gymNote}`]); else if (trained) wins.push([8, `Trained ${v.gym.toLowerCase()}`]);
         if (dsaN || lcN) wins.push([Math.max(dsaN, 1) * 6, dsaN ? `Solved ${dsaN} LeetCode problem${dsaN > 1 ? 's' : ''}` : `Kept LeetCode going (${lcN} submission${lcN > 1 ? 's' : ''})`]);
         if (goalsLogged && done.length >= daily.length * 0.8) wins.push([20, `Hit ${done.length}/${daily.length} daily goals`]);
-        if (steps >= 10000) wins.push([10, `${Math.round(steps).toLocaleString('en-IN')} steps`]);
+        if (steps >= T.steps) wins.push([10, `${Math.round(steps).toLocaleString('en-IN')} steps`]);
         if (v.vedantu) wins.push([6, `Learned: ${cut(v.vedantu, 60)}`]);
         const win = wins.sort((a, b) => b[0] - a[0]).slice(0, 2).map((w) => w[1]).join('; ');
         // HARD — honest list of what slipped
         const hard = [];
         if (goalsLogged && missed.length) hard.push(`Missed ${missed.slice(0, 3).map((g) => g.name).join(', ')}${missed.length > 3 ? ` +${missed.length - 3} more` : ''}`);
-        if (sleep && sleep < 7) hard.push(`only ${sleep}h sleep`);
+        if (sleep && sleep < T.sleep) hard.push(`only ${sleep}h sleep (target ${T.sleep}h)`);
         if (v.diet === 'Off track' || v.diet === 'Mostly') hard.push(`diet ${v.diet.toLowerCase()}`);
         if (v.gym === 'Skipped') hard.push('skipped the gym');
-        if (steps && steps < 7000) hard.push(`only ${Math.round(steps).toLocaleString('en-IN')} steps`);
+        if (steps && steps < T.steps * 0.7) hard.push(`only ${Math.round(steps).toLocaleString('en-IN')} steps`);
         if ((energy && energy <= 2) || (mood && mood <= 2)) hard.push(`low ${energy && energy <= 2 ? 'energy' : 'mood'}`);
         if (!dsaN && !lcN) hard.push('no LeetCode today');
         const hardTxt = hard.length ? hard.join('; ').replace(/^./, (c) => c.toUpperCase()) + '.' : '';

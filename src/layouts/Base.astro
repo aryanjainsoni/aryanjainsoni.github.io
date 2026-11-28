@@ -50,6 +50,13 @@ const last = [...'Jain'];
       const saved = localStorage.getItem('theme');
       const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      // Settings that change the look (calm mode, privacy blur, text size) — applied before paint. See src/lib/prefs.ts
+      try {
+        const p = JSON.parse(localStorage.getItem('pref:settings') || '{}'), r = document.documentElement;
+        if (p.calm) r.classList.add('calm');
+        if (p.privacy) r.classList.add('privacy');
+        r.dataset.text = p.text || 'm';
+      } catch {}
     </script>
   </head>
   <body>
@@ -75,6 +82,7 @@ const last = [...'Jain'];
           </button>
           <button id="settings-open" class="toggle gear" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4Z" /></svg>
+          <span class="gear-dot" hidden aria-hidden="true"></span>
           </button>
         </nav>
       </div>
@@ -94,6 +102,14 @@ const last = [...'Jain'];
             <button type="button" role="radio" data-theme-set="dark">☾ Dark</button>
             <button type="button" role="radio" data-theme-set="system">◐ Auto</button>
           </div>
+          <div class="sd-row"><div><b>Text size</b><p>Bigger or smaller text on every page.</p></div>
+            <div class="sd-seg mini" role="radiogroup" aria-label="Text size">
+              <button type="button" role="radio" data-p="text" data-v="s" aria-label="Small text"><small>A</small></button>
+              <button type="button" role="radio" data-p="text" data-v="m" aria-label="Medium text">A</button>
+              <button type="button" role="radio" data-p="text" data-v="l" aria-label="Large text"><big>A</big></button>
+            </div>
+          </div>
+          <div class="sd-row"><div><b>Calm mode</b><p>Every animation off — no aurora, glow, moving videos or fades.</p></div><button type="button" class="sw" role="switch" data-p="calm" aria-label="Calm mode"></button></div>
         </section>
         <section class="sd-sec">
           <h3>Sound &amp; motion</h3>
@@ -101,10 +117,61 @@ const last = [...'Jain'];
           <div class="sd-row"><div><b>Live video icons</b><p>Turn off to save battery and data — photos stay.</p></div><button type="button" class="sw" role="switch" data-pref="motion" aria-label="Live video icons"></button></div>
           <div class="sd-row"><div><b>Cursor glow</b><p>The soft light that follows your mouse.</p></div><button type="button" class="sw" role="switch" data-pref="glow" aria-label="Cursor glow"></button></div>
         </section>
+        <section class="sd-sec" id="sd-targets">
+          <h3>My targets</h3>
+          <p class="sd-note">Used by the Steps ring, Today rings, Diet water &amp; protein, streaks and the Daily Log.</p>
+          <div class="sd-grid">
+            <label class="sd-in"><span>Steps / day</span><input type="number" inputmode="numeric" min="1000" max="50000" step="500" data-p="steps"></label>
+            <label class="sd-in"><span>Sleep (hours)</span><input type="number" inputmode="decimal" min="4" max="12" step="0.25" data-p="sleep"></label>
+            <label class="sd-in"><span>Water (litres)</span><input type="number" inputmode="decimal" min="1" max="8" step="0.25" data-p="water"></label>
+            <label class="sd-in"><span>Protein</span><select data-p="protein">
+              <option value="0">Auto (from goal)</option><option value="1.6">1.6 g / kg</option><option value="1.8">1.8 g / kg</option><option value="2">2.0 g / kg</option><option value="2.2">2.2 g / kg</option><option value="2.4">2.4 g / kg</option>
+            </select></label>
+            <label class="sd-in"><span>Weigh-in time</span><input type="time" data-p="weighTime"></label>
+          </div>
+        </section>
+        <section class="sd-sec">
+          <h3>Reminders</h3>
+          <p class="sd-note">Pick reminders, then add them to your phone’s calendar once — it alerts you even when this site is closed.</p>
+          <div class="sd-rem" data-reminders></div>
+          <button type="button" class="sd-btn wide" data-ics>📅 Add to calendar (.ics)</button>
+          <p class="sd-note small">Opens in Google Calendar / Apple Calendar. Re-download after changing times — import replaces the old ones.</p>
+        </section>
+        <section class="sd-sec">
+          <h3>Units</h3>
+          <div class="sd-row"><div><b>Weight</b></div><div class="sd-seg mini" role="radiogroup" aria-label="Weight unit"><button type="button" role="radio" data-p="weight" data-v="kg">kg</button><button type="button" role="radio" data-p="weight" data-v="lb">lb</button></div></div>
+          <div class="sd-row"><div><b>Distance</b></div><div class="sd-seg mini" role="radiogroup" aria-label="Distance unit"><button type="button" role="radio" data-p="dist" data-v="km">km</button><button type="button" role="radio" data-p="dist" data-v="mi">mi</button></div></div>
+          <div class="sd-row"><div><b>Clock</b></div><div class="sd-seg mini" role="radiogroup" aria-label="Clock"><button type="button" role="radio" data-p="clock" data-v="12">12h</button><button type="button" role="radio" data-p="clock" data-v="24">24h</button></div></div>
+          <div class="sd-row"><div><b>Week starts</b></div><div class="sd-seg mini" role="radiogroup" aria-label="Week starts on"><button type="button" role="radio" data-p="weekStart" data-v="mon">Mon</button><button type="button" role="radio" data-p="weekStart" data-v="sun">Sun</button></div></div>
+        </section>
         <section class="sd-sec">
           <h3>Typing</h3>
           <div class="sd-row"><div><b>Smart typing</b><p>Word suggestions and autocorrect in every text box.</p></div><button type="button" class="sw" role="switch" data-pref="typing" aria-label="Smart typing"></button></div>
           <div class="sd-row"><div><b>Learned words</b><p data-learned>Words you use often, kept in this browser.</p></div><button type="button" class="sd-btn" data-clear-words>Clear</button></div>
+        </section>
+        <section class="sd-sec">
+          <h3>Privacy</h3>
+          <div class="sd-row"><div><b>Privacy screen</b><p>Blur weights, calories and body numbers in the Gym — hover or tap to peek. Shortcut: <kbd>P</kbd></p></div><button type="button" class="sw" role="switch" data-p="privacy" aria-label="Privacy screen"></button></div>
+          <div class="sd-row"><div><b>Auto-lock</b><p>Lock the Gym vault after this long in the background.</p></div>
+            <select class="sd-sel" data-p="autolock" aria-label="Auto-lock after">
+              <option value="1">1 min</option><option value="5">5 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="0">Never</option>
+            </select>
+          </div>
+        </section>
+        <section class="sd-sec">
+          <h3>Backup</h3>
+          <p class="sd-note" data-backup-status>Everything in one file.</p>
+          <div class="sd-btns">
+            <button type="button" class="sd-btn" data-backup>⬇ Full backup</button>
+            <label class="sd-btn file">⬆ Restore<input type="file" accept=".json,application/json" data-restore hidden></label>
+          </div>
+          <p class="sd-note small">Gym (stays encrypted), goal ticks, Daily Log drafts, learned words and these settings.</p>
+        </section>
+        <section class="sd-sec">
+          <h3>App</h3>
+          <div class="sd-row"><div><b>Install Ascent</b><p data-install-note>Opens like an app, full screen, from your home screen.</p></div><button type="button" class="sd-btn" data-install>Install</button></div>
+          <div class="sd-row"><div><b>Offline mode</b><p data-offline-note>Pages you’ve opened work without internet.</p></div><span class="sd-pill" data-offline-pill>…</span></div>
+          <div class="sd-row"><div><b>Keyboard shortcuts</b><p>Jump anywhere without the mouse.</p></div><button type="button" class="sd-btn" data-shortcuts>Show <kbd>?</kbd></button></div>
         </section>
         <section class="sd-sec">
           <h3>Security &amp; data</h3>
@@ -146,7 +213,7 @@ const last = [...'Jain'];
         dispatchEvent(new Event('ascent:theme'));
       });
 
-      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('calm'); // Settings → Calm mode
       const finePointer = matchMedia('(pointer: fine)').matches;
 
       // Scroll par elements ka aana.
@@ -184,6 +251,8 @@ const last = [...'Jain'];
       <script>
       import '../scripts/smart-type.ts'; // word suggestions + autocorrect in every text box
       import '../scripts/settings.ts'; // settings drawer (gear icon)
+      import '../scripts/shortcuts.ts'; // keyboard shortcuts + cheat sheet (press ?)
+      import '../scripts/pwa.ts'; // install button + offline mode (service worker)
     </script>
 </body>
 </html>

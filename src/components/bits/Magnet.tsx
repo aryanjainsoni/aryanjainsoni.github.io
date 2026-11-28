@@ -164,7 +164,7 @@ const Magnet = ({
     const inner = innerRef.current;
     if (!wrapper || !inner) return undefined;
 
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const reduce = (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) || document.documentElement.classList.contains('calm');
     const current: Motion = { x: 0, y: 0, tiltX: 0, tiltY: 0, scale: 1 };
     const velocity: Motion = { x: 0, y: 0, tiltX: 0, tiltY: 0, scale: 0 };
     let active = false;

@@ -230,7 +230,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
 
   <script is:inline>
     (() => {
-      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('calm');
       if (calm) return;
       // Project cards scale down slightly as the next one stacks over them
       const cards = [...document.querySelectorAll('[data-stack] .pcard')];

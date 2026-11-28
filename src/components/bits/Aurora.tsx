@@ -414,15 +414,17 @@ const Aurora = ({
         state.py += (ty - state.py) * follow;
       }
       state.reach += ((engaged ? 1 : 0) - state.reach) * (1 - Math.exp(-dt / (engaged ? 0.9 : 1.4)));
-      if (!s.intro || reduce) state.reveal = 1;
+      const calm = document.documentElement.classList.contains('calm'); // Settings → Calm mode: draw one still frame
+      if (!s.intro || reduce || calm) state.reveal = 1;
       else if (state.reveal < 1) state.reveal = Math.min(1, state.reveal + dt / INTRO_SECONDS);
       render();
-      raf = requestAnimationFrame(frame);
+      raf = calm ? 0 : requestAnimationFrame(frame);
     };
 
     const wake = () => {
       if (!raf && visible && !document.hidden) raf = requestAnimationFrame(frame);
     };
+    window.addEventListener('ascent:prefs', wake);
 
     const resize = () => {
       const s = settingsRef.current;
@@ -496,6 +498,7 @@ const Aurora = ({
 
     return () => {
       cancelAnimationFrame(raf);
+      window.removeEventListener('ascent:prefs', wake);
       wakeRef.current = null;
       resizeObserver.disconnect();
       intersection.disconnect();

@@ -179,6 +179,7 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
     const mm = gsap.matchMedia();
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
+      if (document.documentElement.classList.contains('calm')) return; // Settings → Calm mode: text stays fully shown
       const order = pieces.map((_, index) => index);
       const last = pieces.map(() => -1);
       const state = { p: 0 };

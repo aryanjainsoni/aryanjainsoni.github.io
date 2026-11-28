@@ -148,7 +148,7 @@ const SplitText = ({
         onCompleteRef.current?.();
       };
 
-      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('calm')) { // Settings → Calm mode
         setReady(true);
         finish();
         return;

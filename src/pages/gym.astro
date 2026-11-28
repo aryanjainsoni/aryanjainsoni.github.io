@@ -81,7 +81,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
     <div class="wrap">
       <div class="top">
         <div class="card today">
-          <div class="ring" style={`--p:${pct}`}>
+          <div class="ring" data-s="ring" data-n={shown?.n ?? 0} style={`--p:${pct}`}>
             <svg viewBox="0 0 200 200" aria-hidden="true">
               <defs>
                 <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -94,14 +94,14 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
             <div class="center">
               <p class="rl">{shown ? (isToday ? 'Today' : fmtDay(shown.d)) : 'Today'}</p>
               <b>{shown ? n(shown.n) : '—'}</b>
-              <p class="rg">of {n(goal)} steps</p>
+              <p class="rg">of <span data-s="goal">{n(goal)}</span> steps</p>
             </div>
           </div>
           <div class="facts">
             {shown ? (
               <>
-                <span><i>{Math.round(pct * 100)}%</i> of goal</span>
-                <span><i>≈ {(shown.n * KM_PER_STEP).toFixed(1)}</i> km</span>
+                <span><i data-s="pct">{Math.round(pct * 100)}%</i> of goal</span>
+                <span><i data-s="dist">≈ {(shown.n * KM_PER_STEP).toFixed(1)}</i> <span data-s="du">km</span></span>
                 <span><i>≈ {n(shown.n * KCAL_PER_STEP)}</i> kcal</span>
               </>
             ) : <span class="muted">No steps logged yet — the first one lands tonight.</span>}
@@ -110,10 +110,10 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
         </div>
 
         <div class="tiles">
-          <div class="tile"><span class="e" aria-hidden="true">🔥</span><b>{s.goalStreak.current}</b><span>day 10k streak</span></div>
+          <div class="tile"><span class="e" aria-hidden="true">🔥</span><b data-s="streak">{s.goalStreak.current}</b><span>day <span data-s="goalk">{Math.round(goal / 1000)}k</span> streak</span></div>
           <div class="tile"><span class="e" aria-hidden="true">📈</span><b>{s.avg7 ? n(s.avg7) : '—'}</b><span>7-day average</span></div>
           <div class="tile"><span class="e" aria-hidden="true">🏆</span><b>{s.best ? n(s.best.n) : '—'}</b><span>{s.best ? `best · ${fmtDay(s.best.d)}` : 'best day'}</span></div>
-          <div class="tile"><span class="e" aria-hidden="true">🎯</span><b>{s.goalDays}<small>/{s.days.length}</small></b><span>days hit goal</span></div>
+          <div class="tile"><span class="e" aria-hidden="true">🎯</span><b><span data-s="goaldays">{s.goalDays}</span><small>/{s.days.length}</small></b><span>days hit goal</span></div>
         </div>
       </div>
 
@@ -146,7 +146,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
         <div class="card rhythm">
           <p class="label">Weekly rhythm</p>
           <h3>{bestWd ? <>I walk most on <em>{bestWd}</em>.</> : 'Average by weekday'}</h3>
-          <div class="wd">
+          <div class="wd" data-s="wd">
             {s.weekday.map((v, i) => (
               <div class="wdc" title={v ? `${wdNames[i]} · avg ${n(v)} steps` : `${wdNames[i]} · no data`}>
                 <div class="wdt"><span class:list={['wdb', { hit: v >= goal }]} style={`height:${(v / wdMax) * 100}%`}></span></div>
@@ -158,13 +158,13 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
 
         <div class="card journey">
           <p class="label">Lifetime distance</p>
-          <p class="big"><b>{s.km < 10 ? s.km.toFixed(1) : n(s.km)}</b> km</p>
+          <p class="big"><b data-s="life">{s.km < 10 ? s.km.toFixed(1) : n(s.km)}</b> <span data-s="du">km</span></p>
           <p class="muted sub">{n(s.total)} steps since day one{prev && <> · past <b>{prev.name}</b></>}</p>
           {next && (
             <div class="mile">
-              <div class="mtop"><span>Next: {next.name}</span><span>{n(next.km)} km</span></div>
+              <div class="mtop"><span>Next: {next.name}</span><span data-s="nextkm" data-km={next.km}>{n(next.km)} km</span></div>
               <div class="mbar"><span style={`width:${mPct}%`}></span></div>
-              <p class="fine">{(next.km - s.km).toFixed(next.km - s.km < 10 ? 1 : 0)} km to go</p>
+              <p class="fine" data-s="togo" data-km={next.km - s.km}>{(next.km - s.km).toFixed(next.km - s.km < 10 ? 1 : 0)} km to go</p>
             </div>
           )}
         </div>
@@ -226,24 +226,27 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
     </div>
   </section>
 
-  <script is:inline type="application/json" id="steps-data" set:html={JSON.stringify({ goal, today: s.today, days: s.days })}></script>
+  <script is:inline type="application/json" id="steps-data" set:html={JSON.stringify({ goal, today: s.today, days: s.days, km: s.km, kmPerStep: KM_PER_STEP })}></script>
   <script is:inline>
     (() => {
       const D = JSON.parse(document.getElementById('steps-data').textContent);
       const map = new Map(D.days.map((x) => [x.d, x.n]));
-      const goal = D.goal;
+      // Settings → My targets (steps) + Units (km/mi, week start) — this browser only; the build uses site.stepGoal
+      const P = () => { try { return JSON.parse(localStorage.getItem('pref:settings') || '{}'); } catch { return {}; } };
+      let goal = P().steps || D.goal;
       const fmt = (x) => Math.round(x).toLocaleString('en-IN');
       const key = (d) => d.toISOString().slice(0, 10);
       const day = (k, o) => new Date(k).toLocaleDateString('en-IN', { timeZone: 'UTC', ...o });
 
       // ---------- live video orbs: all loop while on screen; hover = bigger, brighter, faster ----------
       const sysCalm = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
-      const calmNow = () => sysCalm || localStorage.getItem('pref:motion') === 'off'; // Settings → Live video icons
+      const calmNow = () => sysCalm || localStorage.getItem('pref:motion') === 'off' || document.documentElement.classList.contains('calm'); // Settings → Live video icons / Calm mode
       const vidOf = (t) => t.querySelector('video');
       const play = (v) => { if (calmNow() || !v) return; if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); };
       const orbPlay = () => { soundSwitch(); };
       const startOrbs = () => document.querySelectorAll('.orbs video').forEach(play);
-      addEventListener('ascent:motion', () => document.querySelectorAll('.orbs video').forEach((v) => (calmNow() ? v.pause() : play(v))));
+      const motionSync = () => document.querySelectorAll('.orbs video').forEach((v) => (calmNow() ? v.pause() : play(v)));
+      addEventListener('ascent:motion', motionSync); addEventListener('ascent:prefs', motionSync);
       if (!sysCalm) {
         const io = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target; if (e.isIntersecting) play(v); else v.pause(); }), { threshold: 0.1 });
         document.querySelectorAll('.orbs video').forEach((v) => io.observe(v));
@@ -417,6 +420,39 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       const go = () => { const h = location.hash.slice(1); show(fromHash()); if (h.startsWith('nb-')) document.getElementById(h)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
       go();
       addEventListener('hashchange', go);
+
+      // ---------- personal targets + units on the Steps tab ----------
+      function applyPrefs() {
+        const p = P(); goal = p.steps || D.goal;
+        const mi = p.dist === 'mi', conv = (km) => (mi ? km * 0.621371 : km), du = mi ? 'mi' : 'km';
+        const q = (k) => document.querySelector(`[data-s="${k}"]`);
+        document.querySelectorAll('[data-s="du"]').forEach((e) => (e.textContent = du));
+        const ring = q('ring'), shownN = +ring.dataset.n, pct = Math.min(shownN / goal, 1);
+        ring.style.setProperty('--p', pct);
+        const bar = ring.querySelector('.bar'), C = +bar.getAttribute('stroke-dasharray'); bar.setAttribute('stroke-dashoffset', C * (1 - pct));
+        q('goal').textContent = fmt(goal);
+        if (q('pct')) q('pct').textContent = Math.round((shownN / goal) * 100) + '%';
+        if (q('dist')) q('dist').textContent = '≈ ' + conv(shownN * D.kmPerStep).toFixed(1);
+        q('goalk').textContent = (goal % 1000 ? (goal / 1000).toFixed(1) : goal / 1000) + 'k';
+        const hit = D.days.filter((x) => x.n >= goal).map((x) => x.d), set = new Set(hit);
+        q('goaldays').textContent = hit.length;
+        const cur = new Date(D.today); if (!set.has(key(cur))) cur.setUTCDate(cur.getUTCDate() - 1);
+        let streak = 0; while (set.has(key(cur))) { streak++; cur.setUTCDate(cur.getUTCDate() - 1); }
+        q('streak').textContent = streak;
+        const life = conv(D.km); q('life').textContent = life < 10 ? life.toFixed(1) : fmt(life);
+        if (q('nextkm')) q('nextkm').textContent = `${fmt(conv(+q('nextkm').dataset.km))} ${du}`;
+        if (q('togo')) { const t = conv(+q('togo').dataset.km); q('togo').textContent = `${t.toFixed(t < 10 ? 1 : 0)} ${du} to go`; }
+        // weekly rhythm: start on Sunday if chosen, goal colour from the target
+        const wd = q('wd'), cols = [...wd.children];
+        if (!wd.dataset.ord) cols.forEach((c, i) => (c.dataset.i = i));
+        const order = p.weekStart === 'sun' ? [6, 0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6];
+        wd.dataset.ord = order.join('');
+        order.forEach((i) => wd.append(cols.find((c) => +c.dataset.i === i)));
+        cols.forEach((c) => { const b = c.querySelector('.wdb'), v = +(c.title.match(/avg ([\d,]+)/)?.[1].replace(/,/g, '') || 0); b.classList.toggle('hit', v >= goal); });
+        draw();
+      }
+      applyPrefs();
+      addEventListener('ascent:prefs', applyPrefs);
       draw();
     })();
   </script>

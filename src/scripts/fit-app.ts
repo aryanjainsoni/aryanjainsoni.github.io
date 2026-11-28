@@ -8,6 +8,7 @@ import { foods, foodById, type Food } from '../data/foods';
 import * as V from '../lib/vault';
 import type { AnyVault, VaultV2, KeySlot, OwnerKey } from '../lib/vault';
 import { repo } from '../data/dailyLog';
+import * as PR from '../lib/prefs';
 import '../styles/fit.css'; // also needed when Settings loads this on other pages
 
 // ---------------- store ----------------
@@ -35,7 +36,8 @@ const plainKeys = () => Object.keys(localStorage).filter((k) => k.startsWith('fi
 if (lockOff()) { try { mem = JSON.parse(localStorage.getItem(PLAIN)!); } catch { mem = {}; } }
 
 const scans = (): Scan[] => load<Scan[]>(K.scans, []).filter((s) => s && s.date && s.weight).sort((a, b) => a.date.localeCompare(b.date));
-const goal = (): Goal | null => load<Goal | null>(K.goal, null);
+// step target comes from Settings → My targets (one number for the whole site)
+const goal = (): Goal | null => { const g = load<Goal | null>(K.goal, null); return g ? { ...g, stepGoal: PR.prefs().steps } : null; };
 const logOf = (d: string): DayLog | undefined => load<DayLog | undefined>(K.log(d), undefined);
 const saveLog = (d: string, patch: Partial<DayLog>) => {
   const cur = { ...(logOf(d) ?? { date: d }), ...patch };
@@ -55,6 +57,8 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '
 const n0 = (v: number) => Math.round(v).toLocaleString('en-IN');
 const n1 = (v: number) => (Math.round(v * 10) / 10).toLocaleString('en-IN', { maximumFractionDigits: 1 });
 const num = (v: FormDataEntryValue | null | undefined) => { const x = parseFloat(String(v ?? '')); return Number.isFinite(x) ? x : undefined; };
+// weight in the unit chosen in Settings (stored in kg always)
+const wv = (kg: number) => n1(PR.wOut(kg)), WU = () => ' ' + PR.wUnit();
 const fmtD = (k: string, o: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }) => new Date(k + 'T00:00:00Z').toLocaleDateString('en-IN', { timeZone: 'UTC', ...o });
 const WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TODAY = F.todayKey();
@@ -102,7 +106,7 @@ function setOther(d: string, slot: string, items: Item[]) {
   const rest = (log?.meals ?? []).filter((m) => !m.startsWith(slot + ':'));
   saveLog(d, { other: Object.keys(other).length ? other : undefined, meals: items.length ? [...rest, `${slot}:other`] : rest, plan: { ...dayPlan(d) } });
 }
-const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+const fmt12 = (hhmm: string) => PR.fmtTime(hhmm); // 12h or 24h — Settings → Units → Clock
 const stepsOn = (d: string) => logOf(d)?.steps ?? journalSteps.get(d);
 
 function tdeeAdj(d: string) {
@@ -121,8 +125,10 @@ function plan(d: string) {
   const kg = kgOn(d), adjT = tdeeAdj(d), base = F.baseTargets(g, s, kg, adjT);
   const L = F.ledger({ today: d, goal: g, kg, base, logFor: logOf, stepsFor: (k) => journalSteps.get(k), eatenFor: eatenOn });
   const kcal = Math.max(base.bmr, base.kcal + L.adj.kcal);
-  const m = F.macrosFor(kcal, kg, g.type); m.p += L.adj.protein; m.c = Math.max(0, (kcal - m.p * 4 - m.f * 9) / 4);
-  const t: Targets = { ...base, ...m, kcal, steps: base.steps + L.adj.steps, cardioMin: base.cardioMin + L.adj.cardio, burn: base.burn + L.adj.burnKcal };
+  const pr = PR.prefs(), m = F.macrosFor(kcal, kg, g.type);
+  if (pr.protein) m.p = Math.round(pr.protein * kg); // Settings → My targets → Protein g/kg (0 = auto from the goal)
+  m.p += L.adj.protein; m.c = Math.max(0, (kcal - m.p * 4 - m.f * 9) / 4);
+  const t: Targets = { ...base, ...m, kcal, water: pr.water, steps: base.steps + L.adj.steps, cardioMin: base.cardioMin + L.adj.cardio, burn: base.burn + L.adj.burnKcal };
   return { g, s, kg, base, t, L, adjT };
 }
 
@@ -220,7 +226,7 @@ function renderToday(root: HTMLElement) {
     <div class="f-grid4">
       ${inp('steps', fromJournal ? 'steps · from journal' : 'steps', log.steps ?? journalSteps.get(view), '1')}
       ${inp('cardioMin', 'incline walk min', log.cardioMin)}${inp('workoutMin', 'strength min', log.workoutMin)}
-      ${inp('water', 'water L', log.water, '0.25')}${inp('sleep', 'sleep h', log.sleep, '0.5')}${inp('weight', 'morning weight kg', log.weight, '0.05')}
+      ${inp('water', 'water L', log.water, '0.25')}${inp('sleep', 'sleep h', log.sleep, '0.5')}${inp('weight', `morning weight ${PR.wUnit()}`, log.weight != null ? Math.round(PR.wOut(log.weight) * 100) / 100 : undefined, '0.05')}
     </div>
     <p class="fine">Tip: weigh yourself most mornings (after the loo, before food). After ~2 weeks the system learns your real maintenance calories.</p>
   </form>${NOTE}`;
@@ -239,12 +245,12 @@ function weighCard(w?: number) {
        <div class="tr"><span style="width:${(Math.min(wi / F.CALIB.weighIns, fd / F.CALIB.foodDays, 1)) * 100}%"></span></div></div>`;
   return `<form class="card f-weigh${w ? ' done' : ''}" data-form="weigh" autocomplete="off">
     <div class="wl">
-      <p class="label">Morning weigh-in</p>
-      ${w ? `<h3>Weighed <em>✓</em> ${n1(w)} kg</h3><p class="fine">${avg ? `${w - avg >= 0 ? '+' : '−'}${n1(Math.abs(w - avg))} kg vs your 7-day average — daily swings of ±1 kg are just water.` : 'Same time tomorrow.'}</p>`
+      <p class="label">Morning weigh-in · ${PR.fmtTime(PR.prefs().weighTime)}</p>
+      ${w ? `<h3>Weighed <em>✓</em> <span class="pv">${wv(w)}${WU()}</span></h3><p class="fine">${avg ? `<span class="pv">${w - avg >= 0 ? '+' : '−'}${wv(Math.abs(w - avg))}${WU()}</span> vs your 7-day average — daily swings of ±${PR.wUnit() === 'lb' ? '2 lb' : '1 kg'} are just water.` : 'Same time tomorrow.'}</p>`
         : `<h3>Step on the scale <em>before breakfast.</em></h3><p class="fine">After the loo, before food or water — same time every day.</p>`}
       <div class="f-dots" aria-label="Weigh-ins in the last 7 days">${dots.join('')}<span>last 7 days</span></div>
     </div>
-    <div class="wr">${w ? '' : `<label class="f-in"><input type="number" inputmode="decimal" step="0.05" min="20" max="250" name="weight" placeholder="kg"><span>today’s weight</span></label><button class="btn primary sm" type="submit">Save</button>`}</div>
+    <div class="wr">${w ? '' : `<label class="f-in"><input type="number" inputmode="decimal" step="0.05" min="20" max="550" name="weight" placeholder="${PR.wUnit()}"><span>today’s weight</span></label><button class="btn primary sm" type="submit">Save</button>`}</div>
     ${calib}
   </form>`;
 }
@@ -334,15 +340,15 @@ function renderPlan(root: HTMLElement) {
       <h2>${fmtD(g.start, { day: 'numeric', month: 'short' })} → ${fmtD(end, { day: 'numeric', month: 'short', year: 'numeric' })}</h2></div>
       <button class="btn ghost sm" data-act="edit-goal">Edit goal</button></div>
     <div class="f-delta">
-      ${delta('Weight', first.weight, g.targetWeight, ' kg')}${delta('Body fat', first.fatPct, g.targetFatPct, '%')}${delta('Fat mass', F.fatMassOf(first), m.fatT, ' kg')}${delta('Muscle (SMM)', first.smm, g.targetSmm, ' kg')}
+      ${delta('Weight', PR.wOut(first.weight), PR.wOut(g.targetWeight), WU())}${delta('Body fat', first.fatPct, g.targetFatPct, '%')}${delta('Fat mass', PR.wOut(F.fatMassOf(first)), PR.wOut(m.fatT), WU())}${delta('Muscle (SMM)', PR.wOut(first.smm), PR.wOut(g.targetSmm), WU())}
     </div>
     <ul class="f-issues">${issues.map((i) => `<li class="${i.level}">${esc(i.msg)}</li>`).join('')}</ul>
   </div>
   <div class="f-phases">${Array.from({ length: phases }, (_, i) => { const a = i * 30, b = Math.min(g.days, (i + 1) * 30), f = b / g.days, now = F.diffDays(g.start, TODAY);
     return `<div class="card f-phase${now >= a && now < b ? ' cur' : ''}"><p class="label">Phase ${i + 1}${now >= a && now < b ? ' · now' : ''}</p><h3>${fmtD(F.addDays(g.start, a))} – ${fmtD(F.addDays(g.start, b - 1))}</h3>
-      <ul><li><span>Weight</span><b>${n1(lerp(first.weight, g.targetWeight, f))} kg</b></li><li><span>Body fat</span><b>${n1(lerp(first.fatPct, g.targetFatPct, f))}%</b></li><li><span>SMM</span><b>${n1(lerp(first.smm, g.targetSmm, f))} kg</b></li></ul></div>`; }).join('')}</div>
+      <ul><li><span>Weight</span><b>${wv(lerp(first.weight, g.targetWeight, f))}${WU()}</b></li><li><span>Body fat</span><b>${n1(lerp(first.fatPct, g.targetFatPct, f))}%</b></li><li><span>SMM</span><b>${wv(lerp(first.smm, g.targetSmm, f))}${WU()}</b></li></ul></div>`; }).join('')}</div>
   <div class="f-two">
-    <div class="card">${spark(weightActual, planPts((f) => lerp(first.weight, g.targetWeight, f)), ' kg', 'Weight · plan vs actual')}</div>
+    <div class="card">${spark(weightActual.map((q) => ({ ...q, y: PR.wOut(q.y) })), planPts((f) => PR.wOut(lerp(first.weight, g.targetWeight, f))), WU(), 'Weight · plan vs actual')}</div>
     <div class="card">${spark(all.filter((x) => x.date >= F.addDays(g.start, -45)).map((x) => ({ x: x.date, y: x.fatPct })), planPts((f) => lerp(first.fatPct, g.targetFatPct, f)), '%', 'Body fat · plan vs actual')}</div>
   </div>
   <div class="card f-check"><p class="label">Scan check-ins · every 2 weeks</p><div class="f-chips">${checkins.map((d) => { const done = all.some((x) => Math.abs(F.diffDays(x.date, d)) <= 3); return `<span class="${done ? 'done' : d < TODAY ? 'miss' : ''}">${done ? '✓ ' : ''}${fmtD(d)}</span>`; }).join('')}</div>
@@ -391,7 +397,7 @@ function readGoal(form: HTMLFormElement): Goal {
   return {
     type: (f.get('type') as GoalType) || 'recomp', start: String(f.get('start') || TODAY), days: Number(f.get('days')) || 90,
     targetWeight: num(f.get('targetWeight')) ?? 0, targetFatPct: num(f.get('targetFatPct')) ?? 0, targetSmm: num(f.get('targetSmm')) ?? 0,
-    stepGoal: num(f.get('stepGoal')) ?? 10000, workoutMin: num(f.get('workoutMin')) ?? 60, cardioMin: num(f.get('cardioMin')) ?? 30,
+    stepGoal: num(f.get('stepGoal')) ?? PR.prefs().steps, workoutMin: num(f.get('workoutMin')) ?? 60, cardioMin: num(f.get('cardioMin')) ?? 30,
     cardioKmh: num(f.get('cardioKmh')) ?? 4, cardioGrade: num(f.get('cardioGrade')) ?? 15,
   };
 }
@@ -516,7 +522,7 @@ function historyCard() {
   if (!rows.length) return `<div class="card f-hist"><p class="label">History · by date</p><p class="fine">Every day you tick meals is saved under its date (e.g. ${fmtD(TODAY, { day: 'numeric', month: 'short', year: 'numeric' })}) and shows up here.</p></div>`;
   return `<div class="card f-hist"><div class="f-loghead"><p class="label">History · by date</p><span class="fine">${rows.length} day${rows.length > 1 ? 's' : ''} logged</span></div><div class="f-tbl"><table><thead><tr><th>Date</th><th>Meals</th><th>Kcal</th><th>Protein</th><th>Weight</th><th>Steps</th><th></th></tr></thead><tbody>
     ${rows.map((d) => { const l = logOf(d)!, f = eatenOn(d), ok = onTarget(d);
-      return `<tr class="f-hrow${d === dietDate ? ' sel' : ''}" data-act="dd" data-d="${d}" tabindex="0"><td>${fmtD(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</td><td>${l.meals?.length ?? 0}/${meals.length}</td><td>${f ? n0(f.kcal) : '—'}</td><td>${f ? n0(f.p) + ' g' : '—'}</td><td>${l.weight ? n1(l.weight) : '—'}</td><td>${stepsOn(d) != null ? n0(stepsOn(d)!) : '—'}</td><td>${ok ? '<span class="ok">✓</span>' : ok === false ? '<span class="off">·</span>' : ''}</td></tr>`; }).join('')}
+      return `<tr class="f-hrow${d === dietDate ? ' sel' : ''}" data-act="dd" data-d="${d}" tabindex="0"><td>${fmtD(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</td><td>${l.meals?.length ?? 0}/${meals.length}</td><td>${f ? n0(f.kcal) : '—'}</td><td>${f ? n0(f.p) + ' g' : '—'}</td><td>${l.weight ? wv(l.weight) : '—'}</td><td>${stepsOn(d) != null ? n0(stepsOn(d)!) : '—'}</td><td>${ok ? '<span class="ok">✓</span>' : ok === false ? '<span class="off">·</span>' : ''}</td></tr>`; }).join('')}
   </tbody></table></div><p class="fine">Tap a day to open it. Older days: use the date picker above. Export backup keeps everything, date by date.</p></div>`;
 }
 function renderDiet(root: HTMLElement) {
@@ -524,12 +530,12 @@ function renderDiet(root: HTMLElement) {
   const chosen = meals.map((s) => s.options.find((o) => o.id === day[s.id]) ?? s.options[0]);
   const tot = F.sumMacros(chosen), tags = new Map<string, number>();
   chosen.forEach((o) => (o.tags ?? []).forEach((x) => tags.set(x, (tags.get(x) ?? 0) + 1)));
-  const mon = F.addDays(D, -F.weekdayIdx(D)), wk = Array.from({ length: 7 }, (_, i) => F.addDays(mon, i));
+  const sun = PR.prefs().weekStart === 'sun', first = F.addDays(D, -((F.weekdayIdx(D) + (sun ? 1 : 0)) % 7)), wk = Array.from({ length: 7 }, (_, i) => F.addDays(first, i)); // Settings → Week starts
   const label = D === TODAY ? 'Today' : D < TODAY ? 'Logged day' : 'Upcoming';
   root.innerHTML = `
   <div class="f-dayhead"><div><p class="label">Pure veg · dairy · Indian · ${label}</p><h2>${fmtD(D, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2></div>
     <div class="f-row"><button class="f-nav" data-act="dweek" data-d="-7" aria-label="Previous week">‹</button><input type="date" class="f-date" data-act="dpick" value="${D}"><button class="f-nav" data-act="dweek" data-d="7" aria-label="Next week">›</button>${D !== TODAY ? '<button class="btn ghost sm" data-act="dd" data-d="' + TODAY + '">Today</button>' : ''}</div></div>
-  <div class="f-wd" role="tablist" aria-label="Days of this week">${wk.map((k, i) => `<button role="tab" aria-selected="${k === D}" data-act="dd" data-d="${k}" class="${k > TODAY ? 'fut' : ''}${logOf(k)?.meals?.length ? ' has' : ''}">${WD[i]}<small>${fmtD(k, { day: 'numeric', month: 'short' })}</small>${k === TODAY ? '<i></i>' : ''}</button>`).join('')}</div>
+  <div class="f-wd" role="tablist" aria-label="Days of this week">${wk.map((k, i) => `<button role="tab" aria-selected="${k === D}" data-act="dd" data-d="${k}" class="${k > TODAY ? 'fut' : ''}${logOf(k)?.meals?.length ? ' has' : ''}">${WD[F.weekdayIdx(k)]}<small>${fmtD(k, { day: 'numeric', month: 'short' })}</small>${k === TODAY ? '<i></i>' : ''}</button>`).join('')}</div>
   <div class="f-row f-dayact"><button class="btn ghost sm" data-act="build-day">✦ Build this day</button><button class="btn ghost sm" data-act="build-week">Rebuild weekly plan</button></div>
   <div class="card f-totals">
     <div class="f-loghead"><p class="label">${sample ? 'Sample targets — your own appear once your goal is set' : D === TODAY ? `Today’s targets${adjusted ? ' · rebalanced' : ''}` : D < TODAY ? 'Targets that day' : 'Planned targets'}</p><span class="fine">${n0(tot.kcal)} / ${n0(t.kcal)} kcal</span></div>
@@ -574,15 +580,16 @@ function renderBody(root: HTMLElement) {
   root.innerHTML = `
   <div class="f-dayhead"><div><p class="label">Latest scan · ${fmtD(last.date, { day: 'numeric', month: 'long', year: 'numeric' })}${dAgo > 14 ? ` · ${dAgo} days ago — time for a new one` : ''}</p><h2>Body, <em>measured.</em></h2></div></div>
   <div class="f-stats">${FIELDS.filter(([k]) => last[k] != null).map(([k, l, u, low]) => { const val = (x: Scan) => (k === 'fatMass' ? F.fatMassOf(x) : (x[k] as number | undefined)); const a = val(first), b = val(last)!; const d = a != null && first !== last ? b - a : 0; const good = d === 0 || low === null ? '' : (d < 0) === low ? 'good' : 'bad';
-    return `<div class="f-stat"><p class="label">${l}</p><b>${n1(b)}<small>${u}</small></b>${d ? `<span class="${good}">${d > 0 ? '↑' : '↓'} ${n1(Math.abs(d))} since ${fmtD(first.date, { month: 'short', year: '2-digit' })}</span>` : '<span>&nbsp;</span>'}</div>`; }).join('')}</div>
+    const kg = u === 'kg', cv = (x: number) => (kg ? PR.wOut(x) : x), uu = kg ? PR.wUnit() : u;
+    return `<div class="f-stat"><p class="label">${l}</p><b>${n1(cv(b))}<small>${uu}</small></b>${d ? `<span class="${good}">${d > 0 ? '↑' : '↓'} ${n1(Math.abs(cv(d)))} since ${fmtD(first.date, { month: 'short', year: '2-digit' })}</span>` : '<span>&nbsp;</span>'}</div>`; }).join('')}</div>
   <div class="f-sparks">
-    <div class="card">${spark(all.map((x) => ({ x: x.date, y: x.weight })), [], ' kg', 'Weight')}</div>
+    <div class="card">${spark(all.map((x) => ({ x: x.date, y: PR.wOut(x.weight) })), [], WU(), 'Weight')}</div>
     <div class="card">${spark(all.map((x) => ({ x: x.date, y: x.fatPct })), [], '%', 'Body fat')}</div>
-    <div class="card">${spark(all.map((x) => ({ x: x.date, y: x.smm })), [], ' kg', 'Skeletal muscle')}</div>
-    <div class="card">${spark(all.map((x) => ({ x: x.date, y: F.fatMassOf(x) })), [], ' kg', 'Fat mass')}</div>
+    <div class="card">${spark(all.map((x) => ({ x: x.date, y: PR.wOut(x.smm) })), [], WU(), 'Skeletal muscle')}</div>
+    <div class="card">${spark(all.map((x) => ({ x: x.date, y: PR.wOut(F.fatMassOf(x)) })), [], WU(), 'Fat mass')}</div>
   </div>
-  <div class="card f-hist"><p class="label">History</p><div class="f-tbl"><table><thead><tr><th>Date</th><th>Weight</th><th>Fat %</th><th>Fat kg</th><th>SMM</th><th>Water</th><th></th></tr></thead><tbody>
-    ${[...all].reverse().map((x) => `<tr><td>${fmtD(x.date, { day: 'numeric', month: 'short', year: '2-digit' })}</td><td>${n1(x.weight)}</td><td>${n1(x.fatPct)}</td><td>${n1(F.fatMassOf(x))}</td><td>${n1(x.smm)}</td><td>${x.water != null ? n1(x.water) : '—'}</td><td><button class="f-x" data-act="del-scan" data-d="${x.date}" aria-label="Delete scan ${x.date}">×</button></td></tr>`).join('')}
+  <div class="card f-hist"><p class="label">History</p><div class="f-tbl"><table><thead><tr><th>Date</th><th>Weight ${PR.wUnit()}</th><th>Fat %</th><th>Fat ${PR.wUnit()}</th><th>SMM</th><th>Water</th><th></th></tr></thead><tbody>
+    ${[...all].reverse().map((x) => `<tr><td>${fmtD(x.date, { day: 'numeric', month: 'short', year: '2-digit' })}</td><td>${wv(x.weight)}</td><td>${n1(x.fatPct)}</td><td>${wv(F.fatMassOf(x))}</td><td>${wv(x.smm)}</td><td>${x.water != null ? n1(x.water) : '—'}</td><td><button class="f-x" data-act="del-scan" data-d="${x.date}" aria-label="Delete scan ${x.date}">×</button></td></tr>`).join('')}
   </tbody></table></div></div>
   ${form}${data}`;
 }
@@ -922,9 +929,15 @@ async function addFinger() {
   } catch (e) { secMsg = errMsg(e); }
   render();
 }
-// auto-lock after 5 minutes in the background
+// auto-lock after N minutes in the background — Settings → Privacy → Auto-lock (default 5, 0 = never)
 let hiddenAt = 0;
-document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (mem && hiddenAt && Date.now() - hiddenAt > 5 * 60_000) lockNow(); });
+document.addEventListener('visibilitychange', () => {
+  const min = PR.prefs().autolock;
+  if (document.hidden) hiddenAt = Date.now();
+  else if (mem && min > 0 && hiddenAt && Date.now() - hiddenAt > min * 60_000) lockNow();
+});
+// targets / units / clock changed in Settings -> redraw
+addEventListener('ascent:prefs', () => { if (mem) render(); });
 document.addEventListener('keydown', (e) => {
   const el = e.target as HTMLElement;
   if (e.key === 'Enter' && el.classList.contains('f-hrow')) { e.preventDefault(); el.click(); return; }
@@ -943,7 +956,7 @@ document.addEventListener('submit', (e) => {
   else if (t === 'owner') ownerUnlock(form);
   else if (t === 'publish') publishOwner(form);
   else if (t === 'code') { pendingCode = ''; offerFinger = fpAvail && !(v2()?.keys?.length); render(); }
-  else if (t === 'weigh') { const w = num(new FormData(form).get('weight')); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: w }); }
+  else if (t === 'weigh') { const x = num(new FormData(form).get('weight')), w = x && PR.wIn(x); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: Math.round(w * 100) / 100 }); }
 });
 
 document.addEventListener('click', (e) => {
@@ -1054,7 +1067,8 @@ document.addEventListener('change', (e) => {
   const form = el.closest('form') as HTMLFormElement | null;
   if (form?.dataset.form === 'log') {
     if (el.name === 'meal') return tickMeal(view, el.dataset.slot!, el.checked);
-    return saveLog(view, { [el.name]: num(el.value) } as Partial<DayLog>);
+    const v = num(el.value);
+    return saveLog(view, { [el.name]: el.name === 'weight' && v != null ? PR.wIn(v) : v } as Partial<DayLog>);
   }
   if (form?.dataset.form === 'goal') checkGoal(roots.plan!);
 });
