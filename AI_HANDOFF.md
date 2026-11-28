@@ -158,8 +158,12 @@ decisions that are truly mine.
   Included automatically in Settings → Full backup (fit:vault) and Gym export.
   Real textures (Pexels, free licence): public/images/bucket/leather.jpg (#18786378, tinted burgundy via
   multiply) and paper.jpg (#235985, toned dark golden-brown, shifted per page). Cover says "Ascent · Vol. II"
-  (Gym notebook "Altitude" = Vol. I). NEXT: Aryan will generate a photoreal cove image in Gemini (16:9 + 9:16)
-  → replace the SVG scene with it as a living cinemagraph (WebGL water flow, lantern flicker, rays, dust).
+  (Gym notebook "Altitude" = Vol. I). The cove is now a PHOTOREAL still made by Aryan in Gemini
+  (public/images/bucket/cove-wide*.webp 16:9, cove-tall.webp 9:16) brought to life by src/scripts/cove-gl.ts
+  (one WebGL shader: lake ripples + glints, breathing sunbeam + dust motes, wall caustics wobble, lantern
+  flicker, gold specular glints, slow push-in, parallax). Masks + book hotspot are polygons in image space
+  (SCENES in cove-gl.ts) — if the photo changes, redraw those numbers. Calm mode / no WebGL = still photo.
+  Locked = iron chains + brass padlock over the book (SVG), brushed-brass lock plate; soft clink on unlock.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -203,6 +207,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Bucket cove: photoreal Gemini scene + WebGL cinemagraph (flowing water, sunbeam, dust, gold glints).
 - 2026-11-28 Bucket book: real leather cover + real aged-paper pages (Pexels textures), "Ascent · Vol. II".
 - 2026-11-28 Private bucket list book "Rahasya" (/bucket/): treasure-cove scene, vault lock, wishes, wax seals, search.
 - 2026-11-28 Gym Notebook → real spiral notebook "Altitude": green cover, ruled pages, page flip, index, search.

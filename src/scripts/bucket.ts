@@ -3,6 +3,7 @@
 // and, once unlocked, hands us a tiny get/set bridge via the 'ascent:vault' event (null again on lock).
 // Nothing here ever sends data anywhere; the page HTML contains no wishes.
 import { BOOK, CATS } from '../data/bucket';
+import { createCove } from './cove-gl';
 
 type Step = { t: string; ok?: boolean };
 type Wish = { id: string; title: string; cat: string; month?: string; date?: string; why?: string; notes?: string; steps: Step[]; done?: string; created: string };
@@ -15,7 +16,7 @@ if (root) init(root);
 
 function init(root: HTMLElement) {
   const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
-  const cove = $('[data-cove]'), art = $<SVGSVGElement>('[data-art]'), canvas = $<HTMLCanvasElement>('[data-dust]');
+  const cove = $('[data-cove]'), canvas = $<HTMLCanvasElement>('[data-gl]');
   const sbook = $('[data-sbook]'), hint = $('[data-hint]'), lockWrap = $('[data-lockwrap]');
   const stage = $('[data-stage]'), book = $('[data-book]'), ind = $('[data-ind]'), say = $('[data-say]');
   const prevB = $<HTMLButtonElement>('[data-prev]'), nextB = $<HTMLButtonElement>('[data-next]');
@@ -34,6 +35,7 @@ function init(root: HTMLElement) {
   const wishes = () => store().wishes;
   const save = (list: Wish[]) => api?.set(KEY, { v: 1, wishes: list } satisfies Store);
   function setApi(a: Api | null) {
+    if (a && root.dataset.state === 'locked') setTimeout(clink, 250); // chains slide off
     api = a;
     root.dataset.state = a ? 'open' : 'locked';
     hint.textContent = a ? 'Touch the book to open it' : 'The book is sealed.';
@@ -54,57 +56,35 @@ function init(root: HTMLElement) {
   const catOf = (id: string) => CATS.find((c) => c.id === id) ?? CATS[CATS.length - 1];
   const icon = (id: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${catOf(id).icon}</svg>`;
 
-  // ================= THE COVE =================
-  // parallax
-  let raf = 0, px = 0, py = 0;
-  cove.addEventListener('pointermove', (e) => {
-    if (calm()) return;
-    const r = cove.getBoundingClientRect();
-    px = ((e.clientX - r.left) / r.width - 0.5) * 2; py = ((e.clientY - r.top) / r.height - 0.5) * 2;
-    if (!raf) raf = requestAnimationFrame(() => { raf = 0; art.style.setProperty('--px', px.toFixed(3)); art.style.setProperty('--py', py.toFixed(3)); });
-  });
-  cove.addEventListener('pointerleave', () => { art.style.setProperty('--px', '0'); art.style.setProperty('--py', '0'); });
-  // keep the treasure in view on tall phones
-  const frame = () => art.setAttribute('viewBox', cove.clientWidth / cove.clientHeight < 1.1 ? '190 0 1600 900' : '0 0 1600 900');
-  frame(); addEventListener('resize', frame);
-
-  // dust motes + fireflies
-  const ctx = canvas.getContext('2d')!;
-  type P = { x: number; y: number; vx: number; vy: number; r: number; a: number; f: boolean; ph: number };
-  let parts: P[] = [], running = false;
-  function sizeCanvas() {
-    const d = Math.min(2, devicePixelRatio || 1);
-    canvas.width = cove.clientWidth * d; canvas.height = cove.clientHeight * d; ctx.setTransform(d, 0, 0, d, 0, 0);
-    const W = cove.clientWidth, H = cove.clientHeight;
-    parts = [
-      ...Array.from({ length: 46 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.12, vy: -0.05 - Math.random() * 0.12, r: 0.6 + Math.random() * 1.3, a: 0.15 + Math.random() * 0.35, f: false, ph: Math.random() * 6 })),
-      ...Array.from({ length: 14 }, () => ({ x: W * (0.25 + Math.random() * 0.6), y: H * (0.45 + Math.random() * 0.4), vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.3, r: 1.6 + Math.random() * 1.4, a: 1, f: true, ph: Math.random() * 6 })),
-    ];
-  }
-  function tick(t: number) {
-    if (!running) return;
-    const W = cove.clientWidth, H = cove.clientHeight;
-    ctx.clearRect(0, 0, W, H);
-    for (const p of parts) {
-      if (p.f) { p.vx += (Math.random() - 0.5) * 0.04; p.vy += (Math.random() - 0.5) * 0.04; p.vx *= 0.98; p.vy *= 0.98; }
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10; if (p.y < -10) p.y = H + 10; if (p.y > H + 10) p.y = -10;
-      const blink = p.f ? 0.35 + 0.65 * Math.max(0, Math.sin(t / 700 + p.ph)) : p.a * (0.7 + 0.3 * Math.sin(t / 1300 + p.ph));
-      if (p.f) {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 6);
-        g.addColorStop(0, `rgba(255,230,150,${0.9 * blink})`); g.addColorStop(0.3, `rgba(255,190,80,${0.35 * blink})`); g.addColorStop(1, 'rgba(255,170,40,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 6, 0, 7); ctx.fill();
-      } else { ctx.fillStyle = `rgba(255,240,210,${blink})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
-    }
-    requestAnimationFrame(tick);
-  }
-  const dust = (on: boolean) => {
-    on = on && !calm() && !document.hidden && stage.hidden;
-    if (on === running) return; running = on;
-    if (on) { sizeCanvas(); requestAnimationFrame(tick); } else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // ================= THE COVE (photo + WebGL cinemagraph, see cove-gl.ts) =================
+  // place the book hotspot exactly over the book in the photo
+  const placeBook = (sc: { book: { x: number; y: number; w: number; h: number; rot: number } }, map: (x: number, y: number) => [number, number]) => {
+    const [x1, y1] = map(sc.book.x, sc.book.y), [x2, y2] = map(sc.book.x + sc.book.w, sc.book.y + sc.book.h);
+    Object.assign(sbook.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px`, transform: `rotate(${sc.book.rot}deg)` });
+    Object.assign(hint.style, { left: `${(x1 + x2) / 2}px`, top: `${Math.max(12, y1 - 46)}px`, bottom: 'auto' });
   };
+  const gl = calm() ? null : createCove(canvas, { onLayout: placeBook });
+  if (!gl) {
+    // no WebGL (or calm mode): the still photo, hotspot mapped with the same cover maths
+    const AS = { wide: { a: 1376 / 768, book: { x: 0.5, y: 0.765, w: 0.205, h: 0.2, rot: -6 } }, tall: { a: 768 / 1376, book: { x: 0.445, y: 0.775, w: 0.42, h: 0.165, rot: -4 } } };
+    const still = () => {
+      const W = cove.clientWidth, H = cove.clientHeight, sa = W / H, sc = sa < 1 ? AS.tall : AS.wide;
+      const c = sa > sc.a ? { sx: 1, sy: sc.a / sa } : { sx: sa / sc.a, sy: 1 };
+      placeBook(sc, (x, y) => [((x - 0.5) / c.sx + 0.5) * W, ((y - 0.5) / c.sy + 0.5) * H]);
+    };
+    still(); addEventListener('resize', still);
+  }
+  cove.addEventListener('pointermove', (e) => {
+    if (!gl || calm()) return;
+    const r = cove.getBoundingClientRect();
+    gl.point(((e.clientX - r.left) / r.width - 0.5) * 2, ((e.clientY - r.top) / r.height - 0.5) * 2);
+  });
+  cove.addEventListener('pointerleave', () => gl?.point(0, 0));
+  // only animate while the cove is on screen, the tab is visible and the book is closed
+  let onScreen = true;
+  new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; dust(true); }).observe(cove);
+  const dust = (on: boolean) => gl?.run(on && onScreen && !calm() && !document.hidden && stage.hidden);
   dust(true);
-  addEventListener('resize', () => { if (running) sizeCanvas(); });
   document.addEventListener('visibilitychange', () => dust(true));
 
   // ambient sound (water + soft wind), only if Gym sound is on — starts on the first tap
@@ -135,6 +115,17 @@ function init(root: HTMLElement) {
       const s = actx.createBufferSource(); s.buffer = b;
       const f = actx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.6; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(600, t + d);
       const g = actx.createGain(); g.gain.value = soft ? 0.05 : 0.1; s.connect(f).connect(g).connect(actx.destination); s.start();
+    } catch {}
+  }
+  function clink() {
+    if (!soundOn()) return;
+    try {
+      actx ||= new AudioContext(); const t = actx.currentTime;
+      [[2730, 0.05], [3810, 0.035], [5120, 0.02], [1460, 0.03]].forEach(([fr, g0], i) => {
+        const o = actx!.createOscillator(), g = actx!.createGain(); o.type = 'sine'; o.frequency.value = fr * (1 + i * 0.003);
+        g.gain.setValueAtTime(g0, t + i * 0.09); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.45);
+        o.connect(g).connect(actx!.destination); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.5);
+      });
     } catch {}
   }
   function chime() {
@@ -422,7 +413,7 @@ function init(root: HTMLElement) {
     if (stage.hidden || editor.open || e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target as HTMLElement;
     if (e.key === 'Escape') { if (!findBox.hidden) { closeFind(); findBtn.focus(); } else closeBook(); return; }
-    if (t.matches('input, textarea, select')) return;
+    if (t.matches?.('input, textarea, select')) return;
     if (document.documentElement.classList.contains('sd-open')) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
