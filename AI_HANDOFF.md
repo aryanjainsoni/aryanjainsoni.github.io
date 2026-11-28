@@ -97,6 +97,8 @@ decisions that are truly mine.
   public/videos/gym/*.mp4 (+ .jpg posters), compressed with macOS avconvert PresetMediumQuality.
 - Gym music: per-tab royalty-free instrumentals from Pixabay (public/audio/gym/*.m4a, 96 kbps AAC via afconvert).
   Off by default ("Sound" button, choice saved as gym:sound); Web Audio crossfades when switching tabs.
+  Loudness: each track's RMS was measured and scaled to ~ -31 dBFS (gains map in gym.astro) + a limiter
+  (DynamicsCompressor). Note: a website can't override the laptop's own volume keys.
   Tracks: Steps "Heroic Background Music" (EnergySound), Today "Morning Evening Piano & Strings" (WELC0MEИ0),
   Plan "Ambient Music" (JonasBlakewood), Diet "New Age Nature" (Sonican), Body "Inspiring Epic" (AtlasAudio),
   Notebook "Documentary Piano" (leberch).
@@ -148,6 +150,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym music: quiet background level per track (measured loudness) + limiter.
 - 2026-11-28 Gym orbs redesigned (3D loops + glass + glyphs, always live, hover boost) + per-tab music with crossfade.
 - 2026-11-28 Gym tabs → round live 3D video icons (Steps, Today, Plan, Diet, Body, Notebook).
 - 2026-11-28 Daily Log GitHub box + reflection stay live all day (5-min refresh, on tab return) until edited.

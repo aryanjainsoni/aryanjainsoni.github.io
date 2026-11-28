@@ -27,6 +27,9 @@ const orbs: [string, string, string, string, string][] = [
   ['guide', 'Notebook', 'notebook', '#c5d2ff', '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>'],
 ];
 
+// Music loudness: each track measured (RMS) and scaled to the same quiet background level (~ -31 dBFS RMS)
+const gains: Record<string, number> = { steps: 0.108, today: 0.26, plan: 0.089, diet: 0.11, body: 0.197, notebook: 0.224 };
+
 const goal = site.stepGoal;
 const s = stepStats(await getEntries(), goal);
 const n = (x: number) => Math.round(x).toLocaleString('en-IN');
@@ -57,7 +60,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       <div class="orbbar">
         <div class="tabs orbs" role="tablist" aria-label="Gym sections">
           {orbs.map(([id, label, vid, tint, glyph], i) => (
-            <button role="tab" id={`tab-${id}`} aria-controls={`p-${id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={id} data-track={vid} style={`--tint:${tint}`}>
+            <button role="tab" id={`tab-${id}`} aria-controls={`p-${id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={id} data-track={vid} data-gain={gains[vid]} style={`--tint:${tint}`}>
               <span class="orb" aria-hidden="true">
                 <video muted loop playsinline preload="none" poster={`/videos/gym/${vid}.jpg`} data-src={`/videos/gym/${vid}.mp4`}></video>
                 <svg class="glyph" viewBox="0 0 24 24" set:html={glyph} />
@@ -249,8 +252,18 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       const soundBtn = document.getElementById('gym-sound');
       let actx = null, master = null, nowTrack = null, soundOn = localStorage.getItem('gym:sound') === 'on';
       const tracks = {};
-      const VOL = 0.32;
-      const ensureCtx = () => { if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination); } if (actx.state === 'suspended') actx.resume(); };
+      // fixed background level + limiter, so no track (or loud moment) ever jumps out
+      const ensureCtx = () => {
+        if (!actx) {
+          actx = new (window.AudioContext || window.webkitAudioContext)();
+          master = actx.createGain(); master.gain.value = 1;
+          const lim = actx.createDynamicsCompressor();
+          lim.threshold.value = -34; lim.knee.value = 8; lim.ratio.value = 10; lim.attack.value = 0.01; lim.release.value = 0.35;
+          master.connect(lim); lim.connect(actx.destination);
+        }
+        if (actx.state === 'suspended') actx.resume();
+      };
+      const gainOf = (name) => Number(tabs.find((t) => t.dataset.track === name)?.dataset.gain) || 0.12;
       const trackFor = (name) => {
         if (tracks[name]) return tracks[name];
         const el = new Audio(`/audio/gym/${name}.m4a`); el.loop = true; el.preload = 'auto';
@@ -263,7 +276,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
         if (!soundOn || !actx) return;
         const name = activeTrack(); if (!name || name === nowTrack) return;
         if (nowTrack && tracks[nowTrack]) { const old = tracks[nowTrack]; fade(old, 0, 1.2); setTimeout(() => { if (nowTrack !== old.name) old.el.pause(); }, 1300); old.name = nowTrack; }
-        const t = trackFor(name); t.name = name; t.el.play().catch(() => {}); fade(t, VOL, 1.6); nowTrack = name;
+        const t = trackFor(name); t.name = name; t.el.play().catch(() => {}); fade(t, gainOf(name), 1.6); nowTrack = name;
       }
       const setSoundUi = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.querySelector('.sl').textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.classList.toggle('on', soundOn); };
       const soundStop = () => { Object.values(tracks).forEach((t) => { fade(t, 0, 0.8); setTimeout(() => t.el.pause(), 900); }); nowTrack = null; };
