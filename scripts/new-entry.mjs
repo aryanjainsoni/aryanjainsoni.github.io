@@ -17,7 +17,6 @@ writeFileSync(
 title: "Aaj ka main topic yahan likho"
 date: ${date}
 tags: [dsa, ai]
-dsaSolved: 0
 ---
 
 ## What I did today

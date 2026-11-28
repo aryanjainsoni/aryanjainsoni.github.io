@@ -1,0 +1,60 @@
+---
+// "Showing up, daily" — journal + LeetCode stats and heatmaps.
+// Used on Home and on the Journal page, so both always match.
+import Heatmap from './Heatmap.astro';
+import Stats from './Stats.astro';
+import { getEntries, getStats, streaks } from '../lib/journal';
+import { getLeetCode, leetLevel } from '../lib/leetcode';
+
+interface Props { heading?: boolean }
+const { heading = true } = Astro.props;
+
+const journal = getStats(await getEntries());
+const lc = await getLeetCode();
+const lcLevels = new Map([...(lc?.byDay ?? [])].map(([d, n]) => [d, leetLevel(n)]));
+const lcLabels = new Map([...(lc?.byDay ?? [])].map(([d, n]) => [d, `${n} submission${n > 1 ? 's' : ''}`]));
+const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
+---
+{heading && (
+  <>
+    <p class="kicker" data-reveal>Consistency</p>
+    <h2 class="section-title" data-reveal>Showing up, <em class="sun">daily.</em></h2>
+  </>
+)}
+<Stats
+  items={[
+    { value: journal.current, label: 'journal streak' },
+    { value: journal.total, label: 'days journaled' },
+    ...(lc ? [
+      { value: lc.solved.all, label: 'LeetCode solved' },
+      { value: lcStreak!.current, label: 'LeetCode streak' },
+    ] : []),
+  ]}
+/>
+<div class="maps">
+  <div class="card map" data-reveal>
+    <div class="maphead"><h3>Journal</h3><span class="muted">one square = one day written</span></div>
+    <Heatmap byDay={journal.byDay} empty="no entry" />
+  </div>
+  {lc && (
+    <div class="card map leet" data-reveal>
+      <div class="maphead">
+        <h3>LeetCode</h3>
+        <span class="muted">
+          <b class="e">{lc.solved.easy} easy</b> · <b class="m">{lc.solved.medium} medium</b> · <b class="h">{lc.solved.hard} hard</b> · auto-updated nightly
+        </span>
+      </div>
+      <Heatmap byDay={lcLevels} labels={lcLabels} empty="no submissions" />
+    </div>
+  )}
+</div>
+
+<style>
+  .maps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+  .map { --heat: var(--accent-2); min-width: 0; }
+  .leet { --heat: #ffa116; }
+  .maphead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 14px; }
+  .maphead h3 { margin: 0; font-size: 1.3rem; }
+  .maphead .muted { font-size: 13px; }
+  .e { color: #00b8a3; } .m { color: #ffa116; } .h { color: #ff375f; }
+</style>

@@ -1,11 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
-import Heatmap from '../../components/Heatmap.astro';
-import Stats from '../../components/Stats.astro';
-import { getEntries, getStats } from '../../lib/journal';
+import Consistency from '../../components/Consistency.astro';
+import { getEntries } from '../../lib/journal';
 
 const entries = await getEntries();
-const stats = getStats(entries);
 
 // Mahine ke hisaab se group karo: "November 2026" -> [entries]
 const groups = new Map<string, typeof entries>();
@@ -21,13 +19,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
       <p class="kicker">Journal</p>
       <h1>One entry <em class="sun">a day.</em></h1>
       <p class="lead">What I learned, solved and practised — written down daily. Each square is a day I showed up.</p>
-      <Stats items={[
-        { value: stats.current, label: 'day streak 🔥' },
-        { value: stats.longest, label: 'longest streak' },
-        { value: stats.total, label: 'days logged' },
-        { value: stats.dsa, label: 'DSA solved' },
-      ]} />
-      <div class="card map" data-reveal><Heatmap byDay={stats.byDay} empty="no entry" /></div>
+      <Consistency heading={false} />
     </div>
   </section>
 
