@@ -80,6 +80,10 @@ decisions that are truly mine.
   each wrong try is logged on that device (time · passcode/recovery · browser + OS, no location) and shown
   as a ⚠ alert after the next unlock + Body → Security → Unlock activity. No server = no remote alerts.
   Nobody (not even the AI) can reset a lost passcode. NEVER commit my data.
+- Smart typing (every text box, loaded in Base.astro → src/scripts/smart-type.ts + src/data/words.ts):
+  word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
+  spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
+  Skips passwords, numbers, the food search and anything with data-nosmart.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -120,6 +124,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Smart typing site-wide: suggestions, autocorrect + undo, spelling chip, learns my words.
 - 2026-11-28 Diet: food suggestions while typing, +45 foods (shakes, fruits, sweets, snacks), private "New food"; fingerprint retry for Android.
 - 2026-11-28 Gym lock: escalating lockout (survives refresh) + wrong-attempt log & alert after unlock.
 - 2026-11-28 Gym Diet tab date-based: week strip with dates, past-day ticks, per-date plan snapshots, History.
