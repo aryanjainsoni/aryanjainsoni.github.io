@@ -87,6 +87,10 @@ decisions that are truly mine.
   each wrong try is logged on that device (time · passcode/recovery · browser + OS, no location) and shown
   as a ⚠ alert after the next unlock + Body → Security → Unlock activity. No server = no remote alerts.
   Nobody (not even the AI) can reset a lost passcode. NEVER commit my data.
+- Settings drawer (gear icon top-left, every page; Base.astro + src/scripts/settings.ts): theme (light/dark/auto),
+  background music, live video icons (pref:motion), cursor glow (pref:glow), smart typing on/off (smart:off) +
+  clear learned words, and on the Gym page: data export/import + full security (fit-app renders into
+  [data-sd-gym]). Phones: theme toggle + Index link hidden in the header (Settings / search cover them).
 - Smart typing (every text box, loaded in Base.astro → src/scripts/smart-type.ts + src/data/words.ts):
   word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
   spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
@@ -151,6 +155,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Settings drawer (gear icon): theme, music, motion, glow, typing, Gym backups + security; phone header fixed.
 - 2026-11-28 Gym Body: "Add a scan" styled as an orange call-to-action card.
 - 2026-11-28 Gym orbs re-themed "ancient + modern tech" (stone gate, astrolabe, lotus, crag, doorway); music toggle is now a note icon.
 - 2026-11-28 Gym music: quiet background level per track (measured loudness) + limiter.

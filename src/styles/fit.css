@@ -392,3 +392,14 @@ details.f-secrow[open] summary span::after { content: ' −'; }
 .fit .f-add summary::after { content: '+'; display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--sun); color: #fff; font: 500 22px/1 'Inter', sans-serif; box-shadow: 0 6px 16px -6px var(--accent); transition: transform .3s; }
 .fit .f-add[open] summary::after { content: '−'; transform: rotate(180deg); }
 .fit .f-add:hover summary::after { transform: scale(1.08); }
+
+/* Gym security & data inside the Settings drawer */
+[data-sd-gym] .card { padding: 16px; border-radius: 18px; box-shadow: none; margin-bottom: 12px; background: var(--bg); border: 1px solid var(--line); }
+[data-sd-gym] .f-data { flex-direction: column; align-items: flex-start; }
+[data-sd-gym] .f-secrow { padding: 12px 0; }
+[data-sd-gym] .f-grid4 { grid-template-columns: minmax(0, 1fr); }
+[data-sd-gym] .label { margin: 0 0 6px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+[data-sd-gym] .fine { margin: 4px 0 0; font-size: .82rem; color: var(--muted); }
+[data-sd-gym] h3 { margin: 0 0 6px; font: 400 1.1rem 'Fraunces', serif; }
+[data-sd-gym] .f-err { margin: 0 0 8px; color: var(--accent); font-size: .86rem; }
+[data-sd-gym] .btn.sm { padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit; }

@@ -14,6 +14,7 @@ const known = (w: string) => rank.has(w) || (learned[w] ?? 0) >= 2;
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
 const eligible = (el: EventTarget | null): el is Field => {
+  if (localStorage.getItem('smart:off') === '1') return false; // turned off in Settings
   if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) return false;
   if (el instanceof HTMLInputElement && !['text', ''].includes(el.type)) return false;
   return !el.readOnly && !el.disabled && !el.closest('.f-pw, [data-nosmart]') && !el.matches('[data-food], .f-codein, [name^="nf-"]');
@@ -164,4 +165,5 @@ bar.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest('button[data-i]') as HTMLElement | null; if (!b || !active) return;
   chips[+b.dataset.i!]?.run(); refresh(active);
 });
+addEventListener('ascent:words-cleared', () => { learned = {}; });
 addEventListener('resize', place); addEventListener('scroll', place, { passive: true });

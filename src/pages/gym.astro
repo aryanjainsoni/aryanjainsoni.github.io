@@ -237,12 +237,14 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       const day = (k, o) => new Date(k).toLocaleDateString('en-IN', { timeZone: 'UTC', ...o });
 
       // ---------- live video orbs: all loop while on screen; hover = bigger, brighter, faster ----------
-      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
+      const sysCalm = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
+      const calmNow = () => sysCalm || localStorage.getItem('pref:motion') === 'off'; // Settings → Live video icons
       const vidOf = (t) => t.querySelector('video');
-      const play = (v) => { if (calm || !v) return; if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); };
+      const play = (v) => { if (calmNow() || !v) return; if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); };
       const orbPlay = () => { soundSwitch(); };
       const startOrbs = () => document.querySelectorAll('.orbs video').forEach(play);
-      if (!calm) {
+      addEventListener('ascent:motion', () => document.querySelectorAll('.orbs video').forEach((v) => (calmNow() ? v.pause() : play(v))));
+      if (!sysCalm) {
         const io = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target; if (e.isIntersecting) play(v); else v.pause(); }), { threshold: 0.1 });
         document.querySelectorAll('.orbs video').forEach((v) => io.observe(v));
         document.addEventListener('visibilitychange', () => { if (!document.hidden) startOrbs(); });
@@ -280,10 +282,13 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       }
       const setSoundUi = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.setAttribute('aria-label', soundOn ? 'Music on — turn off' : 'Music off — turn on'); soundBtn.classList.toggle('on', soundOn); };
       const soundStop = () => { Object.values(tracks).forEach((t) => { fade(t, 0, 0.8); setTimeout(() => t.el.pause(), 900); }); nowTrack = null; };
-      soundBtn.addEventListener('click', () => {
-        soundOn = !soundOn; localStorage.setItem('gym:sound', soundOn ? 'on' : 'off'); setSoundUi();
+      const setSound = (on) => {
+        soundOn = on; localStorage.setItem('gym:sound', soundOn ? 'on' : 'off'); setSoundUi();
         if (soundOn) { ensureCtx(); soundSwitch(); } else if (actx) soundStop();
-      });
+        dispatchEvent(new Event('ascent:music-state')); // keep the Settings switch in sync
+      };
+      soundBtn.addEventListener('click', () => setSound(!soundOn));
+      addEventListener('ascent:music', (e) => setSound(!!e.detail)); // Settings → Background music
       // remembered "on": browsers only allow audio after a tap/click, so start on the first interaction
       if (soundOn) { const go = () => { ensureCtx(); soundSwitch(); removeEventListener('pointerdown', go); removeEventListener('keydown', go); }; addEventListener('pointerdown', go); addEventListener('keydown', go); }
       document.addEventListener('visibilitychange', () => { if (!actx) return; if (document.hidden) actx.suspend(); else if (soundOn) actx.resume(); });

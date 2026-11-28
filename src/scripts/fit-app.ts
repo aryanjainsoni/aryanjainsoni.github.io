@@ -566,9 +566,8 @@ function renderBody(root: HTMLElement) {
       ${FIELDS.map(([k, l, u]) => `<label class="f-in"><input type="number" inputmode="decimal" step="0.01" min="0" name="${k}" ${['weight', 'fatPct', 'smm'].includes(k) ? 'required' : ''} placeholder="—"><span>${l.toLowerCase()}${u ? ' ' + u : ''}</span></label>`).join('')}
       <button class="btn primary" data-act="add-scan">Save scan</button>
     </form></details>`;
-  const data = `<div class="card f-data"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then — and import it on your other devices.</p></div>
-    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div></div>
-    ${securityCard()}`;
+  const data = `<div class="card f-data"><div><p class="label">Backups &amp; security</p><p class="fine">Export / import, fingerprint, recovery key, passcode and lock now live in Settings.</p></div>
+    <button type="button" class="btn ghost sm" data-open-settings>⚙ Open settings</button></div>`;
   if (!last) return (root.innerHTML = locked('Body reports', 'Scan history, trends and progress since your first measurement.', false) + form + data);
   const dAgo = F.diffDays(last.date, TODAY);
   root.innerHTML = `
@@ -589,9 +588,19 @@ function renderBody(root: HTMLElement) {
 
 // ---------------- events ----------------
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
+
+// Settings drawer (Base layout) — Gym data + security are rendered into it while this page is open
+function settingsHtml() {
+  if (!mem) return `<p class="sd-note">Unlock the Gym (any tab above) to manage backups and security.</p>`;
+  return `<div class="card f-data sd-gym"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then — and import it on your other devices.</p></div>
+    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div></div>
+    ${securityCard()}`;
+}
+function renderSettings() { const r = document.querySelector('[data-sd-gym]') as HTMLElement | null; if (r) r.innerHTML = settingsHtml(); }
 function render() {
   const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : publishJson ? publishCard(publishJson) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
   if (!mem) ensureTick();
+  renderSettings();
   if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return eyes(); }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);

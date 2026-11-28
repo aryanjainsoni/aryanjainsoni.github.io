@@ -55,6 +55,9 @@ const last = [...'Jain'];
             {first.map((c, i) => <i style={`--i:${i}`}>{c}</i>)}<i class="gap"></i>{last.map((c, i) => <i class="sun" style={`--i:${i + 6}`}>{c}</i>)}<i class="dot" style="--i:10">.</i>
           </span>
         </a>
+        <button id="settings-open" class="toggle gear" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4Z" /></svg>
+        </button>
         <nav aria-label="Main">
           {nav.map((item) => (
             <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>{item.label}</a>
@@ -68,6 +71,39 @@ const last = [...'Jain'];
         </nav>
       </div>
     </header>
+    <!-- SETTINGS drawer (gear icon, top-left). Logic: src/scripts/settings.ts · Gym security/data are filled in by fit-app.ts -->
+    <div class="sd-scrim" data-sd-close hidden></div>
+    <aside id="settings" class="sd" role="dialog" aria-modal="true" aria-labelledby="sd-title" hidden>
+      <div class="sd-head">
+        <div><p class="sd-kicker">Ascent</p><h2 id="sd-title">Settings</h2></div>
+        <button type="button" class="sd-x" data-sd-close aria-label="Close settings">×</button>
+      </div>
+      <div class="sd-body">
+        <section class="sd-sec">
+          <h3>Appearance</h3>
+          <div class="sd-seg" role="radiogroup" aria-label="Theme">
+            <button type="button" role="radio" data-theme-set="light">☀︎ Light</button>
+            <button type="button" role="radio" data-theme-set="dark">☾ Dark</button>
+            <button type="button" role="radio" data-theme-set="system">◐ Auto</button>
+          </div>
+        </section>
+        <section class="sd-sec">
+          <h3>Sound &amp; motion</h3>
+          <div class="sd-row"><div><b>Background music</b><p>Each Gym tab has its own soft instrumental.</p></div><button type="button" class="sw" role="switch" data-pref="music" aria-label="Background music"></button></div>
+          <div class="sd-row"><div><b>Live video icons</b><p>Turn off to save battery and data — photos stay.</p></div><button type="button" class="sw" role="switch" data-pref="motion" aria-label="Live video icons"></button></div>
+          <div class="sd-row"><div><b>Cursor glow</b><p>The soft light that follows your mouse.</p></div><button type="button" class="sw" role="switch" data-pref="glow" aria-label="Cursor glow"></button></div>
+        </section>
+        <section class="sd-sec">
+          <h3>Typing</h3>
+          <div class="sd-row"><div><b>Smart typing</b><p>Word suggestions and autocorrect in every text box.</p></div><button type="button" class="sw" role="switch" data-pref="typing" aria-label="Smart typing"></button></div>
+          <div class="sd-row"><div><b>Learned words</b><p data-learned>Words you use often, kept in this browser.</p></div><button type="button" class="sd-btn" data-clear-words>Clear</button></div>
+        </section>
+        <section class="sd-sec">
+          <h3>Gym · security &amp; data</h3>
+          <div data-sd-gym data-fit="settings"><p class="sd-note">Your private gym data, backups and lock settings appear here on the <a href="/gym/#body">Gym page →</a></p></div>
+        </section>
+      </div>
+    </aside>
 
     <main>
       <slot />
@@ -99,6 +135,7 @@ const last = [...'Jain'];
         const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
         document.documentElement.dataset.theme = next;
         localStorage.setItem('theme', next);
+        dispatchEvent(new Event('ascent:theme'));
       });
 
       const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -124,7 +161,7 @@ const last = [...'Jain'];
         setTimeout(() => { if (!fired) revealEls.forEach((el) => el.classList.add('in')); }, 2000);
       }
 
-      if (!calm && finePointer) {
+      if (!calm && finePointer && localStorage.getItem('pref:glow') !== 'off') {
         // Cursor ke saath glow
         const root = document.documentElement;
         addEventListener('pointermove', (e) => {
@@ -138,6 +175,7 @@ const last = [...'Jain'];
     </script>
       <script>
       import '../scripts/smart-type.ts'; // word suggestions + autocorrect in every text box
+      import '../scripts/settings.ts'; // settings drawer (gear icon)
     </script>
 </body>
 </html>
@@ -223,6 +261,9 @@ const last = [...'Jain'];
     .mark b { width: 39px; height: 39px; }
     nav { gap: 12px; }
     nav > a:first-child { display: none; } /* Home — logo already links home */
+    #theme-toggle { display: none; } /* theme lives in Settings on phones */
+    nav a[href="/explore/"] { display: none; } /* the search icon opens the Index */
+    .gear { margin-left: 2px; }
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }
   }
 </style>
