@@ -24,6 +24,7 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
 <Stats
   items={[
     { value: journal.current, label: 'journal streak' },
+    { value: journal.longest, label: 'longest streak' },
     { value: journal.total, label: 'days journaled' },
     ...(lc ? [
       { value: lc.solved.all, label: 'LeetCode solved' },
