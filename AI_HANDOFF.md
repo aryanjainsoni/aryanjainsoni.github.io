@@ -101,7 +101,9 @@ decisions that are truly mine.
    a random data key (src/lib/vault.ts, "fit:vault" v2). That key is wrapped 3 ways: passcode (PBKDF2),
    one-time recovery key, and fingerprint/Touch ID (WebAuthn passkey PRF → HKDF). Body tab → Security:
    add fingerprint, new recovery key, change passcode, turn lock off ("fit:plain") / on. Old v1 vaults
-   auto-upgrade on unlock. Nobody (not even the AI) can reset a lost passcode. NEVER commit my data. Still to add: my old diet plan + exact
+   auto-upgrade on unlock. Nobody (not even the AI) can reset a lost passcode. NEVER commit my data.
+   public/owner.json = one-way PBKDF2 check value of my passcode (published by ME via Body → Security →
+   Other devices). With it, new devices show only "enter passcode" (visitors can't set one). Still to add: my old diet plan + exact
    supplements, and my workout plan (V-shape focus).
 4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.

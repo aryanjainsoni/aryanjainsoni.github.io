@@ -128,3 +128,23 @@ export async function openFingerprint(slots: KeySlot[]) {
   if (!slot) throw new Error('unknown-key');
   return unwrap(await hkdf(secret), slot);
 }
+
+// ---------- owner key (public/owner.json) ----------
+// A one-way check value of the owner's passcode, published with the site so a NEW device can tell the owner
+// from a visitor: only someone who knows the passcode can open (or create) the private space.
+// It reveals nothing about the data. Because it's public, the passcode must be strong (10+ characters).
+export type OwnerKey = { v: 1; it: number; salt: string; hash: string };
+const OWNER_ITER = 600_000;
+async function ownerHash(pass: string, salt: Uint8Array, it: number) {
+  const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: it, hash: 'SHA-256' }, base, 256));
+}
+export async function makeOwnerKey(pass: string): Promise<OwnerKey> {
+  const salt = rand(16);
+  return { v: 1, it: OWNER_ITER, salt: b64(salt), hash: b64(await ownerHash(pass, salt, OWNER_ITER)) };
+}
+export async function checkOwnerKey(pass: string, k: OwnerKey) {
+  const h = await ownerHash(pass, unb64(k.salt), k.it), want = unb64(k.hash);
+  let diff = h.length ^ want.length; for (let i = 0; i < h.length; i++) diff |= h[i] ^ (want[i] ?? 0);
+  return diff === 0;
+}

@@ -6,7 +6,8 @@ import type { Scan, Goal, DayLog, GoalType, Macros, Targets } from '../lib/fit';
 import { meals, micros } from '../data/meals';
 import { foods, foodById, type Food } from '../data/foods';
 import * as V from '../lib/vault';
-import type { AnyVault, VaultV2, KeySlot } from '../lib/vault';
+import type { AnyVault, VaultV2, KeySlot, OwnerKey } from '../lib/vault';
+import { repo } from '../data/dailyLog';
 
 // ---------------- store ----------------
 const K = { scans: 'fit:scans', goal: 'fit:goal', week: 'fit:dietweek', log: (d: string) => `fit:log:${d}` };
@@ -533,7 +534,7 @@ function renderBody(root: HTMLElement) {
 // ---------------- events ----------------
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
 function render() {
-  const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
+  const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : publishJson ? publishCard(publishJson) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
   if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return eyes(); }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
@@ -589,29 +590,64 @@ async function importData(file: File) {
 // ---------------- lock ----------------
 let tries = 0, waitUntil = 0, lockMsg = '', screen: 'unlock' | 'recover' = 'unlock';
 let pendingCode = '', needNewPass = false, settingUp = false, offerFinger = false, fpAvail = false, secMsg = '';
+// owner key (public/owner.json): lets a NEW device tell the owner from a visitor
+let owner: OwnerKey | null | undefined = undefined, ownerSetup = false, publishJson = '';
+fetch(`/owner.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => (owner = j?.hash ? j : null)).catch(() => (owner = null)).finally(() => render());
+const MIN_OWNER = 10;
+const ghNew = (json: string) => `https://github.com/${repo.owner}/${repo.name}/new/${repo.branch}?filename=public/owner.json&value=${encodeURIComponent(json)}`;
+const ghEdit = () => `https://github.com/${repo.owner}/${repo.name}/edit/${repo.branch}/public/owner.json`;
 V.fingerprintAvailable().then((ok) => { fpAvail = ok; render(); });
 const deviceName = () => { const u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone / iPad' : /Android/.test(u) ? 'Android phone' : /Mac/.test(u) ? 'Mac (Touch ID)' : /Windows/.test(u) ? 'Windows Hello' : 'This device'; };
 const errMsg = (e: unknown) => { const n = (e as Error)?.name, m = (e as Error)?.message;
   return m === 'no-prf' ? 'This browser can’t use fingerprint for encryption yet — use your passcode. (Latest Chrome or Safari usually can.)'
     : n === 'NotAllowedError' || m === 'cancelled' ? 'Fingerprint was cancelled or timed out.' : n === 'InvalidStateError' ? 'This device is already added.' : 'Fingerprint didn’t work here — use your passcode.'; };
 const passFields = (a = 'p1', b = 'p2') => `<div class="f-pass">
-  <label class="f-in"><input type="password" name="${a}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · 6+ characters</span></label>
+  <label class="f-in"><input type="password" name="${a}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · ${owner === null ? '10' : '6'}+ characters</span></label>
   <label class="f-in"><input type="password" name="${b}" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>repeat passcode</span></label></div>`;
 const msg = () => (lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : '');
 
+
+function ownerGate() {
+  const wait = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
+  return `<form class="card f-lock f-vault" data-form="owner" autocomplete="off">
+    <span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private · owner only</p><h2>Locked.</h2>
+    <p class="lead">This space belongs to Aryan — body data, goals and diet logs. Enter the passcode to open it on this device.</p>
+    <div class="f-pass one"><label class="f-in"><input type="password" name="p" required autocomplete="current-password" placeholder="••••••••••" ${wait ? 'disabled' : ''}><span>passcode</span></label>
+      <button class="btn primary" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${wait}s` : 'Unlock'}</button></div>
+    ${msg()}<p class="fine">Just visiting? The <button type="button" class="f-link" data-act="go-steps">Steps</button> tab is public.</p></form>`;
+}
+function privateCard() {
+  return `<div class="card f-lock f-vault"><span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private · owner only</p><h2>Private.</h2>
+    <p class="lead">Body data, goals and diet logs on this page are private. The <button type="button" class="f-link" data-act="go-steps">Steps</button> tab is public.</p>
+    <p class="fine">Owner? <button type="button" class="f-link" data-act="owner-setup">Set up the private space</button></p></div>`;
+}
+function publishCard(json: string) {
+  const update = !!owner;
+  return `<div class="card f-lock f-vault"><span class="f-lk" aria-hidden="true">🌐</span><p class="label">One-time step</p><h2>${update ? 'Update' : 'Publish'} your <em>owner key.</em></h2>
+    <p class="lead">Then every new device asks only for your passcode — and visitors can’t set one. It’s a one-way check value: it can’t be turned back into your passcode, and your data never leaves this device.</p>
+    <ol class="f-steps">
+      <li>Tap <b>Open GitHub</b>${update ? ', select everything in the file and paste (Copy first)' : ' — the file is already filled in'}.</li>
+      <li>Press <b>Commit changes</b>. It’s live in about a minute.</li></ol>
+    <div class="f-row"><a class="btn primary" href="${update ? ghEdit() : ghNew(json)}" target="_blank" rel="noopener">Open GitHub ↗</a><button type="button" class="btn ghost sm" data-act="copy-owner">Copy key</button><button type="button" class="btn ghost sm" data-act="owner-done">Done</button></div>
+    <p class="fine">Skipped it? Body → Security → “Publish owner key” any time.</p></div>`;
+}
 function setupCard() {
   return `<form class="card f-lock f-vault" data-form="setup" autocomplete="off">
-    <span class="f-lk" aria-hidden="true">🔐</span><p class="label">Private space</p><h2>Set a <em>passcode.</em></h2>
+    <span class="f-lk" aria-hidden="true">🔐</span><p class="label">Private space</p><h2>${owner ? 'Turn the lock <em>back on.</em>' : 'Set a <em>passcode.</em>'}</h2>
     <p class="lead">Body scans, goals and daily logs are encrypted on this device (AES-256). Without the passcode, fingerprint or recovery key, nobody can open them — not even with developer tools.</p>
     ${passFields()}
     ${mem ? '' : '<label class="f-in f-backup"><input type="file" name="backup" accept="application/json"><span>start from a backup file (optional)</span></label>'}
     ${msg()}
     <div class="f-row"><button class="btn primary" type="submit">Create & unlock</button>${settingUp ? '<button type="button" class="btn ghost" data-act="cancel-setup">Cancel</button>' : ''}</div>
-    <p class="fine">Next you’ll get a one-time recovery key, in case you ever forget the passcode.${mem ? '' : ' <button type="button" class="f-link" data-act="no-lock">Use without a lock</button>'}</p></form>`;
+    <p class="fine">${owner ? 'Use the same passcode as your other devices.' : 'One passcode for all your devices. Next you’ll get a one-time recovery key.'}${mem ? '' : ' <button type="button" class="f-link" data-act="no-lock">Use without a lock</button>'}</p></form>`;
 }
 function lockCard() {
   const v = vault();
-  if (!v) return setupCard();
+  if (!v) {
+    if (owner === undefined) return `<div class="card f-lock f-vault"><span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private</p><h2>Checking…</h2></div>`;
+    if (owner) return ownerGate();
+    return ownerSetup ? setupCard() : privateCard();
+  }
   const wait = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
   const keys = v.v === 2 ? v.keys ?? [] : [];
   if (screen === 'recover') return `<form class="card f-lock f-vault" data-form="recover" autocomplete="off">
@@ -659,6 +695,10 @@ function securityCard() {
     ${secMsg ? `<p class="f-err" role="alert">${esc(secMsg)}</p>` : ''}
     <div class="f-secrow"><div><b>Fingerprint / Touch ID</b><p>${keys.length ? keys.map((k) => `${esc(k.label)} · added ${fmtD(k.added)} <button class="f-x" data-act="del-finger" data-id="${esc(k.id)}" aria-label="Remove ${esc(k.label)}">×</button>`).join('<br>') : fpAvail ? 'Not set up on this device.' : 'Not available in this browser.'}</p></div>
       ${fpAvail ? `<button class="btn ghost sm" data-act="add-finger">${keys.length ? 'Add another device' : 'Set up'}</button>` : ''}</div>
+    <details class="f-secrow f-chg"><summary><b>Other devices</b><span>${owner ? 'Owner key published ✓' : 'Owner key not published'}</span></summary>
+      <p class="fine">${owner ? 'New devices ask only for your passcode. Re-publish after changing it.' : 'Publish it so new devices ask for your passcode — and visitors can’t set one.'} Needs a 10+ character passcode.</p>
+      <form data-form="publish" class="f-grid4" autocomplete="off"><label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>passcode</span></label>
+      <button class="btn ghost sm" type="submit">${owner ? 'Re-publish' : 'Publish owner key'}</button><p class="f-err" role="alert"></p></form></details>
     <div class="f-secrow"><div><b>Recovery key</b><p>${v?.rec ? 'Saved at setup. Lost it? Make a new one — the old one stops working.' : 'None yet.'}</p></div><button class="btn ghost sm" data-act="new-code">New key</button></div>
     <details class="f-secrow f-chg"><summary><b>Passcode</b><span>Change</span></summary><form data-form="pass" class="f-grid4" autocomplete="off">
       <label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>current</span></label>
@@ -701,6 +741,15 @@ async function unlockFinger() {
   const v = v2(); if (!v?.keys?.length || Date.now() < waitUntil) return;
   try { await opened(await V.openFingerprint(v.keys)); } catch (e) { lockMsg = errMsg(e); render(); }
 }
+async function ownerUnlock(form: HTMLFormElement) {
+  if (Date.now() < waitUntil || !owner) return;
+  const p = String(new FormData(form).get('p') || ''); busy(form, 'Checking…');
+  if (!(await V.checkOwnerKey(p, owner))) return failed();
+  tries = 0; lockMsg = '';
+  await newVault(p, {}); // first time on this device: fresh encrypted space (import a backup from Body)
+  pendingCode = ''; offerFinger = fpAvail; // same passcode everywhere -> go straight to fingerprint
+  render();
+}
 async function recover(form: HTMLFormElement) {
   if (Date.now() < waitUntil) return;
   const v = v2(); if (!v?.rec) return;
@@ -717,8 +766,10 @@ async function setNewPass(form: HTMLFormElement) {
 }
 async function setup(form: HTMLFormElement) {
   const f = new FormData(form), p1 = String(f.get('p1') || ''), p2 = String(f.get('p2') || '');
-  if (p1.length < 6) { lockMsg = 'Use at least 6 characters.'; return render(); }
   if (p1 !== p2) { lockMsg = 'The two passcodes don’t match.'; return render(); }
+  if (owner) { busy(form, 'Checking…'); if (!(await V.checkOwnerKey(p1, owner))) { lockMsg = 'Use the same passcode as your other devices.'; return render(); } }
+  else if (p1.length < MIN_OWNER) { lockMsg = `Use at least ${MIN_OWNER} characters — mix words and numbers.`; return render(); }
+  else publishJson = JSON.stringify(await V.makeOwnerKey(p1));
   let data: Record<string, unknown> = { ...(mem ?? {}) };
   plainKeys().forEach((k) => { try { data[k] = JSON.parse(localStorage.getItem(k)!); } catch {} });
   const file = (form.elements.namedItem('backup') as HTMLInputElement | null)?.files?.[0];
@@ -726,14 +777,23 @@ async function setup(form: HTMLFormElement) {
   busy(form, 'Encrypting…');
   await newVault(p1, data);
   plainKeys().forEach((k) => localStorage.removeItem(k)); localStorage.removeItem(PLAIN); // no plaintext left behind
-  settingUp = false; lockMsg = ''; render();
+  settingUp = false; ownerSetup = false; lockMsg = ''; render();
 }
 async function changePass(form: HTMLFormElement) {
   const f = new FormData(form), v = v2(), out = form.querySelector('.f-err') as HTMLElement;
   const cur = String(f.get('cur') || ''), p1 = String(f.get('n1') || ''), p2 = String(f.get('n2') || '');
   try { await V.openSecretSlot(cur, v!.pass); } catch { out.textContent = 'Current passcode is wrong.'; return; }
   if (p1.length < 6 || p1 !== p2) { out.textContent = p1.length < 6 ? 'Use at least 6 characters.' : 'New passcodes don’t match.'; return; }
-  saveVault({ ...v2()!, pass: await V.makeSecretSlot(p1, dk!) }); secMsg = 'Passcode changed ✓'; render();
+  saveVault({ ...v2()!, pass: await V.makeSecretSlot(p1, dk!) });
+  if (p1.length >= MIN_OWNER) { publishJson = JSON.stringify(await V.makeOwnerKey(p1)); secMsg = 'Passcode changed ✓ — update the owner key so new devices use it. Your other devices keep their old passcode until you change it there.'; }
+  else secMsg = `Passcode changed ✓ — it’s under ${MIN_OWNER} characters, so the owner key wasn’t updated.`;
+  render();
+}
+async function publishOwner(form: HTMLFormElement) {
+  const out = form.querySelector('.f-err') as HTMLElement, p = String(new FormData(form).get('cur') || '');
+  try { await V.openSecretSlot(p, v2()!.pass); } catch { out.textContent = 'Passcode is wrong.'; return; }
+  if (p.length < MIN_OWNER) { out.textContent = `Your passcode is under ${MIN_OWNER} characters. Change it to a longer one first (Passcode → Change).`; return; }
+  publishJson = JSON.stringify(await V.makeOwnerKey(p)); render();
 }
 async function turnOff(form: HTMLFormElement) {
   const out = form.querySelector('.f-err') as HTMLElement, v = v2();
@@ -766,6 +826,8 @@ document.addEventListener('submit', (e) => {
   else if (t === 'newpass') setNewPass(form);
   else if (t === 'pass') changePass(form);
   else if (t === 'lockoff') turnOff(form);
+  else if (t === 'owner') ownerUnlock(form);
+  else if (t === 'publish') publishOwner(form);
   else if (t === 'code') { pendingCode = ''; offerFinger = fpAvail && !(v2()?.keys?.length); render(); }
   else if (t === 'weigh') { const w = num(new FormData(form).get('weight')); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: w }); }
 });
@@ -797,6 +859,10 @@ document.addEventListener('click', (e) => {
   } else if (a === 'del-scan') { if (confirm(`Delete the scan from ${el.dataset.d}?`)) put(K.scans, scans().filter((x) => x.date !== el.dataset.d)); }
   else if (a === 'export') exportData();
   else if (a === 'eye') toggleEye(el);
+  else if (a === 'go-steps') goTab('steps');
+  else if (a === 'owner-setup') { ownerSetup = true; lockMsg = ''; render(); }
+  else if (a === 'copy-owner') { navigator.clipboard?.writeText(publishJson).then(() => (el.textContent = 'Copied ✓')); }
+  else if (a === 'owner-done') { publishJson = ''; render(); }
   else if (a === 'lock') lockNow();
   else if (a === 'finger') unlockFinger();
   else if (a === 'screen-recover') { screen = 'recover'; lockMsg = ''; render(); }
