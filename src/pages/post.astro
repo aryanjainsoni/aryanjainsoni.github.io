@@ -1,0 +1,228 @@
+---
+// WEEKLY POST — turns a week of journal entries into a LinkedIn post draft.
+// Reads the journal (and LeetCode activity) at build time; everything else happens in the browser.
+// Nothing is posted automatically — you copy the draft and post it yourself.
+import Base from '../layouts/Base.astro';
+import { site } from '../data/site';
+import { getEntries, dayKey } from '../lib/journal';
+import { getLeetCode } from '../lib/leetcode';
+
+const plain = (s: string) => s.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1').replace(/\*(.+?)\*/g, '$1').trim();
+const entries = (await getEntries()).map((e) => {
+  const sections: Record<string, string[]> = {};
+  let cur = 'intro';
+  for (const line of (e.body ?? '').split('\n')) {
+    const h = line.match(/^##\s+(.*)/);
+    if (h) { cur = h[1].toLowerCase(); continue; }
+    const b = line.match(/^\s*-\s+(.*)/);
+    if (b) (sections[cur] ??= []).push(plain(b[1]));
+  }
+  return { date: dayKey(e.data.date), title: e.data.title, tags: e.data.tags, sections };
+});
+const lc = await getLeetCode();
+const leet = lc ? Object.fromEntries(lc.byDay) : {};
+const siteUrl = (site as any).url ?? 'aryanjainsoni.github.io';
+---
+<Base title="Weekly Post" description="Turn a week of journal entries into a LinkedIn post draft.">
+  <section class="head">
+    <div class="wrap">
+      <p class="kicker">Weekly post</p>
+      <h1>Your week, <em>ready to share.</em></h1>
+      <p class="lead">Built from your journal and LeetCode activity. Pick a style, tweak the words, copy, post. Sundays work best.</p>
+      <div class="bar">
+        <label class="pick"><span>Week ending</span><input type="date" id="end" /></label>
+        <div class="seg" role="group" aria-label="Post style">
+          <button type="button" class="on" data-style="recap">Weekly recap</button>
+          <button type="button" data-style="lesson">One big lesson</button>
+          <button type="button" data-style="short">Short &amp; punchy</button>
+        </div>
+      </div>
+      <p class="facts" id="facts">—</p>
+    </div>
+  </section>
+
+  <section class="body">
+    <div class="wrap layout">
+      <div class="card editor">
+        <div class="ehead">
+          <p class="label">Draft — edit freely</p>
+          <span class="count" id="count">0 / 3000</span>
+        </div>
+        <textarea id="draft" rows="18" spellcheck="true" aria-label="LinkedIn post draft"></textarea>
+        <div class="actions">
+          <button type="button" class="btn primary" id="copy">Copy post</button>
+          <a class="btn ghost" href="https://www.linkedin.com/feed/" target="_blank" rel="noopener" id="open">Open LinkedIn ↗</a>
+          <button type="button" class="link" id="regen">↺ Rebuild from journal</button>
+        </div>
+        <p class="fine" id="msg" aria-live="polite">Copy → open LinkedIn → “Start a post” → paste. Your edits are kept in this browser until you rebuild.</p>
+      </div>
+
+      <aside class="card tips">
+        <p class="label">Before you post</p>
+        <ul>
+          <li><b>Hook first.</b> The first two lines show before “…see more” — make them specific.</li>
+          <li><b>Add one image.</b> A screenshot of your heatmap, code or site usually beats plain text.</li>
+          <li><b>Be honest.</b> One struggle + what you learned reads better than only wins.</li>
+          <li><b>Reply to every comment</b> in the first hour.</li>
+          <li><b>3–5 hashtags</b> are plenty.</li>
+        </ul>
+        <p class="label src">Pulled from this week</p>
+        <div id="sources" class="sources"></div>
+      </aside>
+    </div>
+  </section>
+
+  <script type="application/json" id="post-data" set:html={JSON.stringify({ entries, leet, siteUrl })} />
+
+  <script is:inline>
+    (() => {
+      const D = JSON.parse(document.getElementById('post-data').textContent);
+      const $ = (s) => document.querySelector(s);
+      const pad = (n) => String(n).padStart(2, '0');
+      const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+      const fmt = (s) => parse(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      const endIn = $('#end'), draft = $('#draft');
+      const today = new Date();
+      endIn.value = ymd(today); endIn.max = ymd(today);
+      let style = 'recap';
+
+      const HASH = { dsa: ['#DSA', '#LeetCode'], ai: ['#MachineLearning', '#AI'], github: ['#BuildInPublic'], study: ['#StudentLife'],
+        internship: ['#Internships'], gym: ['#Discipline'], linkedin: ['#Networking'], web: ['#WebDev'], astro: ['#WebDev'], git: ['#Git'] };
+
+      const week = () => {
+        const end = parse(endIn.value), start = new Date(end); start.setDate(start.getDate() - 6);
+        const s = ymd(start), e = ymd(end);
+        const list = D.entries.filter((x) => x.date >= s && x.date <= e).sort((a, b) => a.date.localeCompare(b.date));
+        let subs = 0, leetDays = 0;
+        Object.entries(D.leet).forEach(([k, n]) => { if (k >= s && k <= e) { subs += n; leetDays++; } });
+        const pick = (sec) => list.flatMap((x) => Object.entries(x.sections).filter(([k]) => k.includes(sec)).flatMap(([, v]) => v));
+        const learned = pick('learn'), did = pick('did'), reflect = pick('reflect');
+        const strip = (l) => l.replace(/^(TIL|DSA|Vedantu AI|Study|Career|Built|Gym|Workout|Win|Hard|Diet|LinkedIn[^:]*|Swimming):\s*/i, '');
+        const tagged = (re) => [...learned, ...did, ...reflect].filter((l) => re.test(l)).map(strip);
+        const tags = [...new Set(list.flatMap((x) => x.tags))];
+        return { s, e, list, subs, leetDays, learned, did, reflect,
+          til: tagged(/^TIL:/i), dsa: tagged(/^DSA:/i), ai: tagged(/^Vedantu AI:/i), built: tagged(/^Built:/i),
+          wins: tagged(/^Win:/i), hard: tagged(/^Hard:/i), tags };
+      };
+
+      const hashtags = (w) => {
+        const h = new Set(['#LearningInPublic']);
+        w.tags.forEach((t) => (HASH[t] || []).forEach((x) => h.add(x)));
+        if (w.subs) { h.add('#LeetCode'); h.add('#DSA'); }
+        return [...h].slice(0, 5).join(' ');
+      };
+      const bullets = (arr, n, mark = '→') => arr.slice(0, n).map((l) => `${mark} ${l}`).join('\n');
+
+      const build = () => {
+        const w = week();
+        const days = w.list.length;
+        $('#facts').textContent = `${fmt(w.s)} – ${fmt(w.e)} · ${days} journal ${days === 1 ? 'entry' : 'entries'} · ${w.subs} LeetCode submissions on ${w.leetDays} ${w.leetDays === 1 ? 'day' : 'days'}`;
+        $('#sources').innerHTML = w.list.length
+          ? w.list.map((x) => `<a href="/journal/${x.date}/">${fmt(x.date)} — ${x.title.replace(/[<>&]/g, '')}</a>`).join('')
+          : '<p class="muted">No journal entries this week yet — write one in the Daily Log.</p>';
+        const link = `Following the whole journey here → ${D.siteUrl}`;
+        const learnedList = [...w.til, ...w.ai, ...w.learned.filter((l) => !/^(TIL|DSA|Vedantu AI):/i.test(l))].slice(0, 4);
+        // Har block ke beech ek khaali line (LinkedIn par padhne mein aasaan)
+        const blocks = (...b) => b.filter(Boolean).join('\n\n');
+        const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+        const daysTxt = plural(days, 'day', 'days');
+        const subsTxt = w.subs ? plural(w.subs, 'LeetCode submission', 'LeetCode submissions') : '';
+        let out = '';
+        if (style === 'recap') {
+          out = blocks(
+            `Week ${fmt(w.s)} – ${fmt(w.e)}: ${daysTxt} logged${subsTxt ? `, ${subsTxt}` : ''}. Here’s what actually stuck 👇`,
+            learnedList.length && `📚 What I learned\n${bullets(learnedList, 4)}`,
+            w.dsa.length && `🧩 DSA\n${bullets(w.dsa, 3)}`,
+            w.built.length && `🛠️ What I built\n${bullets(w.built, 3)}`,
+            w.hard.length && `😅 Where I got stuck\n${bullets(w.hard, 2)}`,
+            w.wins.length && `🏆 Win of the week\n→ ${w.wins[w.wins.length - 1]}`,
+            'Small steps, every day. Next week: keep the streak alive.',
+            link,
+            hashtags(w),
+          );
+        } else if (style === 'lesson') {
+          const big = w.til[w.til.length - 1] || learnedList[0] || 'Consistency beats intensity.';
+          out = blocks(
+            'The one thing I learned this week:',
+            `“${big}”`,
+            w.hard.length
+              ? `It didn’t come easy — ${w.hard[0].charAt(0).toLowerCase() + w.hard[0].slice(1)}`
+              : `It came from showing up — ${plural(days, 'journal entry', 'journal entries')}${subsTxt ? ` and ${subsTxt}` : ''} this week.`,
+            w.dsa.length && `Problems that helped:\n${bullets(w.dsa, 3, '•')}`,
+            'What’s one thing you learned this week?',
+            link,
+            hashtags(w),
+          );
+        } else {
+          out = blocks(
+            [`${daysTxt} logged.`, subsTxt && `${subsTxt}.`, w.built.length ? `${plural(w.built.length, 'thing', 'things')} shipped.` : 'One step closer.'].filter(Boolean).join(' '),
+            learnedList[0] ? `Biggest takeaway: ${learnedList[0]}` : 'Building in public, one day at a time.',
+            `${link}\n${hashtags(w)}`,
+          );
+        }
+        // Is hafte + style ka edited draft pehle se save hai to wahi dikhao (jab tak "Rebuild" na dabao)
+        const saved = keepSaved ? localStorage.getItem(key()) : null;
+        draft.value = saved ?? out;
+        if (!saved) save();
+        count();
+      };
+      let keepSaved = true;
+
+      const key = () => `post:draft:${endIn.value}:${style}`;
+      const save = () => { try { localStorage.setItem(key(), draft.value); } catch {} };
+      const count = () => { const n = draft.value.length; $('#count').textContent = `${n} / 3000`; $('#count').classList.toggle('over', n > 3000); };
+      const load = () => build();
+
+      draft.addEventListener('input', () => { save(); count(); });
+      endIn.addEventListener('change', () => { if (endIn.value > ymd(today)) endIn.value = ymd(today); load(); });
+      document.querySelectorAll('[data-style]').forEach((b) => b.addEventListener('click', () => {
+        style = b.dataset.style;
+        document.querySelectorAll('[data-style]').forEach((x) => x.classList.toggle('on', x === b));
+        load();
+      }));
+      $('#regen').addEventListener('click', () => { localStorage.removeItem(key()); keepSaved = false; build(); keepSaved = true; $('#msg').textContent = 'Rebuilt from your journal.'; });
+      $('#copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(draft.value); $('#msg').textContent = 'Copied ✓ — now open LinkedIn, “Start a post”, paste.'; }
+        catch { draft.select(); $('#msg').textContent = 'Select-all done — press Cmd/Ctrl+C to copy.'; }
+      });
+      build();
+    })();
+  </script>
+</Base>
+
+<style>
+  .head { padding-block: 72px 16px; }
+  h1 { font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 400; margin: 10px 0 14px; letter-spacing: -.03em; }
+  h1 em { color: var(--accent); }
+  .lead { color: var(--muted); font-size: 1.1rem; max-width: 600px; margin: 0 0 24px; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .pick { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .pick span, .label, .count, .facts { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .pick input { border: none; background: transparent; color: var(--ink); font: 600 14px 'Inter', sans-serif; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); flex-wrap: wrap; }
+  .seg button { border: none; background: none; color: var(--muted); font: 600 13px 'Inter', sans-serif; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+  .seg button.on { background: var(--ink); color: var(--bg); }
+  .facts { margin: 18px 0 0; letter-spacing: .06em; text-transform: none; font-size: 12px; }
+
+  .body { padding-top: 24px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(20px, 3vw, 30px); box-shadow: var(--shadow); min-width: 0; }
+  .ehead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .count.over { color: #c0392b; }
+  textarea { width: 100%; padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 400 15px/1.6 'Inter', sans-serif; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+  .actions .btn { cursor: pointer; font-family: inherit; }
+  .link { border: none; background: none; color: var(--accent); font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+  .fine { margin: 10px 0 0; font-size: .85rem; color: var(--muted); }
+  .tips ul { margin: 10px 0 0; padding-left: 18px; }
+  .tips li { margin-bottom: 8px; font-size: .95rem; color: var(--muted); }
+  .tips li b { color: var(--ink); }
+  .src { margin-top: 22px; }
+  .sources { display: grid; gap: 6px; margin-top: 8px; }
+  .sources :global(a) { font: 500 1rem 'Fraunces', serif; color: var(--ink); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); }
+  .sources :global(a:hover) { border-color: var(--accent); text-decoration: none; }
+  .sources :global(.muted) { color: var(--muted); font-size: .9rem; margin: 0; }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+</style>

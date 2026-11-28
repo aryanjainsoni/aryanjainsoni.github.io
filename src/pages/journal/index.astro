@@ -19,7 +19,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
       <p class="kicker">Journal</p>
       <h1>One entry <em class="sun">a day.</em></h1>
       <p class="lead">What I learned, solved and practised — written down daily. Each square is a day I showed up.</p>
-      <div class="cta-row"><a class="btn primary" href="/log/">✎ Write today’s entry</a></div>
+      <div class="cta-row"><a class="btn primary" href="/log/">✎ Write today’s entry</a><a class="btn ghost" href="/post/">Weekly LinkedIn post →</a></div>
       <Consistency heading={false} />
     </div>
   </section>
@@ -50,7 +50,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 
   .head { padding-block: 72px 48px; }
   h1 { font-size: clamp(2.8rem, 8vw, 5rem); margin: 12px 0 14px; }
   .lead { color: var(--muted); font-size: 1.1rem; max-width: 620px; margin: 0 0 22px; }
-  .cta-row { margin: 0 0 28px; }
+  .cta-row { margin: 0 0 28px; display: flex; flex-wrap: wrap; gap: 10px; }
   .map { margin-top: 14px; --heat: var(--accent-2); }
   .month + .month { margin-top: 36px; }
   h2 { font-size: 1.3rem; margin: 0 0 14px; }

@@ -135,5 +135,6 @@ export const goals = {
     { id: 'w-hair-oiling', name: 'Hair oiling', days: ['wed', 'sun'], target: 2, time: '20:00' },
     { id: 'w-call-friends-relatives', name: 'Call friends / relatives', days: ['sun'], target: 1, time: '18:00' },
     { id: 'w-face-neck-pack', name: 'Face + neck pack', days: [], target: 1 },
+    { id: 'w-linkedin-post', name: 'LinkedIn weekly post', days: ['sun'], target: 1, time: '19:00' },
   ],
 };
