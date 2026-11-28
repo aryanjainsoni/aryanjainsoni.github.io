@@ -260,3 +260,11 @@ details.f-secrow summary span { font-size: .86rem; color: var(--muted); }
 details.f-secrow summary span::after { content: ' +'; color: var(--accent); }
 details.f-secrow[open] summary span::after { content: ' −'; }
 @media (max-width: 560px) { .f-code { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* show / hide passcode */
+.f-pw { position: relative; display: block; }
+.f-pw input { padding-right: 46px !important; }
+.f-pw input[type='text'] { letter-spacing: .04em !important; }
+.f-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border: none; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; transition: color .2s, background .2s; }
+.f-eye:hover, .f-eye[aria-pressed='true'] { color: var(--accent); background: var(--accent-soft); }
+.f-eye svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

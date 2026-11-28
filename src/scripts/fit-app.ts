@@ -393,14 +393,33 @@ function renderBody(root: HTMLElement) {
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
 function render() {
   const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
-  if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return; }
+  if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return eyes(); }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
   if (roots.plan) renderPlan(roots.plan);
   if (roots.diet) renderDiet(roots.diet);
   if (roots.body) renderBody(roots.body);
   Object.values(roots).forEach((r) => r?.insertAdjacentHTML('afterbegin', lockBar()));
+  eyes();
   if (name && form) { const el = document.querySelector(`form[data-form="${form}"] [name="${name}"]`) as HTMLInputElement | null; if (el && el.type !== 'checkbox') { el.focus(); try { const v = el.value; el.value = ''; el.value = v; } catch {} } }
+}
+// 👁 show / hide button on every password field (added after each render)
+const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+function eyes() {
+  document.querySelectorAll<HTMLInputElement>('[data-fit] input[type="password"]').forEach((inp) => {
+    if (inp.parentElement?.classList.contains('f-pw')) return;
+    const wrap = document.createElement('span'); wrap.className = 'f-pw';
+    inp.replaceWith(wrap); wrap.append(inp);
+    wrap.insertAdjacentHTML('beforeend', `<button type="button" class="f-eye" data-act="eye" aria-label="Show passcode" aria-pressed="false" tabindex="-1">${EYE}</button>`);
+  });
+}
+function toggleEye(btn: HTMLElement) {
+  const inp = btn.parentElement?.querySelector('input'); if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? EYE_OFF : EYE; btn.setAttribute('aria-pressed', String(show)); btn.setAttribute('aria-label', show ? 'Hide passcode' : 'Show passcode');
+  inp.focus(); const n = inp.value.length; try { inp.setSelectionRange(n, n); } catch {}
 }
 const goTab = (t: string) => (document.querySelector(`[data-tab="${t}"]`) as HTMLElement | null)?.click();
 
@@ -631,6 +650,7 @@ document.addEventListener('click', (e) => {
     put(K.scans, [...scans().filter((x) => x.date !== s.date), s]);
   } else if (a === 'del-scan') { if (confirm(`Delete the scan from ${el.dataset.d}?`)) put(K.scans, scans().filter((x) => x.date !== el.dataset.d)); }
   else if (a === 'export') exportData();
+  else if (a === 'eye') toggleEye(el);
   else if (a === 'lock') lockNow();
   else if (a === 'finger') unlockFinger();
   else if (a === 'screen-recover') { screen = 'recover'; lockMsg = ''; render(); }
