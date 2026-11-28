@@ -84,6 +84,10 @@ decisions that are truly mine.
   word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
   spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
   Skips passwords, numbers, the food search and anything with data-nosmart.
+- Gym Notebook (/gym/#guide): evidence-based guideline chapters. ONE FILE PER CHAPTER in src/content/guide/
+  (frontmatter: n, title, icon, summary, updated, visual, caption, sources[]). Charts/diagrams live in
+  src/components/GuideVisual.astro (energy, rate, protein, macros, phases, matador, sleep, incline, vshape,
+  checkin, protein-foods). To add/update: edit or add a .md file, bump `updated`, cite sources.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -115,7 +119,9 @@ decisions that are truly mine.
 2. Roadmap: Week 1 project case studies (start with Breast Cancer Prediction) → Week 2 Notes Library
    (PDFs, searchable) → Week 3 Achievements gallery (certificate/newspaper photos) → Week 4 GitHub README
    polish + SEO/OG share image + sitemap.
-3. Gym — status: built and live. Lock/encryption details are under "HOW THINGS WORK → Gym lock".
+3. Gym — status: built and live. Notebook: keep adding chapters as I learn (ask me what to add).
+   Next build ideas I liked: phase engine (habit phase → fat loss → diet break → finish), Sunday weekly
+   check-in "coach", sleep tracker, gym-day carbs, workout log with progressive overload. Lock/encryption details are under "HOW THINGS WORK → Gym lock".
    Still to add: my old diet plan (photo) merged into src/data/meals.ts; my exact supplements; my workout
    plan as a new Workout section (aesthetic V-shape, 60-min strength + incline walk); fingerprint on my
    Android phone failed (NotReadableError from Android credential manager, Chrome 158) — added a retry
@@ -124,6 +130,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym Notebook tab: 12 sourced chapters with 11 charts/diagrams (from the 100-day video + research).
 - 2026-11-28 Smart typing site-wide: suggestions, autocorrect + undo, spelling chip, learns my words.
 - 2026-11-28 Diet: food suggestions while typing, +45 foods (shakes, fruits, sweets, snacks), private "New food"; fingerprint retry for Android.
 - 2026-11-28 Gym lock: escalating lockout (survives refresh) + wrong-attempt log & alert after unlock.

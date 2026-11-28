@@ -15,4 +15,20 @@ const journal = defineCollection({
   }),
 });
 
-export const collections = { journal };
+// GYM NOTEBOOK — har chapter ek file: src/content/guide/NN-naam.md (naya chapter = nayi file).
+// visual: src/components/GuideVisual.astro mein jo chart/diagram ka naam hai (optional)
+const guide = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/guide' }),
+  schema: z.object({
+    n: z.number(),                       // chapter number (order)
+    title: z.string(),
+    icon: z.string(),                    // emoji
+    summary: z.string(),                 // one-line takeaway
+    updated: z.coerce.date(),            // last time this chapter changed
+    visual: z.string().optional(),
+    caption: z.string().optional(),
+    sources: z.array(z.object({ title: z.string(), url: z.string() })).default([]),
+  }),
+});
+
+export const collections = { journal, guide };

@@ -1,0 +1,233 @@
+---
+// Charts & diagrams for the Gym Notebook. Chapter file -> `visual: <name>`.
+// Numbers come from the cited studies (see each chapter's sources) or are clearly marked as examples.
+interface Props { name: string }
+const { name } = Astro.props;
+const fmt = (n: number) => n.toLocaleString('en-IN');
+
+// protein per 100 kcal (from src/data/foods.ts)
+const proteinFoods = [
+  ['Whey protein', 20.0], ['Soya chunks', 15.4], ['Tofu', 11.1], ['Hung curd', 10.0], ['Paneer', 6.8],
+  ['Roasted chana', 5.9], ['Milk (toned)', 5.3], ['Dal', 5.3], ['Curd', 5.0], ['Peanuts', 4.5],
+] as const;
+---
+<figure class="gv" data-visual={name}>
+  {name === 'energy' && (
+    <svg viewBox="0 0 640 210" role="img" aria-label="Example energy balance: 2,600 kcal out versus 2,150 kcal eaten gives a 450 kcal deficit">
+      <text x="20" y="26" class="gv-h">Calories out · 2,600</text>
+      <rect x="20" y="36" width="355.7" height="36" rx="6" class="gv-s0" />
+      <rect x="375.7" y="36" width="51.4" height="36" class="gv-s1" />
+      <rect x="427.1" y="36" width="49.3" height="36" class="gv-s2" />
+      <rect x="476.4" y="36" width="51.4" height="36" class="gv-s3" />
+      <rect x="527.8" y="36" width="49.3" height="36" rx="6" class="gv-s4" />
+      <text x="32" y="59" class="gv-in">Body at rest + daily life · 1,660</text>
+      <g class="gv-legend" transform="translate(20 92)">
+        <rect width="10" height="10" rx="2" class="gv-s1" /><text x="16" y="9">Steps 240</text>
+        <rect x="100" width="10" height="10" rx="2" class="gv-s2" /><text x="116" y="9">Strength 230</text>
+        <rect x="222" width="10" height="10" rx="2" class="gv-s3" /><text x="238" y="9">Incline walk 240</text>
+        <rect x="358" width="10" height="10" rx="2" class="gv-s4" /><text x="374" y="9">Digestion 230</text>
+      </g>
+      <text x="20" y="138" class="gv-h">Calories in (food) · 2,150</text>
+      <rect x="20" y="148" width="460.7" height="36" rx="6" class="gv-food" />
+      <rect x="480.7" y="148" width="96.4" height="36" rx="6" class="gv-gap" />
+      <text x="528.9" y="171" class="gv-gapt" text-anchor="middle">−450</text>
+    </svg>
+  )}
+
+  {name === 'rate' && (
+    <svg viewBox="0 0 640 230" role="img" aria-label="Lean mass change: plus 2.1 percent when losing 0.7 percent of bodyweight per week, minus 0.2 percent when losing 1.4 percent per week">
+      <line x1="80" y1="160" x2="600" y2="160" class="gv-axis" />
+      <text x="70" y="164" class="gv-tick" text-anchor="end">0%</text>
+      <rect x="150" y="65.5" width="130" height="94.5" rx="6" class="gv-s3" />
+      <text x="215" y="55" class="gv-val" text-anchor="middle">+2.1%</text>
+      <rect x="380" y="160" width="130" height="9" rx="3" class="gv-s0" />
+      <text x="445" y="150" class="gv-val muted" text-anchor="middle">−0.2%</text>
+      <text x="215" y="194" class="gv-lab" text-anchor="middle">Slow · 0.7% / week</text>
+      <text x="445" y="194" class="gv-lab" text-anchor="middle">Fast · 1.4% / week</text>
+      <text x="330" y="222" class="gv-note" text-anchor="middle">Lean mass change while dieting + lifting 4×/week (Garthe 2011)</text>
+    </svg>
+  )}
+
+  {name === 'protein' && (
+    <svg viewBox="0 0 640 240" role="img" aria-label="Illustration: muscle gain rises with protein up to about 1.6 grams per kilogram then levels off; the cutting zone is 1.8 to 2.2">
+      <rect x="305.5" y="30" width="98.1" height="160" class="gv-band" />
+      <text x="354.5" y="46" class="gv-bandt" text-anchor="middle">Cutting zone</text>
+      <text x="354.5" y="60" class="gv-bandt" text-anchor="middle">1.8–2.2</text>
+      <line x1="60" y1="190" x2="600" y2="190" class="gv-axis" />
+      <line x1="60" y1="30" x2="60" y2="190" class="gv-axis" />
+      <path d="M60,180 C120,150 205,70 256,60 L600,58" class="gv-line" />
+      <line x1="256" y1="60" x2="256" y2="190" class="gv-dash" />
+      <text x="250" y="88" class="gv-note" text-anchor="end">~1.6 g/kg: gains level off</text>
+      {[1.0, 1.6, 2.2, 2.8].map((v) => <text x={60 + (v - 0.8) * 245.45} y="208" class="gv-tick" text-anchor="middle">{v.toFixed(1)}</text>)}
+      <text x="330" y="230" class="gv-note" text-anchor="middle">Protein, g per kg bodyweight · illustrative shape (Morton 2018 breakpoint)</text>
+      <text x="48" y="110" class="gv-note" text-anchor="middle" transform="rotate(-90 48 110)">Muscle gain</text>
+    </svg>
+  )}
+
+  {name === 'macros' && (
+    <svg viewBox="0 0 640 200" role="img" aria-label="Example 2,150 kcal day: protein 135 g, fat 55 g, carbs 279 g">
+      <g class="gv-steps">
+        <text x="20" y="24"><tspan class="gv-num">1</tspan> Protein  135 g × 4 = 540</text>
+        <text x="230" y="24"><tspan class="gv-num">2</tspan> Fat  55 g × 9 = 495</text>
+        <text x="420" y="24"><tspan class="gv-num">3</tspan> Carbs = rest ÷ 4</text>
+      </g>
+      <rect x="20" y="44" width="150.7" height="46" rx="6" class="gv-s3" />
+      <rect x="170.7" y="44" width="138.1" height="46" class="gv-s2" />
+      <rect x="308.8" y="44" width="311.2" height="46" rx="6" class="gv-s0" />
+      <text x="95" y="72" class="gv-in" text-anchor="middle">Protein 25%</text>
+      <text x="240" y="72" class="gv-in" text-anchor="middle">Fat 23%</text>
+      <text x="464" y="72" class="gv-in dark" text-anchor="middle">Carbs 279 g · 52%</text>
+      <text x="20" y="124" class="gv-note">Example: 65 kg, 2,150 kcal day · protein 2.1 g/kg · fat 0.85 g/kg</text>
+      <text x="20" y="146" class="gv-note">Gym days: keep protein &amp; fat, add carbs · Rest days: carbs a little lower</text>
+    </svg>
+  )}
+
+  {name === 'phases' && (
+    <svg viewBox="0 0 640 220" role="img" aria-label="100-day plan: days 1 to 28 minus 250 kcal, days 29 to 70 minus 450, days 71 to 77 diet break at maintenance, days 78 to 100 minus 500">
+      <text x="104" y="34" class="gv-lab" text-anchor="middle">Habits · 1–28</text>
+      <text x="314" y="34" class="gv-lab" text-anchor="middle">Fat loss · 29–70</text>
+      <text x="461" y="34" class="gv-lab" text-anchor="middle">Break</text>
+      <text x="551" y="34" class="gv-lab" text-anchor="middle">Finish · 78–100</text>
+      <line x1="20" y1="60" x2="620" y2="60" class="gv-axis" />
+      <text x="620" y="52" class="gv-note" text-anchor="end">maintenance</text>
+      <rect x="20" y="60" width="166" height="30" rx="4" class="gv-s1" />
+      <rect x="188" y="60" width="250" height="54" rx="4" class="gv-s2" />
+      <rect x="440" y="58" width="42" height="5" rx="2" class="gv-s4" />
+      <rect x="484" y="60" width="136" height="60" rx="4" class="gv-s3" />
+      <text x="103" y="80" class="gv-in dark" text-anchor="middle">−250 kcal</text>
+      <text x="313" y="92" class="gv-in" text-anchor="middle">−450 kcal</text>
+      <text x="461" y="80" class="gv-tick" text-anchor="middle">0</text>
+      <text x="552" y="95" class="gv-in" text-anchor="middle">−500 kcal</text>
+      <text x="20" y="150" class="gv-note">Deeper bar = bigger daily deficit. Never more than ~1% bodyweight per week.</text>
+      <text x="20" y="172" class="gv-note">Phase 1 builds the habits · the break protects muscle &amp; metabolism · then finish.</text>
+    </svg>
+  )}
+
+  {name === 'matador' && (
+    <svg viewBox="0 0 640 210" role="img" aria-label="Fat lost: 12.3 kg with two-week diet breaks versus 8.0 kg dieting continuously">
+      <line x1="80" y1="160" x2="600" y2="160" class="gv-axis" />
+      <rect x="150" y="37" width="130" height="123" rx="6" class="gv-s3" />
+      <text x="215" y="28" class="gv-val" text-anchor="middle">12.3 kg</text>
+      <rect x="380" y="80" width="130" height="80" rx="6" class="gv-s0" />
+      <text x="445" y="71" class="gv-val muted" text-anchor="middle">8.0 kg</text>
+      <text x="215" y="182" class="gv-lab" text-anchor="middle">With diet breaks</text>
+      <text x="445" y="182" class="gv-lab" text-anchor="middle">Continuous diet</text>
+      <text x="330" y="204" class="gv-note" text-anchor="middle">Fat lost over 16 dieting weeks · men with obesity · MATADOR (Byrne 2017)</text>
+    </svg>
+  )}
+
+  {name === 'sleep' && (
+    <svg viewBox="0 0 640 230" role="img" aria-label="Same diet, 14 days: with 8.5 hours sleep 1.4 kg fat and 1.5 kg lean lost; with 5.5 hours 0.6 kg fat and 2.4 kg lean lost">
+      <line x1="60" y1="170" x2="600" y2="170" class="gv-axis" />
+      <rect x="110" y="100" width="80" height="70" rx="5" class="gv-s3" /><text x="150" y="92" class="gv-val" text-anchor="middle">1.4</text>
+      <rect x="200" y="140" width="80" height="30" rx="5" class="gv-s0" /><text x="240" y="132" class="gv-val muted" text-anchor="middle">0.6</text>
+      <rect x="360" y="95" width="80" height="75" rx="5" class="gv-s3" /><text x="400" y="87" class="gv-val" text-anchor="middle">1.5</text>
+      <rect x="450" y="50" width="80" height="120" rx="5" class="gv-s0" /><text x="490" y="42" class="gv-val muted" text-anchor="middle">2.4</text>
+      <text x="195" y="192" class="gv-lab" text-anchor="middle">Fat lost (kg)</text>
+      <text x="445" y="192" class="gv-lab" text-anchor="middle">Lean mass lost (kg)</text>
+      <g class="gv-legend" transform="translate(190 210)">
+        <rect width="10" height="10" rx="2" class="gv-s3" /><text x="16" y="9">8.5 h sleep</text>
+        <rect x="120" width="10" height="10" rx="2" class="gv-s0" /><text x="136" y="9">5.5 h sleep</text>
+      </g>
+    </svg>
+  )}
+
+  {name === 'incline' && (
+    <svg viewBox="0 0 640 170" role="img" aria-label="Extra calories in 30 minutes at 4 km per hour for 65 kg: flat 65, 10 percent incline 182, 15 percent incline 240">
+      {[['Flat · 0%', 65, '2.9 METs'], ['Incline 10%', 182, '6.3 METs'], ['Incline 15%', 240, '8.0 METs']].map(([l, v, m], i) => (
+        <g transform={`translate(0 ${20 + i * 42})`}>
+          <text x="130" y="21" class="gv-lab" text-anchor="end">{l}</text>
+          <rect x="142" y="4" width={(v as number) * 1.4} height="26" rx="5" class={i === 2 ? 'gv-s3' : i === 1 ? 'gv-s2' : 'gv-s0'} />
+          <text x={150 + (v as number) * 1.4} y="22" class="gv-val sm">{v} kcal <tspan class="gv-tick">· {m}</tspan></text>
+        </g>
+      ))}
+      <text x="20" y="160" class="gv-note">30 min at 4 km/h, 65 kg, calories above resting · ACSM walking equation</text>
+    </svg>
+  )}
+
+  {name === 'vshape' && (
+    <svg viewBox="0 0 640 270" role="img" aria-label="V-shape: wide shoulders from side delts, wide back from lats, smaller waist from lower body fat">
+      <path d="M250,52 Q320,30 390,52 L452,78 Q470,92 462,112 L410,196 Q400,236 372,250 L268,250 Q240,236 230,196 L178,112 Q170,92 188,78 Z" class="gv-body" />
+      <circle cx="320" cy="30" r="20" class="gv-body" />
+      <line x1="176" y1="70" x2="464" y2="70" class="gv-arrow" marker-start="url(#gvArr)" marker-end="url(#gvArr)" />
+      <line x1="268" y1="236" x2="372" y2="236" class="gv-arrow" marker-start="url(#gvArr)" marker-end="url(#gvArr)" />
+      <defs><marker id="gvArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="gv-arrowhead" /></marker></defs>
+      <text x="480" y="74" class="gv-lab">Side delts → width</text>
+      <text x="480" y="140" class="gv-lab">Lats → the “V”</text>
+      <line x1="430" y1="136" x2="476" y2="136" class="gv-dash" />
+      <text x="160" y="110" class="gv-lab" text-anchor="end">Upper chest</text>
+      <line x1="164" y1="106" x2="290" y2="100" class="gv-dash" />
+      <text x="390" y="262" class="gv-lab">Waist ← lower body fat</text>
+    </svg>
+  )}
+
+  {name === 'checkin' && (
+    <svg viewBox="0 0 640 240" role="img" aria-label="Weekly check-in decision: under 0.25 percent per week adjust; 0.25 to 0.75 keep going; over 1 percent eat a bit more">
+      <rect x="170" y="10" width="300" height="46" rx="10" class="gv-box" />
+      <text x="320" y="30" class="gv-lab" text-anchor="middle">7-day average weight</text>
+      <text x="320" y="47" class="gv-note" text-anchor="middle">change this week (% of bodyweight)</text>
+      <path d="M320,56 L110,96 M320,56 L320,96 M320,56 L530,96" class="gv-dash" />
+      {[[110, '< 0.25%', 'Stuck', '−100 kcal or', '+2,000 steps', 'gv-box'], [320, '0.25–0.75%', 'On track ✓', 'Change nothing', '', 'gv-box ok'], [530, '> 1%', 'Too fast', '+100–150 kcal', 'protect muscle', 'gv-box']].map(([x, r, t, a, b, c]) => (
+        <g>
+          <rect x={(x as number) - 95} y="96" width="190" height="112" rx="12" class={c as string} />
+          <text x={x} y="120" class="gv-tick" text-anchor="middle">{r}</text>
+          <text x={x} y="146" class="gv-val sm" text-anchor="middle">{t}</text>
+          <text x={x} y="172" class="gv-note" text-anchor="middle">{a}</text>
+          <text x={x} y="190" class="gv-note" text-anchor="middle">{b}</text>
+        </g>
+      ))}
+      <text x="320" y="232" class="gv-note" text-anchor="middle">Judge 2 weeks before changing anything — daily weight swings ±1 kg are water.</text>
+    </svg>
+  )}
+
+  {name === 'protein-foods' && (
+    <svg viewBox={`0 0 640 ${proteinFoods.length * 28 + 34}`} role="img" aria-label="Protein per 100 kcal for veg foods">
+      {proteinFoods.map(([l, v], i) => (
+        <g transform={`translate(0 ${8 + i * 28})`}>
+          <text x="128" y="16" class="gv-lab" text-anchor="end">{l}</text>
+          <rect x="140" y="2" width={v * 22} height="20" rx="4" class={v >= 10 ? 'gv-s3' : v >= 6 ? 'gv-s2' : 'gv-s0'} />
+          <text x={148 + v * 22} y="17" class="gv-val sm">{v.toFixed(1)} g</text>
+        </g>
+      ))}
+      <text x="20" y={proteinFoods.length * 28 + 26} class="gv-note">Grams of protein per 100 kcal — higher = more protein for fewer calories</text>
+    </svg>
+  )}
+  <span class="gv-swipe" aria-hidden="true">swipe ↔ for the full chart</span>
+</figure>
+
+<style>
+  .gv { margin: 4px 0 0; padding: 16px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); overflow-x: auto; }
+  .gv-swipe { display: none; margin-top: 8px; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .08em; color: var(--muted); position: sticky; left: 0; }
+  @media (max-width: 560px) { .gv-swipe { display: block; } }
+  .gv svg { display: block; width: 100%; min-width: 480px; height: auto; font-family: 'Inter', sans-serif; }
+  .gv :global(.gv-h) { font: 600 14px 'Inter', sans-serif; fill: var(--ink); }
+  .gv :global(.gv-in) { font: 600 13px 'Inter', sans-serif; fill: #fff; }
+  .gv :global(.gv-in.dark) { fill: var(--ink); }
+  .gv :global(.gv-lab) { font: 500 13px 'Inter', sans-serif; fill: var(--ink); }
+  .gv :global(.gv-note) { font: 400 12px 'Inter', sans-serif; fill: var(--muted); }
+  .gv :global(.gv-tick) { font: 500 11px 'JetBrains Mono', monospace; fill: var(--muted); }
+  .gv :global(.gv-val) { font: 400 20px 'Fraunces', serif; fill: var(--ink); }
+  .gv :global(.gv-val.sm) { font-size: 15px; }
+  .gv :global(.gv-val.muted) { fill: var(--muted); }
+  .gv :global(.gv-legend text) { font: 500 11.5px 'Inter', sans-serif; fill: var(--muted); }
+  .gv :global(.gv-steps text) { font: 500 13px 'Inter', sans-serif; fill: var(--ink); }
+  .gv :global(.gv-num) { font: 700 13px 'JetBrains Mono', monospace; fill: var(--accent); }
+  .gv :global(.gv-s0) { fill: color-mix(in srgb, var(--ink) 22%, var(--bg)); }
+  .gv :global(.gv-s1) { fill: color-mix(in srgb, var(--accent) 40%, var(--bg)); }
+  .gv :global(.gv-s2) { fill: color-mix(in srgb, var(--accent) 70%, var(--bg)); }
+  .gv :global(.gv-s3) { fill: var(--accent); }
+  .gv :global(.gv-s4) { fill: var(--accent-2); }
+  .gv :global(.gv-food) { fill: #2f9e6b; }
+  .gv :global(.gv-gap) { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .gv :global(.gv-gapt) { font: 600 13px 'JetBrains Mono', monospace; fill: var(--accent); }
+  .gv :global(.gv-axis) { stroke: var(--line); stroke-width: 1.5; }
+  .gv :global(.gv-dash) { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; fill: none; }
+  .gv :global(.gv-line) { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+  .gv :global(.gv-band) { fill: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .gv :global(.gv-bandt) { font: 600 11px 'JetBrains Mono', monospace; fill: var(--accent); }
+  .gv :global(.gv-body) { fill: color-mix(in srgb, var(--ink) 10%, var(--bg)); stroke: color-mix(in srgb, var(--ink) 35%, var(--bg)); stroke-width: 1.5; }
+  .gv :global(.gv-arrow) { stroke: var(--accent); stroke-width: 2; }
+  .gv :global(.gv-arrowhead) { fill: var(--accent); }
+  .gv :global(.gv-box) { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+  .gv :global(.gv-box.ok) { stroke: #2f9e6b; stroke-width: 2; }
+</style>
