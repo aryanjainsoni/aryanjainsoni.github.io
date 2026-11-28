@@ -596,6 +596,17 @@ function renderBody(root: HTMLElement) {
 
 // ---------------- events ----------------
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
+// Bucket list (/bucket/) lives in the SAME encrypted vault (key "fit:bucket"): the page shows this lock while
+// locked, and gets a tiny get/set bridge through the 'ascent:vault' event once unlocked (null when locked again).
+const bucketRoot = $('[data-fit="bucket"]');
+const vaultApi = { get: <T,>(k: string, d: T) => load<T>(k, d), set: (k: string, v: unknown) => set(k, v), lock: () => lockNow() };
+let vaultOpen: boolean | null = null;
+function announceVault() {
+  const open = !!mem && !pendingCode && !publishJson && !needNewPass && !settingUp && !offerFinger;
+  if (open === vaultOpen) return;
+  vaultOpen = open; (window as unknown as { __ascentVault?: unknown }).__ascentVault = open ? vaultApi : null;
+  dispatchEvent(new CustomEvent('ascent:vault', { detail: open ? vaultApi : null }));
+}
 
 // Settings drawer (Base layout) — Gym data + security are rendered into it while this page is open
 function settingsHtml(gate = '') {
@@ -610,6 +621,8 @@ function render() {
   const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : publishJson ? publishCard(publishJson) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
   if (!mem) ensureTick();
   renderSettings(gate);
+  if (bucketRoot) bucketRoot.innerHTML = gate;
+  announceVault();
   if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return eyes(); }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
@@ -714,7 +727,7 @@ function ownerGate() {
   const wait = waitLeft();
   return `<form class="card f-lock f-vault" data-form="owner" autocomplete="off">
     <span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private · owner only</p><h2>Locked.</h2>
-    <p class="lead">This space belongs to Aryan — body data, goals and diet logs. Enter the passcode to open it on this device.</p>
+    <p class="lead">This space belongs to Aryan — private, encrypted on this device. Enter the passcode to open it.</p>
     <div class="f-pass one"><label class="f-in"><input type="password" name="p" required autocomplete="current-password" placeholder="••••••••••" ${wait ? 'disabled' : ''}><span>passcode</span></label>
       <button class="btn primary" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${fmtWait(wait)}` : 'Unlock'}</button></div>
     ${msg()}<p class="fine">Just visiting? The <button type="button" class="f-link" data-act="go-steps">Steps</button> tab is public.</p></form>`;

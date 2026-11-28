@@ -146,6 +146,16 @@ decisions that are truly mine.
   swipe, page corners, Index/Search tabs (sticky-note search → jumps + yellow highlighter), chart tap = zoom.
   Deep links #guide/p-5 and #nb-<chapter-file>; last page remembered (nb:last) → "Continue · p. N" on the cover.
   Paper-flip sound only when Gym sound is on. Calm mode / reduced motion = no 3D turn.
+- Bucket list (/bucket/, noindex): header icon = small burgundy book next to Search. PRIVATE: wishes live ONLY in the
+  encrypted Gym vault (key "fit:bucket") — never in the repo/HTML. fit-app.ts shows its lock inside [data-fit="bucket"]
+  (styled as a brass plate) and, once unlocked, hands src/scripts/bucket.ts a get/set bridge via the 'ascent:vault'
+  event (null on lock/auto-lock). Page: src/pages/bucket.astro = original SVG treasure cove (lake, boat + lantern,
+  open chest, gold, gems, god-rays, canvas dust/fireflies, parallax, optional ambient sound if Gym sound is on) + the
+  book. Book = old burgundy hardcover "Rahasya — The Sealed Pages" (title in src/data/bucket.ts, one place): torn
+  aged pages, page turns, p1 owner page, Contents (clickable, progress per year), one page per wish (sorted by
+  target month/date), Fulfilled gallery. Wishes: add/edit/delete (editor dialog), steps checklist + gold progress,
+  tick = red wax seal + gold dust + chime. Search + filters (year, kind, status). Deep links #p-N after unlock.
+  Included automatically in Settings → Full backup (fit:vault) and Gym export.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -189,6 +199,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Private bucket list book "Rahasya" (/bucket/): treasure-cove scene, vault lock, wishes, wax seals, search.
 - 2026-11-28 Gym Notebook → real spiral notebook "Altitude": green cover, ruled pages, page flip, index, search.
 - 2026-11-28 Header logo: photo badge → animated Circle Summit mark (draw-on-load once per visit, hover re-climb).
 - 2026-11-28 New brand mark "Circle Summit": favicon, app icons (incl. maskable), share preview image (og.png).

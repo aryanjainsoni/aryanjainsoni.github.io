@@ -3,9 +3,9 @@
 //  • built files (/_astro/), fonts, images, icons: cache first (they never change under the same name)
 //  • videos / audio and other sites' APIs (GitHub, LeetCode): straight to the network
 // Bump VERSION to throw away old caches.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const PAGES = `ascent-pages-${VERSION}`, ASSETS = `ascent-assets-${VERSION}`;
-const CORE = ['/', '/gym/', '/goals/', '/log/', '/journal/', '/explore/', '/about/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'];
+const CORE = ['/', '/gym/', '/bucket/', '/goals/', '/log/', '/journal/', '/explore/', '/about/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(PAGES).then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));

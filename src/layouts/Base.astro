@@ -7,8 +7,9 @@ import Socials from '../components/Socials.astro';
 interface Props {
   title?: string;
   description?: string;
+  noindex?: boolean; // private pages (bucket list): keep them out of search engines
 }
-const { title, description = site.tagline } = Astro.props;
+const { title, description = site.tagline, noindex = false } = Astro.props;
 // Home: "Ascent — Aryan Jain"   Baaki pages: "Journal · Ascent"
 const fullTitle = title ? `${title} · ${site.brand}` : `${site.brand} — ${site.name}`;
 const path = Astro.url.pathname;
@@ -23,6 +24,7 @@ const last = [...'Jain'];
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#0e0b0a" />
     <!-- App icon + "Add to Home screen" support -->
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -88,6 +90,10 @@ const last = [...'Jain'];
           ))}
           <a class="toggle searchbtn" href="/explore/?focus" aria-label="Search the site (press /)" title="Search  ( / or ⌘K )">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </a>
+          <!-- Private bucket list book (locked with the Gym passcode) -->
+          <a class="toggle bucketbtn" href="/bucket/" aria-label="Bucket list — private, locked" title="Bucket list (private)" aria-current={path === '/bucket/' ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path class="bk" d="M5.5 4.2c0-.9.7-1.6 1.6-1.6h10.4c.6 0 1 .4 1 1v16.8c0 .6-.4 1-1 1H7.1c-.9 0-1.6-.7-1.6-1.6V4.2Z" /><path class="sp" d="M8.2 2.8v18.4" /><path class="cl" d="M18.5 10.2h1.6c.5 0 .9.4.9.9v1.8c0 .5-.4.9-.9.9h-1.6" /><circle class="cl" cx="13.4" cy="10.4" r="2.1" /></svg>
           </a>
           <button id="theme-toggle" class="toggle" type="button" aria-label="Toggle light and dark mode">
             <span class="sunicon">☀️</span><span class="moon">🌙</span>
@@ -333,6 +339,13 @@ const last = [...'Jain'];
   .searchbtn { display: grid; place-items: center; color: var(--ink); }
   .searchbtn:hover { transform: scale(1.08); border-color: var(--accent); }
   .searchbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .bucketbtn { display: grid; place-items: center; transition: transform .3s, border-color .3s, box-shadow .3s; }
+  .bucketbtn svg { width: 19px; height: 19px; overflow: visible; }
+  .bucketbtn .bk { fill: #6b1b2a; stroke: #b98a4a; stroke-width: 1.1; }
+  .bucketbtn .sp { stroke: rgba(0,0,0,.35); stroke-width: 1.2; }
+  .bucketbtn .cl { fill: none; stroke: #e0b25e; stroke-width: 1.5; }
+  .bucketbtn:hover, .bucketbtn[aria-current='page'] { transform: translateY(-1px) scale(1.06); border-color: #c9a24f; box-shadow: 0 0 0 3px rgba(224,178,94,.14), 0 0 18px rgba(224,178,94,.45); }
+  .bucketbtn:hover .cl { stroke: #ffd98a; }
   .toggle .moon { display: none; }
   :global(:root[data-theme='dark']) .toggle .sunicon { display: none; }
   :global(:root[data-theme='dark']) .toggle .moon { display: inline; }
@@ -342,6 +355,7 @@ const last = [...'Jain'];
   .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 14px; }
 
   @media (max-width: 420px) { .word { display: none; } }
+  @media (max-width: 400px) { nav { gap: 9px !important; } nav a { font-size: 13px; } .toggle { width: 32px !important; height: 32px !important; } .bar { gap: 8px !important; padding-inline: 12px !important; } }
   @media (max-width: 480px) {
     .bar { padding-inline: 16px; gap: 10px; }
     .word { font-size: 21px; }
