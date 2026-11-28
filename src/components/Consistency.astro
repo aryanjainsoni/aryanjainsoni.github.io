@@ -27,9 +27,9 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
     <div class="maphead"><h3>Journal</h3><span class="muted">one square = one day written</span></div>
     <div class="mini">
       <Stats items={[
-        { value: journal.current, label: 'day streak' },
-        { value: journal.longest, label: 'longest streak' },
-        { value: journal.total, label: 'days journaled' },
+        { value: journal.current, label: 'day streak 🔥' },
+        { value: journal.longest, label: 'longest streak 🏆' },
+        { value: journal.total, label: 'days journaled 📓' },
       ]} />
     </div>
     <Heatmap byDay={journal.byDay} empty="no entry" />
@@ -44,9 +44,9 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
       </div>
       <div class="mini">
         <Stats items={[
-          { value: lc.solved.all, label: 'problems solved' },
-          { value: lcStreak!.current, label: 'day streak' },
-          { value: lc.activeDays, label: 'active days' },
+          { value: lc.solved.all, label: 'problems solved ✅' },
+          { value: lcStreak!.current, label: 'day streak 🔥' },
+          { value: lc.activeDays, label: 'active days 📅' },
         ]} />
       </div>
       <Heatmap byDay={lcLevels} labels={lcLabels} empty="no submissions" />
