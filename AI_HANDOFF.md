@@ -54,6 +54,8 @@ decisions that are truly mine.
   design/ (icon options, not built). Topic card photos: drop public/images/covers/<slug>.jpg.
 
 ## HOW THINGS WORK (don't break these)
+- Daily Log GitHub box auto-fills from my public commits for that date (GitHub search API, IST day,
+  grouped by repo; never overwrites typed text unless I press ⟳ Fetch).
 - Daily Log (/log/): answers → markdown entry → "Publish to GitHub" opens github.com/.../new/main/... with
   the file prefilled; I press Commit. Drafts in localStorage ("log:draft:DATE"). "Grateful" is private.
 - Goals (/goals/): ticks + my edited goal list live in the BROWSER only (localStorage "goals:YYYY-MM-DD",
@@ -130,6 +132,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Daily Log: GitHub box auto-fills from that date's public commits (+ ⟳ Fetch button).
 - 2026-11-28 Gym Notebook tab: 12 sourced chapters with 11 charts/diagrams (from the 100-day video + research).
 - 2026-11-28 Smart typing site-wide: suggestions, autocorrect + undo, spelling chip, learns my words.
 - 2026-11-28 Diet: food suggestions while typing, +45 foods (shakes, fruits, sweets, snacks), private "New food"; fingerprint retry for Android.

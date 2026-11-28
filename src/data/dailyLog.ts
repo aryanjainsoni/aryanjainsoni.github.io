@@ -13,6 +13,7 @@ export type Q = {
   options?: string[]; out: 'meta' | 'learned' | 'did' | 'reflect' | 'tomorrow' | 'none';
   prefix?: string; tag?: string; required?: boolean; private?: boolean; unit?: string;
   step?: number; // number input ka step (default 0.5)
+  auto?: 'github'; // 'github' -> us date ke GitHub commits apne aap bhar deta hai
   fm?: boolean;  // true -> answer journal ke frontmatter mein bhi jaata hai (charts ke liye, e.g. steps)
 };
 export type Section = { id: string; title: string; intro: string; questions: Q[] };
@@ -40,7 +41,7 @@ export const dailyLog: Section[] = [
   {
     id: 'build', title: 'Build & share', intro: 'What you made or put out into the world.',
     questions: [
-      { id: 'github', label: 'GitHub — what did you commit / build?', type: 'long', out: 'did', prefix: 'Built', tag: 'github' },
+      { id: 'github', label: 'GitHub — what did you commit / build?', hint: 'Filled automatically from your public GitHub commits for this date — edit freely', type: 'long', out: 'did', prefix: 'Built', tag: 'github', auto: 'github' },
       { id: 'linkedin', label: 'LinkedIn', type: 'choice', options: ['Posted', 'Commented', 'Connected', 'Just read', 'Skipped'], out: 'did', prefix: 'LinkedIn', tag: 'linkedin' },
       { id: 'linkedinNote', label: 'LinkedIn — what about? (optional)', type: 'text', out: 'did', prefix: 'LinkedIn note' },
       // Daily streak games (Zip streak 209, Patches 197 on 28 Nov 2026)
