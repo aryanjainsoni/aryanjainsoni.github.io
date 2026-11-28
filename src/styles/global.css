@@ -211,3 +211,6 @@ html.sd-open { overflow: hidden; }
 .toggle.gear svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
 html.sd-open .toggle.gear svg { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .toggle.gear { transition: none; } .toggle.gear:hover { transform: none; } }
+/* gear icon exactly centred in its circle */
+.toggle.gear { display: inline-grid; place-items: center; padding: 0; line-height: 0; }
+.toggle.gear svg { display: block; margin: 0; transform-origin: 50% 50%; }
