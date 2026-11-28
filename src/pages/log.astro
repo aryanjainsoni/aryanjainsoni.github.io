@@ -8,6 +8,11 @@ import { getEntries } from '../lib/journal';
 
 const existing = (await getEntries()).map((e) => e.id);
 const all = dailyLog.flatMap((s) => s.questions);
+// Chhote icons multi-select options ke liye (apne design — LinkedIn ke official art nahi)
+const icons: Record<string, string> = {
+  Zip: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#ff7a45"/><path d="M6 7h12v5H6v5h12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="7" r="2.2" fill="#1c1512"/><circle cx="18" cy="17" r="2.2" fill="#1c1512"/></svg>',
+  Patches: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1c1512"/><rect x="4" y="4" width="9" height="7" rx="1.5" fill="#f9c74f"/><rect x="14" y="4" width="6" height="11" rx="1.5" fill="#43aa8b"/><rect x="4" y="12" width="9" height="8" rx="1.5" fill="#f3722c"/><rect x="14" y="16" width="6" height="4" rx="1.5" fill="#577590"/></svg>',
+};
 ---
 <Base title="Daily Log" description="Aryan's daily log — a few questions that turn into today's journal entry.">
   <section class="head">
@@ -43,6 +48,11 @@ const all = dailyLog.flatMap((s) => s.questions);
                 {q.type === 'rate' && (
                   <div class="rate" role="radiogroup" aria-label={q.label} id={`f-${q.id}`}>
                     {[1, 2, 3, 4, 5].map((v) => <label><input type="radio" name={q.id} value={v} /><span>{v}</span></label>)}
+                  </div>
+                )}
+                {q.type === 'multi' && (
+                  <div class="chips multi" role="group" aria-label={q.label} id={`f-${q.id}`}>
+                    {q.options!.map((o) => <label><input type="checkbox" name={q.id} value={o} /><span>{icons[o] && <i class="ico" set:html={icons[o]} />}{o}</span></label>)}
                   </div>
                 )}
                 {q.type === 'choice' && (
@@ -94,6 +104,7 @@ const all = dailyLog.flatMap((s) => s.questions);
         const v = {};
         Q.forEach((q) => {
           if (q.type === 'rate' || q.type === 'choice') { const c = form.querySelector(`input[name="${q.id}"]:checked`); v[q.id] = c ? c.value : ''; }
+          else if (q.type === 'multi') v[q.id] = [...form.querySelectorAll(`input[name="${q.id}"]:checked`)].map((c) => c.value).join(', ');
           else v[q.id] = (form.elements[q.id]?.value || '').trim();
         });
         return v;
@@ -101,6 +112,7 @@ const all = dailyLog.flatMap((s) => s.questions);
       const write = (v) => {
         Q.forEach((q) => {
           if (q.type === 'rate' || q.type === 'choice') $$(`input[name="${q.id}"]`, form).forEach((r) => (r.checked = r.value === String(v[q.id] ?? '')));
+          else if (q.type === 'multi') $$(`input[name="${q.id}"]`, form).forEach((r) => (r.checked = String(v[q.id] ?? '').split(', ').includes(r.value)));
           else if (form.elements[q.id]) form.elements[q.id].value = v[q.id] ?? '';
         });
       };
@@ -249,6 +261,10 @@ const all = dailyLog.flatMap((s) => s.questions);
   .rate, .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .rate label, .chips label { position: relative; cursor: pointer; }
   .rate input, .chips input { position: absolute; opacity: 0; pointer-events: none; }
+  .chips.multi span { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 8px; }
+  .chips.multi .ico { display: inline-grid; width: 24px; height: 24px; }
+  .chips.multi .ico :global(svg) { width: 24px; height: 24px; }
+  .chips.multi input:checked + span::after { content: '✓'; font-weight: 700; }
   .rate span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); font: 600 14px 'Inter', sans-serif; color: var(--muted); transition: all .2s; }
   .chips span { display: inline-block; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font: 600 13px 'Inter', sans-serif; color: var(--muted); transition: all .2s; }
   .rate input:checked + span, .chips input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }

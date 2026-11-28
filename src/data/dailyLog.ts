@@ -2,14 +2,14 @@
 // Form ko badalna ho to bas yahan sawaal jodo / hatao / badlo — page apne aap update ho jayega.
 //
 // type:   'text' (one line) | 'long' (paragraph) | 'list' (one item per line) | 'rate' (1–5) |
-//         'choice' (pick one) | 'number'
+//         'choice' (pick one) | 'multi' (pick any — checkboxes) | 'number'
 // out:    entry ke kis section mein jaayega: 'meta' (top line) | 'learned' | 'did' | 'reflect' | 'tomorrow'
 // prefix: bullet ke aage kya likha jaaye, e.g. "Vedantu AI: ..."
 // tag:    answer diya to ye tag entry mein jud jaata hai
 // private: true -> sirf aapke browser mein save, journal entry (public) mein NAHI jaata
 
 export type Q = {
-  id: string; label: string; hint?: string; type: 'text' | 'long' | 'list' | 'rate' | 'choice' | 'number';
+  id: string; label: string; hint?: string; type: 'text' | 'long' | 'list' | 'rate' | 'choice' | 'multi' | 'number';
   options?: string[]; out: 'meta' | 'learned' | 'did' | 'reflect' | 'tomorrow' | 'none';
   prefix?: string; tag?: string; required?: boolean; private?: boolean; unit?: string;
 };
@@ -41,6 +41,8 @@ export const dailyLog: Section[] = [
       { id: 'github', label: 'GitHub — what did you commit / build?', type: 'long', out: 'did', prefix: 'Built', tag: 'github' },
       { id: 'linkedin', label: 'LinkedIn', type: 'choice', options: ['Posted', 'Commented', 'Connected', 'Just read', 'Skipped'], out: 'did', prefix: 'LinkedIn', tag: 'linkedin' },
       { id: 'linkedinNote', label: 'LinkedIn — what about? (optional)', type: 'text', out: 'did', prefix: 'LinkedIn note' },
+      // Daily streak games (Zip streak 209, Patches 197 on 28 Nov 2026)
+      { id: 'lgames', label: 'LinkedIn daily games', hint: 'Tick what you played today — keep the streak alive', type: 'multi', options: ['Zip', 'Patches'], out: 'did', prefix: 'LinkedIn games', tag: 'linkedin-games' },
     ],
   },
   {
