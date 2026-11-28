@@ -91,12 +91,13 @@ decisions that are truly mine.
   word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
   spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
   Skips passwords, numbers, the food search and anything with data-nosmart.
-- Gym tabs are round live-video icons: abstract 3D loops (MotionSites free backgrounds: Energy Ring, Eclipse
-  Ring, Blue Light Rings, Floating Blossom, Solar Flare, Prism Ring) + glass + white SVG glyph, each with its
+- Gym tabs are round live-video icons: "ancient + modern tech" 3D loops (MotionSites free backgrounds: Steps Energy Ring,
+  Today Sunset Portal stone gate, Plan Orbit Ball astrolabe, Diet Glowing Lotus, Body Golden Crag, Notebook
+  White Doorway) + glass + white SVG glyph, each with its
   own tint (orbs array in gym.astro). All loop while visible; hover = bigger, brighter, 1.6× speed. Files:
   public/videos/gym/*.mp4 (+ .jpg posters), compressed with macOS avconvert PresetMediumQuality.
 - Gym music: per-tab royalty-free instrumentals from Pixabay (public/audio/gym/*.m4a, 96 kbps AAC via afconvert).
-  Off by default ("Sound" button, choice saved as gym:sound); Web Audio crossfades when switching tabs.
+  Off by default (round music-note icon; slash = off, choice saved as gym:sound); Web Audio crossfades when switching tabs.
   Loudness: each track's RMS was measured and scaled to ~ -31 dBFS (gains map in gym.astro) + a limiter
   (DynamicsCompressor). Note: a website can't override the laptop's own volume keys.
   Tracks: Steps "Heroic Background Music" (EnergySound), Today "Morning Evening Piano & Strings" (WELC0MEИ0),
@@ -150,6 +151,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym orbs re-themed "ancient + modern tech" (stone gate, astrolabe, lotus, crag, doorway); music toggle is now a note icon.
 - 2026-11-28 Gym music: quiet background level per track (measured loudness) + limiter.
 - 2026-11-28 Gym orbs redesigned (3D loops + glass + glyphs, always live, hover boost) + per-tab music with crossfade.
 - 2026-11-28 Gym tabs → round live 3D video icons (Steps, Today, Plan, Diet, Body, Notebook).

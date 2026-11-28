@@ -20,11 +20,11 @@ const fmtLong = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', mon
 // Gym tabs: [id, label, media name, tint, SVG glyph]
 const orbs: [string, string, string, string, string][] = [
   ['steps', 'Steps', 'steps', '#7aa7ff', '<path d="M8.5 3.5c1.7 0 2.5 1.8 2.5 4s-1 3.6-2.6 3.6S6 9.8 6 7.6 6.8 3.5 8.5 3.5Z"/><path d="M6.6 13.4h3.8l-.3 2.3a1.9 1.9 0 0 1-3.8 0Z"/><path d="M15.5 8.5c1.7 0 2.5 1.8 2.5 4s-1 3.6-2.6 3.6-2.4-1.3-2.4-3.5.8-4.1 2.5-4.1Z"/><path d="M13.6 18.4h3.8l-.3 2.3a1.9 1.9 0 0 1-3.8 0Z"/>'],
-  ['today', 'Today', 'today', '#ff9a3d', '<path d="M3 17.5h18"/><path d="M7 17.5a5 5 0 0 1 10 0"/><path d="M12 6v3M5.6 9.1l2 2M18.4 9.1l-2 2"/><path d="M8.5 20.5h7"/>'],
-  ['plan', 'Plan', 'plan', '#5b7bff', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/>'],
-  ['diet', 'Diet', 'diet', '#3fd1a8', '<path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19c3-4 6-7 10-9"/>'],
-  ['body', 'Body', 'body', '#ff6a2a', '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>'],
-  ['guide', 'Notebook', 'notebook', '#c5d2ff', '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>'],
+  ['today', 'Today', 'today', '#ffc46b', '<path d="M3 17.5h18"/><path d="M7 17.5a5 5 0 0 1 10 0"/><path d="M12 6v3M5.6 9.1l2 2M18.4 9.1l-2 2"/><path d="M8.5 20.5h7"/>'],
+  ['plan', 'Plan', 'plan', '#d9dee8', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/>'],
+  ['diet', 'Diet', 'diet', '#ff9ec4', '<path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19c3-4 6-7 10-9"/>'],
+  ['body', 'Body', 'body', '#e9a64f', '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>'],
+  ['guide', 'Notebook', 'notebook', '#f3efe6', '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>'],
 ];
 
 // Music loudness: each track measured (RMS) and scaled to the same quiet background level (~ -31 dBFS RMS)
@@ -69,8 +69,8 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
             </button>
           ))}
         </div>
-        <button type="button" class="sound" id="gym-sound" aria-pressed="false" title="Background music — each tab has its own">
-          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="sl">Sound off</span>
+        <button type="button" class="sound" id="gym-sound" aria-pressed="false" aria-label="Music off — turn on" title="Background music (each tab has its own)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5V6.5l10-2.5v12"/><circle class="note" cx="6.5" cy="18.5" r="2.5"/><circle class="note" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg>
         </button>
       </div>
     </div>
@@ -278,7 +278,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
         if (nowTrack && tracks[nowTrack]) { const old = tracks[nowTrack]; fade(old, 0, 1.2); setTimeout(() => { if (nowTrack !== old.name) old.el.pause(); }, 1300); old.name = nowTrack; }
         const t = trackFor(name); t.name = name; t.el.play().catch(() => {}); fade(t, gainOf(name), 1.6); nowTrack = name;
       }
-      const setSoundUi = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.querySelector('.sl').textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.classList.toggle('on', soundOn); };
+      const setSoundUi = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.setAttribute('aria-label', soundOn ? 'Music on — turn off' : 'Music off — turn on'); soundBtn.classList.toggle('on', soundOn); };
       const soundStop = () => { Object.values(tracks).forEach((t) => { fade(t, 0, 0.8); setTimeout(() => t.el.pause(), 900); }); nowTrack = null; };
       soundBtn.addEventListener('click', () => {
         soundOn = !soundOn; localStorage.setItem('gym:sound', soundOn ? 'on' : 'off'); setSoundUi();
@@ -452,14 +452,15 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   .orbs button[aria-selected='true'] { color: var(--ink); }
   .orbs button[aria-selected='true'] .orb { filter: saturate(1.15) brightness(1.05); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--tint), 0 10px 32px -8px var(--tint); }
   .orbs button[aria-selected='true'] .orb-label::after { content: ''; display: block; width: 14px; height: 2px; margin: 4px auto 0; border-radius: 2px; background: var(--tint); }
-  .sound { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; cursor: pointer; transition: border-color .2s, color .2s; }
-  .sound:hover, .sound.on { border-color: var(--accent); color: var(--ink); }
-  .sound .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
-  .sound .eq i { width: 2px; height: 3px; border-radius: 1px; background: currentColor; transition: height .3s; }
-  .sound.on .eq i { background: var(--accent); animation: eq 1s ease-in-out infinite; }
-  .sound.on .eq i:nth-child(2) { animation-delay: -.25s; } .sound.on .eq i:nth-child(3) { animation-delay: -.5s; } .sound.on .eq i:nth-child(4) { animation-delay: -.75s; }
-  @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
-  @media (prefers-reduced-motion: reduce) { .orbs .orb, .orbs video, .orbs .glyph { transition: none; } .orbs button:hover .orb { transform: none; } .sound.on .eq i { animation: none; height: 8px; } }
+  .sound { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; transition: border-color .25s, color .25s, box-shadow .25s; }
+  .sound svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+  .sound .slash { stroke-dasharray: 24; stroke-dashoffset: 0; transition: stroke-dashoffset .35s ease; }
+  .sound:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+  .sound.on { color: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
+  .sound.on .slash { stroke-dashoffset: 24; }
+  .sound.on::after { content: ''; position: absolute; inset: -1px; border-radius: 50%; border: 1px solid var(--accent); animation: ping 2.4s ease-out infinite; }
+  @keyframes ping { from { transform: scale(1); opacity: .6; } to { transform: scale(1.5); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .orbs .orb, .orbs video, .orbs .glyph { transition: none; } .orbs button:hover .orb { transform: none; } .sound.on::after { animation: none; } }
 
   .panel { padding-block: 36px 24px; }
   /* app tabs (Today…Notebook): compact hero so the whole tab fits one screen; only the footer is below */
