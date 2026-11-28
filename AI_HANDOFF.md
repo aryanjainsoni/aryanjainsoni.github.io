@@ -42,7 +42,8 @@ decisions that are truly mine.
 - src/components/       → Consistency (journal + LeetCode boxes, used on Home & Journal), Heatmap, Stats,
                           Socials (brand-colour hover), TopicCard, IndexRow; bits/ = React Bits components.
 - Pages: / (home) · /journal/ · /journal/[date]/ · /log/ (Daily Log form) · /post/ (weekly LinkedIn post
-  generator) · /goals/ (habits) · /explore/ (searchable Index + timeline) · /about/
+  generator) · /goals/ (habits) · /gym/ (Steps tab + Diet plan tab) · /explore/ (searchable Index + timeline) · /about/
+- src/lib/steps.ts → steps stats for /gym/ (goal = site.stepGoal, 10,000).
 - public/images/ (me-big.jpg, me-full.jpg, me.jpg), public/icons/ + manifest.webmanifest (installable app),
   design/ (icon options, not built). Topic card photos: drop public/images/covers/<slug>.jpg.
 
@@ -54,6 +55,9 @@ decisions that are truly mine.
   list is public in profile.ts — private items (e.g. medicine) are added only via the in-browser editor.
 - Index (/explore/): search + category view + Timeline view, sort newest/oldest, year/month filters,
   share links (?q=&view=time&year=). New content in profile.ts / journal appears automatically.
+- Steps (/gym/): no automatic phone sync (Google Fit web API is shutting down; Health Connect is Android-only).
+  I type "Steps today" in the Daily Log → saved as `steps:` in the entry's frontmatter → ring, chart
+  (7D/30D/90D/1Y), streaks, weekday rhythm, lifetime km and heatmap on /gym/.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -83,7 +87,9 @@ decisions that are truly mine.
 2. Roadmap: Week 1 project case studies (start with Breast Cancer Prediction) → Week 2 Notes Library
    (PDFs, searchable) → Week 3 Achievements gallery (certificate/newspaper photos) → Week 4 GitHub README
    polish + SEO/OG share image + sitemap.
-3. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
+3. Gym → Diet plan tab is a placeholder. Needs my inputs (BMI report, goal, old diet plan, veg/Jain rules,
+   allergies, routine, supplements, budget). Keep body metrics PRIVATE (never on the public site).
+4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
 
 ## FIRST THING TO DO

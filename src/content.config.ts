@@ -11,6 +11,7 @@ const journal = defineCollection({
     date: z.coerce.date(),
     tags: z.array(z.string()).default([]),
     dsaSolved: z.number().int().min(0).default(0),
+    steps: z.number().int().min(0).optional(), // Daily Log -> Gym page steps chart
   }),
 });
 

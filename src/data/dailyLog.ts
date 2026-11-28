@@ -12,6 +12,8 @@ export type Q = {
   id: string; label: string; hint?: string; type: 'text' | 'long' | 'list' | 'rate' | 'choice' | 'multi' | 'number';
   options?: string[]; out: 'meta' | 'learned' | 'did' | 'reflect' | 'tomorrow' | 'none';
   prefix?: string; tag?: string; required?: boolean; private?: boolean; unit?: string;
+  step?: number; // number input ka step (default 0.5)
+  fm?: boolean;  // true -> answer journal ke frontmatter mein bhi jaata hai (charts ke liye, e.g. steps)
 };
 export type Section = { id: string; title: string; intro: string; questions: Q[] };
 
@@ -51,6 +53,8 @@ export const dailyLog: Section[] = [
       { id: 'gym', label: 'Gym', type: 'choice', options: ['Push', 'Pull', 'Legs', 'Full body', 'Cardio', 'Rest day', 'Skipped'], out: 'did', prefix: 'Gym', tag: 'gym' },
       { id: 'gymNote', label: 'Workout highlight / PR (optional)', hint: 'e.g. "Bench 60kg × 8 — new PR"', type: 'text', out: 'did', prefix: 'Workout' },
       { id: 'swim', label: 'Swimming', type: 'choice', options: ['Swam', 'Not today'], out: 'did', prefix: 'Swimming', tag: 'swimming' },
+      // Steps: phone ki Fit / Health app se number dekh kar daalo -> Gym page ka chart isi se banta hai
+      { id: 'steps', label: 'Steps today', hint: 'Check your phone’s Fit / Health app — powers the chart on the Gym page', type: 'number', unit: 'steps', step: 1, fm: true, out: 'none' },
       { id: 'diet', label: 'Diet plan', type: 'choice', options: ['On track', 'Mostly', 'Off track'], out: 'did', prefix: 'Diet' },
     ],
   },

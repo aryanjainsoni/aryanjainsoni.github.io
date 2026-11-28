@@ -12,6 +12,7 @@ export const site = {
   trackerUrl: 'https://docs.google.com/spreadsheets/d/1Q5VmpzsFNSOjB5v1Y_DjRDtLoPALP2hmfaOsLEB1GLg/edit?gid=1146949084#gid=1146949084',
   // Journey shuru hone ki date — isse "Day X" count hota hai
   startDate: '2026-11-27',
+  stepGoal: 10000, // Gym page: daily steps target
 };
 
 export const links = [
@@ -39,7 +40,7 @@ export const topics = [
   { slug: 'art', title: 'Art', line: 'Drawings, published in print.', href: '/art/', ready: false, emoji: '🎨', art: ['#f15bb5', '#fee440'] },
   { slug: 'abacus', title: 'Abacus', line: 'Where numbers first clicked.', href: '/abacus/', ready: false, emoji: '🧮', art: ['#ff8fa3', '#c9184a'] },
   { slug: 'swimming', title: 'Swimming', line: 'New skill. Deep end.', href: '/swimming/', ready: false, emoji: '🏊', art: ['#4cc9f0', '#f72585'] },
-  { slug: 'gym', title: 'Gym', line: 'Showing up since last year.', href: '/gym/', ready: false, emoji: '🏋️', art: ['#ff6b35', '#1a1a2e'] },
+  { slug: 'gym', title: 'Gym', line: 'Steps, training & diet — tracked daily.', href: '/gym/', ready: true, emoji: '🏋️', art: ['#ff6b35', '#1a1a2e'] },
   { slug: 'internship', title: 'Internship', line: 'From zero — documented.', href: '/internship/', ready: false, emoji: '🧭', art: ['#f4a261', '#e76f51'], size: 'wide' },
   { slug: 'progress', title: 'Goals', line: 'Daily & weekly goals, ticked off.', href: '/goals/', ready: true, emoji: '🎯', art: ['#ff9e00', '#ff0054'] },
 ];

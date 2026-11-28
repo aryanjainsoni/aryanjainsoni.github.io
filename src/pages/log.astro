@@ -44,7 +44,7 @@ const icons: Record<string, string> = {
                 {q.hint && <p class="hint">{q.hint}</p>}
                 {q.type === 'text' && <input id={`f-${q.id}`} name={q.id} type="text" />}
                 {(q.type === 'long' || q.type === 'list') && <textarea id={`f-${q.id}`} name={q.id} rows={q.type === 'list' ? 3 : 2} placeholder={q.type === 'list' ? 'One per line' : ''}></textarea>}
-                {q.type === 'number' && <span class="num"><input id={`f-${q.id}`} name={q.id} type="number" min="0" step="0.5" inputmode="decimal" />{q.unit && <em>{q.unit}</em>}</span>}
+                {q.type === 'number' && <span class="num"><input id={`f-${q.id}`} name={q.id} type="number" min="0" step={q.step ?? 0.5} inputmode={q.step === 1 ? "numeric" : "decimal"} />{q.unit && <em>{q.unit}</em>}</span>}
                 {q.type === 'rate' && (
                   <div class="rate" role="radiogroup" aria-label={q.label} id={`f-${q.id}`}>
                     {[1, 2, 3, 4, 5].map((v) => <label><input type="radio" name={q.id} value={v} /><span>{v}</span></label>)}
@@ -130,17 +130,19 @@ const icons: Record<string, string> = {
       };
 
       const toMarkdown = (v) => {
+        const steps = () => { const n = Math.round(Number(v.steps)); return Number.isFinite(n) && n > 0 ? n : 0; };
         const tags = [...new Set(Q.filter((q) => q.tag && v[q.id] && !['Skipped', 'Not today', 'Rest day'].includes(v[q.id])).map((q) => q.tag))];
         const title = (v.headline || 'Daily log').replace(/"/g, '\\"');
         const meta = [
           v.mood && `**Mood** ${v.mood}/5`, v.energy && `**Energy** ${v.energy}/5`, v.sleep && `**Sleep** ${v.sleep}h`,
+          steps() && `**Steps** ${steps().toLocaleString('en-IN')}`,
           goalsLine() && `**${goalsLine()}**`,
         ].filter(Boolean).join(' · ');
         const bullets = (out) => Q.filter((q) => q.out === out && v[q.id] && !q.private && v[q.id] !== 'Not today').flatMap((q) => {
           if (q.type === 'list') return v[q.id].split('\n').map((l) => l.trim()).filter(Boolean).map((l) => `- ${q.prefix ? `**${q.prefix}:** ` : ''}${l}`);
           return [`- ${q.prefix ? `**${q.prefix}:** ` : ''}${v[q.id].replace(/\n+/g, ' ')}`];
         });
-        const parts = [`---\ntitle: "${title}"\ndate: ${dateIn.value}\ntags: [${(tags.length ? tags : ['journal']).join(', ')}]\n---\n`];
+        const parts = [`---\ntitle: "${title}"\ndate: ${dateIn.value}\ntags: [${(tags.length ? tags : ['journal']).join(', ')}]${steps() ? `\nsteps: ${steps()}` : ''}\n---\n`];
         if (meta) parts.push(meta + '\n');
         const L = bullets('learned'), D = bullets('did'), R = bullets('reflect'), T = bullets('tomorrow').map((l) => l.replace(/^- \*\*[^*]+\*\* /, '- '));
         if (L.length) parts.push('## What I learned\n\n' + L.join('\n') + '\n');

@@ -1,0 +1,425 @@
+---
+// GYM — two tabs: Steps (live from the Daily Log) and Diet plan (being built).
+// Steps flow: phone's Fit/Health app -> Daily Log "Steps today" -> journal frontmatter `steps:` -> this page.
+// (Automatic phone sync isn't possible on a free static site — Google Fit's web API is being shut down
+//  and Health Connect only works inside Android apps.)
+import Base from '../layouts/Base.astro';
+import Heatmap from '../components/Heatmap.astro';
+import { site } from '../data/site';
+import { getEntries } from '../lib/journal';
+import { stepStats, milestones, KM_PER_STEP, KCAL_PER_STEP } from '../lib/steps';
+
+const goal = site.stepGoal;
+const s = stepStats(await getEntries(), goal);
+const n = (x: number) => Math.round(x).toLocaleString('en-IN');
+const fmtDay = (k: string) => new Date(k).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+// Hero ring: today if logged, else the last logged day
+const shown = s.last;
+const isToday = shown?.d === s.today;
+const pct = shown ? Math.min(shown.n / goal, 1) : 0;
+const R = 88, C = 2 * Math.PI * R;
+
+// Lifetime milestone progress
+const next = milestones.find((m) => m.km > s.km);
+const prev = [...milestones].reverse().find((m) => m.km <= s.km);
+const mPct = next ? Math.min(100, ((s.km - (prev?.km ?? 0)) / (next.km - (prev?.km ?? 0))) * 100) : 100;
+
+const wdMax = Math.max(...s.weekday, 1);
+const wdNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s.weekday))] : '';
+---
+<Base title="Gym" description="Aryan Jain's fitness log — daily steps, streaks and the diet plan behind the training.">
+  <section class="head">
+    <div class="wrap">
+      <p class="kicker">Gym</p>
+      <h1>Strength is a <em>daily habit.</em></h1>
+      <p class="lead">Every step logged, every day counted. Training since 2025 — this is the quiet part of the work.</p>
+      <div class="tabs" role="tablist" aria-label="Gym sections">
+        <button role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="true" data-tab="steps">Steps</button>
+        <button role="tab" id="tab-diet" aria-controls="p-diet" aria-selected="false" data-tab="diet" tabindex="-1">Diet plan <span class="soon">soon</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEPS ================= -->
+  <section class="panel" id="p-steps" role="tabpanel" aria-labelledby="tab-steps">
+    <div class="wrap">
+      <div class="top">
+        <div class="card today">
+          <div class="ring" style={`--p:${pct}`}>
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#f08a4b" /><stop offset=".55" stop-color="#e2552f" /><stop offset="1" stop-color="#e23d6d" />
+                </linearGradient>
+              </defs>
+              <circle cx="100" cy="100" r={R} class="track" />
+              <circle cx="100" cy="100" r={R} class="bar" stroke-dasharray={C} stroke-dashoffset={C * (1 - pct)} />
+            </svg>
+            <div class="center">
+              <p class="rl">{shown ? (isToday ? 'Today' : fmtDay(shown.d)) : 'Today'}</p>
+              <b>{shown ? n(shown.n) : '—'}</b>
+              <p class="rg">of {n(goal)} steps</p>
+            </div>
+          </div>
+          <div class="facts">
+            {shown ? (
+              <>
+                <span><i>{Math.round(pct * 100)}%</i> of goal</span>
+                <span><i>≈ {(shown.n * KM_PER_STEP).toFixed(1)}</i> km</span>
+                <span><i>≈ {n(shown.n * KCAL_PER_STEP)}</i> kcal</span>
+              </>
+            ) : <span class="muted">No steps logged yet — the first one lands tonight.</span>}
+          </div>
+          {shown && !isToday && <p class="fine center-t">Today isn’t logged yet — showing the last logged day.</p>}
+        </div>
+
+        <div class="tiles">
+          <div class="tile"><span class="e" aria-hidden="true">🔥</span><b>{s.goalStreak.current}</b><span>day 10k streak</span></div>
+          <div class="tile"><span class="e" aria-hidden="true">📈</span><b>{s.avg7 ? n(s.avg7) : '—'}</b><span>7-day average</span></div>
+          <div class="tile"><span class="e" aria-hidden="true">🏆</span><b>{s.best ? n(s.best.n) : '—'}</b><span>{s.best ? `best · ${fmtDay(s.best.d)}` : 'best day'}</span></div>
+          <div class="tile"><span class="e" aria-hidden="true">🎯</span><b>{s.goalDays}<small>/{s.days.length}</small></b><span>days hit goal</span></div>
+        </div>
+      </div>
+
+      <div class="card chart">
+        <div class="chead">
+          <div>
+            <p class="label">Daily steps</p>
+            <h2 data-range-title>Last 30 days</h2>
+          </div>
+          <div class="seg" role="group" aria-label="Chart range">
+            <button data-range="7">7D</button>
+            <button data-range="30" class="on">30D</button>
+            <button data-range="90">90D</button>
+            <button data-range="365">1Y</button>
+          </div>
+        </div>
+        <div class="plotwrap">
+          <div class="plot" data-plot aria-label="Bar chart of daily steps"></div>
+          <div class="tip" data-tip hidden></div>
+        </div>
+        <div class="sum">
+          <div><p class="sk">Average</p><p class="sv" data-sum="avg">—</p></div>
+          <div><p class="sk">Total</p><p class="sv" data-sum="total">—</p></div>
+          <div><p class="sk">Goal days</p><p class="sv" data-sum="hit">—</p></div>
+          <div><p class="sk">Vs previous</p><p class="sv" data-sum="delta">—</p></div>
+        </div>
+      </div>
+
+      <div class="duo">
+        <div class="card rhythm">
+          <p class="label">Weekly rhythm</p>
+          <h3>{bestWd ? <>I walk most on <em>{bestWd}</em>.</> : 'Average by weekday'}</h3>
+          <div class="wd">
+            {s.weekday.map((v, i) => (
+              <div class="wdc" title={v ? `${wdNames[i]} · avg ${n(v)} steps` : `${wdNames[i]} · no data`}>
+                <div class="wdt"><span class:list={['wdb', { hit: v >= goal }]} style={`height:${(v / wdMax) * 100}%`}></span></div>
+                <span class="wdl">{wdNames[i][0]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="card journey">
+          <p class="label">Lifetime distance</p>
+          <p class="big"><b>{s.km < 10 ? s.km.toFixed(1) : n(s.km)}</b> km</p>
+          <p class="muted sub">{n(s.total)} steps since day one{prev && <> · past <b>{prev.name}</b></>}</p>
+          {next && (
+            <div class="mile">
+              <div class="mtop"><span>Next: {next.name}</span><span>{n(next.km)} km</span></div>
+              <div class="mbar"><span style={`width:${mPct}%`}></span></div>
+              <p class="fine">{(next.km - s.km).toFixed(next.km - s.km < 10 ? 1 : 0)} km to go</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="card year">
+        <div class="chead">
+          <div><p class="label">The year</p><h2>Every day, in steps</h2></div>
+          <p class="muted small">Darkest = {n(goal)}+ steps. Logging streak: <b>{s.logStreak.current}</b> days (best {s.logStreak.longest}).</p>
+        </div>
+        <Heatmap byDay={s.levels} labels={s.labels} empty="not logged" />
+      </div>
+
+      <div class="how">
+        <p><b>How this works.</b> Each night I read the count from my phone’s health app and log it in the <a href="/log/">Daily Log</a>. It’s manual on purpose: free, private, and one honest number a day.</p>
+        <a class="btn ghost" href="/log/#f-steps">+ Log today’s steps</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIET ================= -->
+  <section class="panel" id="p-diet" role="tabpanel" aria-labelledby="tab-diet" hidden>
+    <div class="wrap">
+      <div class="card soon-card">
+        <p class="label">Diet plan · in the works</p>
+        <h2>Fuel, <em>planned.</em></h2>
+        <p class="lead">A weekly plan built around my training, my goals and balanced nutrition — with several options for every meal, so it never gets boring.</p>
+        <ul class="feat">
+          <li><b>Mon → Sun</b><span>A plan for every day of the week</span></li>
+          <li><b>5 options</b><span>per meal — breakfast to dinner</span></li>
+          <li><b>Balanced</b><span>protein, fibre, vitamins & minerals</span></li>
+          <li><b>Supplements</b><span>only where food falls short</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline type="application/json" id="steps-data" set:html={JSON.stringify({ goal, today: s.today, days: s.days })}></script>
+  <script is:inline>
+    (() => {
+      const D = JSON.parse(document.getElementById('steps-data').textContent);
+      const map = new Map(D.days.map((x) => [x.d, x.n]));
+      const goal = D.goal;
+      const fmt = (x) => Math.round(x).toLocaleString('en-IN');
+      const key = (d) => d.toISOString().slice(0, 10);
+      const day = (k, o) => new Date(k).toLocaleDateString('en-IN', { timeZone: 'UTC', ...o });
+
+      // ---------- tabs ----------
+      const tabs = [...document.querySelectorAll('[data-tab]')];
+      const show = (name, focus) => {
+        tabs.forEach((t) => {
+          const on = t.dataset.tab === name;
+          t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+          document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+          if (on && focus) t.focus();
+        });
+        history.replaceState(null, '', name === 'steps' ? location.pathname : '#' + name);
+        if (name === 'steps') draw();
+      };
+      tabs.forEach((t, i) => {
+        t.addEventListener('click', () => show(t.dataset.tab));
+        t.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          const j = (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+          show(tabs[j].dataset.tab, true);
+        });
+      });
+
+      // ---------- chart ----------
+      const plot = document.querySelector('[data-plot]');
+      const tip = document.querySelector('[data-tip]');
+      let range = 30;
+
+      // range -> list of { k, n, label } (1Y = weekly averages)
+      const series = (r, offset = 0) => {
+        const end = new Date(D.today); end.setUTCDate(end.getUTCDate() - offset);
+        const out = [];
+        for (let i = r - 1; i >= 0; i--) { const d = new Date(end); d.setUTCDate(d.getUTCDate() - i); const k = key(d); out.push({ k, n: map.get(k) }); }
+        return out;
+      };
+      const weekly = (list) => {
+        const out = [];
+        for (let i = 0; i < list.length; i += 7) {
+          const w = list.slice(i, i + 7), got = w.filter((x) => x.n != null);
+          out.push({ k: w[0].k, k2: w[w.length - 1].k, n: got.length ? got.reduce((s, x) => s + x.n, 0) / got.length : undefined, week: true });
+        }
+        return out;
+      };
+      const summary = (list) => {
+        const got = list.filter((x) => x.n != null);
+        const total = got.reduce((s, x) => s + x.n, 0);
+        return { got, total, avg: got.length ? total / got.length : 0, hit: got.filter((x) => x.n >= goal).length };
+      };
+
+      function draw() {
+        if (!plot.offsetParent) return;
+        const raw = series(range === 365 ? 364 : range);
+        const bars = range === 365 ? weekly(raw) : raw;
+        const W = plot.clientWidth, H = W < 560 ? 200 : 260, padL = 34, padB = 26, padT = 10;
+        const max = Math.max(goal * 1.25, ...bars.map((b) => b.n || 0)) * 1.05;
+        const step = 5000 * Math.ceil(max / 5000 / 4);
+        const y = (v) => padT + (H - padT - padB) * (1 - v / max);
+        const slot = (W - padL) / bars.length, bw = Math.max(2, Math.min(28, slot * 0.62));
+        let g = '';
+        for (let v = 0; v <= max; v += step) g += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${padL - 8}" y="${y(v) + 4}" class="ax" text-anchor="end">${v ? v / 1000 + 'k' : '0'}</text>`;
+        let b = '', x = '';
+        const every = range === 7 ? 1 : range === 30 ? (W < 560 ? 7 : 5) : 0;
+        bars.forEach((d, i) => {
+          const cx = padL + slot * i + slot / 2;
+          if (d.n != null) {
+            const top = y(d.n), h = Math.max(2, H - padB - top);
+            b += `<rect x="${cx - bw / 2}" y="${H - padB - h}" width="${bw}" height="${h}" rx="${Math.min(4, bw / 2)}" class="b ${d.n >= goal ? 'hit' : ''}" style="--i:${i}"/>`;
+          } else b += `<circle cx="${cx}" cy="${H - padB - 3}" r="1.6" class="miss"/>`;
+          b += `<rect x="${padL + slot * i}" y="${padT}" width="${slot}" height="${H - padT - padB}" class="hov" data-i="${i}"/>`;
+          const dt = new Date(d.k);
+          const lab = range === 7 ? day(d.k, { weekday: 'short' })
+            : every ? (i % every === (bars.length - 1) % every ? day(d.k, { day: 'numeric', month: 'short' }) : '')
+            : (dt.getUTCDate() <= (range === 365 ? 7 : 1) && (W >= 560 || range !== 365 || dt.getUTCMonth() % 2 === 0) ? day(d.k, { month: 'short' }) : '');
+          if (lab) x += `<text x="${cx}" y="${H - 6}" class="ax" text-anchor="middle">${lab}</text>`;
+        });
+        const gy = y(goal);
+        const goalLine = `<line x1="${padL}" x2="${W}" y1="${gy}" y2="${gy}" class="goal"/><text x="${W}" y="${gy - 6}" class="gl" text-anchor="end">${fmt(goal)} goal</text>`;
+        const empty = !bars.some((d) => d.n != null) ? `<text x="${(W + padL) / 2}" y="${(H - padB) / 2}" class="empty" text-anchor="middle">No steps logged in this range yet</text>` : '';
+        plot.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Steps per ${range === 365 ? 'week (average)' : 'day'}">${g}${goalLine}${b}${x}${empty}</svg>`;
+
+        plot.querySelectorAll('.hov').forEach((r) => {
+          const d = bars[+r.dataset.i];
+          const on = () => {
+            plot.querySelectorAll('.b.sel').forEach((e) => e.classList.remove('sel'));
+            const label = d.week ? `${day(d.k, { day: 'numeric', month: 'short' })} – ${day(d.k2, { day: 'numeric', month: 'short' })}` : day(d.k, { weekday: 'short', day: 'numeric', month: 'short' });
+            tip.innerHTML = `<span>${label}</span><b>${d.n != null ? fmt(d.n) : '—'}</b><em>${d.n == null ? 'not logged' : d.week ? 'avg steps / day' : d.n >= goal ? 'goal hit ✓' : Math.round((d.n / goal) * 100) + '% of goal'}</em>`;
+            tip.hidden = false;
+            const px = +r.getAttribute('x') + slot / 2, tw = tip.offsetWidth;
+            tip.style.left = Math.min(Math.max(px - tw / 2, 0), W - tw) + 'px';
+            tip.style.top = (d.n != null ? y(d.n) : H - padB) - tip.offsetHeight - 10 + 'px';
+          };
+          r.addEventListener('pointerenter', on);
+          r.addEventListener('click', on);
+        });
+        plot.onpointerleave = () => (tip.hidden = true);
+        plot.querySelector('svg').addEventListener('pointerleave', () => (tip.hidden = true));
+
+        // summary row
+        const now = summary(raw), before = summary(series(range === 365 ? 364 : range, range === 365 ? 364 : range));
+        const set = (k, v) => (document.querySelector(`[data-sum="${k}"]`).innerHTML = v);
+        set('avg', now.got.length ? fmt(now.avg) : '—');
+        set('total', now.got.length ? fmt(now.total) : '—');
+        set('hit', now.got.length ? `${now.hit}<small>/${now.got.length}</small>` : '—');
+        if (now.got.length && before.got.length) {
+          const p = Math.round(((now.avg - before.avg) / before.avg) * 100);
+          set('delta', `<span class="${p >= 0 ? 'up' : 'down'}">${p >= 0 ? '↑' : '↓'} ${Math.abs(p)}%</span>`);
+        } else set('delta', '—');
+        document.querySelector('[data-range-title]').textContent = range === 365 ? 'Last 12 months · weekly avg' : `Last ${range} days`;
+      }
+
+      document.querySelectorAll('[data-range]').forEach((btn) => btn.addEventListener('click', () => {
+        range = +btn.dataset.range;
+        document.querySelectorAll('[data-range]').forEach((b) => b.classList.toggle('on', b === btn));
+        tip.hidden = true; draw();
+      }));
+      let t; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(draw, 120); });
+
+      show(location.hash === '#diet' ? 'diet' : 'steps');
+      addEventListener('hashchange', () => show(location.hash === '#diet' ? 'diet' : 'steps'));
+      draw();
+    })();
+  </script>
+</Base>
+
+<style>
+  .head { padding-block: 72px 0; }
+  h1 { font-size: clamp(2.8rem, 8vw, 5rem); margin: 12px 0 14px; }
+  .lead { color: var(--muted); font-size: 1.1rem; max-width: 600px; margin: 0 0 30px; }
+  .label { margin: 0 0 6px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .small { font-size: .88rem; margin: 0; max-width: 360px; }
+  .fine { margin: 10px 0 0; font-size: .82rem; color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(20px, 3vw, 30px); box-shadow: var(--shadow); min-width: 0; }
+  h2 { margin: 0; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 400; }
+
+  /* tabs */
+  .tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .tabs button { border: none; background: transparent; color: var(--muted); font: 600 14px 'Inter', sans-serif; padding: 10px 20px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .25s, color .25s; }
+  .tabs button[aria-selected='true'] { background: var(--ink); color: var(--bg); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .soon { font: 500 9px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); border: 1px solid currentColor; border-radius: 999px; padding: 2px 6px; }
+
+  .panel { padding-block: 36px 24px; }
+  .panel .wrap { display: grid; gap: 16px; }
+
+  /* top: ring + tiles */
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; }
+  .today { display: grid; justify-items: center; align-content: center; gap: 18px; padding-block: 34px; }
+  .ring { position: relative; width: min(240px, 70vw); aspect-ratio: 1; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 12; }
+  .track { stroke: var(--line); }
+  .bar { stroke: url(#ringGrad); stroke-linecap: round; animation: ring 1.2s cubic-bezier(.2, .7, .2, 1) both; }
+  @keyframes ring { from { stroke-dashoffset: 553; } }
+  .center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .center b { font: 400 clamp(2.4rem, 6vw, 3.2rem)/1 'Fraunces', serif; letter-spacing: -.02em; }
+  .rl { margin: 0 0 8px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+  .rg { margin: 8px 0 0; font-size: .85rem; color: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .facts span { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: .85rem; color: var(--muted); }
+  .facts i { font-style: normal; font-weight: 600; color: var(--ink); }
+  .center-t { text-align: center; margin: 0; }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; box-shadow: var(--shadow); display: grid; align-content: end; gap: 6px; min-height: 150px; position: relative; }
+  .tile .e { position: absolute; top: 18px; right: 18px; font-size: 1.15rem; opacity: .9; }
+  .tile b { font: 400 clamp(2rem, 4vw, 2.6rem)/1 'Fraunces', serif; letter-spacing: -.01em; }
+  .tile b small, .sv small { font-size: .5em; color: var(--muted); margin-left: 2px; }
+  .tile > span:last-child { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+  /* chart */
+  .chart { position: relative; }
+  .chead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .seg { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
+  .seg button { border: none; background: transparent; color: var(--muted); font: 600 12px 'JetBrains Mono', monospace; padding: 7px 13px; border-radius: 999px; cursor: pointer; transition: background .2s, color .2s; }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); }
+  .plotwrap { position: relative; }
+  .plot { min-height: 200px; }
+  .plot :global(svg) { display: block; overflow: visible; }
+  .plot :global(.grid) { stroke: var(--line); stroke-width: 1; }
+  .plot :global(.ax) { fill: var(--muted); font: 500 10px 'JetBrains Mono', monospace; }
+  .plot :global(.goal) { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 5; opacity: .8; }
+  .plot :global(.gl) { paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; fill: var(--accent); font: 600 10px 'JetBrains Mono', monospace; letter-spacing: .06em; }
+  .plot :global(.b) { fill: color-mix(in srgb, var(--ink) 18%, transparent); transform-box: fill-box; transform-origin: bottom; animation: grow .6s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i) * 6ms); transition: fill .2s; }
+  .plot :global(.b.hit) { fill: var(--accent); }
+  .plot :global(.miss) { fill: var(--line); }
+  .plot :global(.hov) { fill: transparent; cursor: pointer; }
+  .plot :global(.hov:hover) { fill: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .plot :global(.empty) { fill: var(--muted); font: 400 15px 'Fraunces', serif; font-style: italic; }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .tip { position: absolute; z-index: 5; pointer-events: none; display: grid; gap: 2px; padding: 10px 14px; border-radius: 14px; background: var(--ink); color: var(--bg); box-shadow: var(--shadow); white-space: nowrap; }
+  .tip[hidden] { display: none; }
+  .tip :global(span) { font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; opacity: .7; }
+  .tip :global(b) { font: 400 1.4rem/1.1 'Fraunces', serif; }
+  .tip :global(em) { font-style: normal; font-size: .78rem; opacity: .8; }
+  .sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .sk { margin: 0 0 4px; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sv { margin: 0; font: 400 1.4rem/1.2 'Fraunces', serif; }
+  .sv :global(.up) { color: #2f9e6b; } .sv :global(.down) { color: var(--accent); }
+
+  /* rhythm + journey */
+  .duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  h3 { margin: 0 0 20px; font: 400 1.35rem/1.25 'Fraunces', serif; }
+  h3 em, .soon-card h2 em, h1 em { color: var(--accent); }
+  .wd { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 150px; }
+  .wdc { display: grid; grid-template-rows: 1fr auto; gap: 8px; justify-items: center; }
+  .wdt { width: 100%; max-width: 34px; background: color-mix(in srgb, var(--line) 50%, transparent); border-radius: 10px; display: flex; align-items: flex-end; overflow: hidden; }
+  .wdb { display: block; width: 100%; min-height: 0; background: color-mix(in srgb, var(--ink) 22%, transparent); border-radius: 10px; }
+  .wdb.hit { background: var(--sun); }
+  .wdl { font: 500 11px 'JetBrains Mono', monospace; color: var(--muted); }
+  .big { margin: 0; font: 400 1rem 'Inter', sans-serif; color: var(--muted); }
+  .big b { font: 400 clamp(2.8rem, 6vw, 3.6rem)/1 'Fraunces', serif; color: var(--ink); letter-spacing: -.02em; margin-right: 4px; }
+  .sub { margin: 8px 0 22px; font-size: .9rem; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  .mtop { display: flex; justify-content: space-between; font-size: .88rem; margin-bottom: 8px; }
+  .mtop span:last-child { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: .8rem; }
+  .mbar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .mbar span { display: block; height: 100%; border-radius: inherit; background: var(--sun); }
+
+  .year .chead { margin-bottom: 14px; }
+  .year { --heat: var(--accent); }
+
+  .how { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; padding: 6px 4px; }
+  .how p { margin: 0; max-width: 620px; color: var(--muted); font-size: .92rem; }
+  .how b { color: var(--ink); }
+
+  /* diet (soon) */
+  .soon-card { padding: clamp(28px, 5vw, 56px); }
+  .soon-card h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin: 8px 0 14px; }
+  .feat { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .feat li { padding: 20px 18px 4px 0; display: grid; gap: 4px; }
+  .feat li + li { padding-left: 18px; border-left: 1px solid var(--line); }
+  .feat b { font: 400 1.3rem 'Fraunces', serif; }
+  .feat span { color: var(--muted); font-size: .88rem; }
+
+  @media (prefers-reduced-motion: reduce) { .bar, .plot :global(.b) { animation: none; } }
+  @media (max-width: 860px) {
+    .top, .duo { grid-template-columns: minmax(0, 1fr); }
+    .feat { grid-template-columns: 1fr 1fr; }
+    .feat li:nth-child(3) { padding-left: 0; border-left: none; }
+  }
+  @media (max-width: 520px) {
+    .sum { grid-template-columns: 1fr 1fr; }
+    .tile { min-height: 120px; padding: 18px; }
+    .tabs button { padding: 9px 16px; }
+  }
+</style>
