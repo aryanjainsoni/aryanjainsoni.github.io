@@ -163,7 +163,14 @@ decisions that are truly mine.
   (one WebGL shader: lake ripples + glints, breathing sunbeam + dust motes, wall caustics wobble, lantern
   flicker, gold specular glints, slow push-in, parallax). Masks + book hotspot are polygons in image space
   (SCENES in cove-gl.ts) — if the photo changes, redraw those numbers. Calm mode / no WebGL = still photo.
-  Locked = iron chains + brass padlock over the book (SVG), brushed-brass lock plate; soft clink on unlock.
+  Second photo set = same scene with the book OPEN & glowing (cove-*-open.webp). Locked = the plain photo + an
+  antique cast-brass PADLOCK (shackle, keyhole escutcheon, rivets, verdigris) that wraps the vault form: engraved
+  passcode slot, wax-seal fingerprint button, plate shakes + slot flashes red on a wrong passcode (watches .f-err).
+  Unlock = keyhole turns, shackle springs, plate sinks, then the shader cross-fades ONLY the book area to the open
+  photo with a light bloom + rising gold dust. Hidden key D toggles all effects (before/after compare).
+  Effects are deliberately visible: flowing lake + reflections, shore lapping line, boat rocking (mask warp),
+  breathing beam + streaks + dust + flare, rippling wall caustics, lantern flame, travelling gold glints.
+  GOTCHA: masks are read from the canvas ALPHA channel (blurred white-on-transparent keeps red = 255).
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -207,6 +214,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Bucket cove: antique padlock, book-opens-in-photo unlock, stronger water/sun/caustic effects, D debug key.
 - 2026-11-28 Bucket cove: photoreal Gemini scene + WebGL cinemagraph (flowing water, sunbeam, dust, gold glints).
 - 2026-11-28 Bucket book: real leather cover + real aged-paper pages (Pexels textures), "Ascent · Vol. II".
 - 2026-11-28 Private bucket list book "Rahasya" (/bucket/): treasure-cove scene, vault lock, wishes, wax seals, search.

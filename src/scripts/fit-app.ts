@@ -783,7 +783,7 @@ function lockCard() {
     ${msg()}<p class="fine"><button type="button" class="f-link" data-act="screen-unlock">← Back to passcode</button></p></form>`;
   return `<form class="card f-lock f-vault" data-form="unlock" autocomplete="off">
     <span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private</p><h2>Locked.</h2>
-    <p class="lead">${keys.length && fpAvail ? 'Use your fingerprint, or enter your passcode.' : 'Enter your passcode to open Today, Plan, Diet and Body.'}</p>
+    <p class="lead">${keys.length && fpAvail ? 'Use your fingerprint, or enter your passcode.' : 'Enter your passcode to open it.'}</p>
     ${keys.length && fpAvail ? `<button type="button" class="btn primary f-finger" data-act="finger" ${wait ? 'disabled' : ''}><span aria-hidden="true">👆</span> Unlock with fingerprint</button><p class="f-or"><span>or passcode</span></p>` : ''}
     <div class="f-pass one"><label class="f-in"><input type="password" name="p" required autocomplete="current-password" placeholder="••••••" ${wait ? 'disabled' : ''}><span>passcode</span></label>
       <button class="btn ${keys.length && fpAvail ? 'ghost' : 'primary'}" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${fmtWait(wait)}` : 'Unlock'}</button></div>

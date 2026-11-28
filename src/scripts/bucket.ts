@@ -17,7 +17,7 @@ if (root) init(root);
 function init(root: HTMLElement) {
   const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
   const cove = $('[data-cove]'), canvas = $<HTMLCanvasElement>('[data-gl]');
-  const sbook = $('[data-sbook]'), hint = $('[data-hint]'), lockWrap = $('[data-lockwrap]');
+  const sbook = $('[data-sbook]'), hint = $('[data-hint]'), lockWrap = $('[data-lockwrap]'), plate = $('[data-plate]');
   const stage = $('[data-stage]'), book = $('[data-book]'), ind = $('[data-ind]'), say = $('[data-say]');
   const prevB = $<HTMLButtonElement>('[data-prev]'), nextB = $<HTMLButtonElement>('[data-next]');
   const findBox = $('[data-findbox]'), findBtn = $('[data-find]'), q = $<HTMLInputElement>('[data-q]'), res = $('[data-res]');
@@ -34,17 +34,27 @@ function init(root: HTMLElement) {
   const store = (): Store => { const s = api?.get<Store | null>(KEY, null); return s && Array.isArray(s.wishes) ? s : { v: 1, wishes: [] }; };
   const wishes = () => store().wishes;
   const save = (list: Wish[]) => api?.set(KEY, { v: 1, wishes: list } satisfies Store);
+  // unlock = the padlock turns + springs open, then the book in the photo opens and glows
+  let firstState = true, openTimer = 0;
   function setApi(a: Api | null) {
-    if (a && root.dataset.state === 'locked') setTimeout(clink, 250); // chains slide off
-    api = a;
-    root.dataset.state = a ? 'open' : 'locked';
-    hint.textContent = a ? 'Touch the book to open it' : 'The book is sealed.';
-    if (!a) { closeBook(true); return; }
+    const wasLocked = root.dataset.state !== 'open';
+    api = a; clearTimeout(openTimer);
+    if (!a) {
+      root.dataset.state = 'locked'; hint.textContent = 'The book is sealed.'; hint.hidden = false;
+      cove3?.setOpen(false, firstState); firstState = false; placeAgain(); closeBook(true); return;
+    }
     const deep = location.hash.match(/^#p-(\d+)$/);
+    if (!wasLocked || firstState || calm()) {
+      root.dataset.state = 'open'; cove3?.setOpen(true, true); hint.textContent = 'Open the book'; placeAgain();
+    } else {
+      const h = plate.getBoundingClientRect().height; plate.style.minHeight = h + 'px';
+      root.dataset.state = 'opening'; hint.hidden = true; clink();
+      setTimeout(() => cove3?.setOpen(true), 550);
+      openTimer = window.setTimeout(() => { root.dataset.state = 'open'; plate.style.minHeight = ''; hint.textContent = 'Open the book'; hint.hidden = false; placeAgain(); }, 2100);
+    }
+    firstState = false;
     if (deep) openBook(+deep[1], true);
   }
-  addEventListener('ascent:vault', (e) => setApi((e as CustomEvent<Api | null>).detail));
-  setApi(api);
 
   // ---------------- dates ----------------
   const sortKey = (w: Wish) => w.date || (w.month ? w.month + '-31' : '9999-12-31');
@@ -58,15 +68,21 @@ function init(root: HTMLElement) {
 
   // ================= THE COVE (photo + WebGL cinemagraph, see cove-gl.ts) =================
   // place the book hotspot exactly over the book in the photo
-  const placeBook = (sc: { book: { x: number; y: number; w: number; h: number; rot: number } }, map: (x: number, y: number) => [number, number]) => {
-    const [x1, y1] = map(sc.book.x, sc.book.y), [x2, y2] = map(sc.book.x + sc.book.w, sc.book.y + sc.book.h);
-    Object.assign(sbook.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px`, transform: `rotate(${sc.book.rot}deg)` });
+  type R = { x: number; y: number; w: number; h: number; rot: number };
+  let lastScene: { book: R; bookOpen: R } | null = null, lastMap: ((x: number, y: number) => [number, number]) | null = null;
+  const placeBook = (sc: { book: R; bookOpen: R }, map: (x: number, y: number) => [number, number]) => {
+    lastScene = sc; lastMap = map;
+    const b = root.dataset.state === 'open' ? sc.bookOpen : sc.book;
+    const [x1, y1] = map(b.x, b.y), [x2, y2] = map(b.x + b.w, b.y + b.h);
+    Object.assign(sbook.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px`, transform: `rotate(${b.rot}deg)` });
     Object.assign(hint.style, { left: `${(x1 + x2) / 2}px`, top: `${Math.max(12, y1 - 46)}px`, bottom: 'auto' });
   };
+  function placeAgain() { if (lastScene && lastMap) placeBook(lastScene, lastMap); }
   const gl = calm() ? null : createCove(canvas, { onLayout: placeBook });
+  const cove3 = gl;
   if (!gl) {
     // no WebGL (or calm mode): the still photo, hotspot mapped with the same cover maths
-    const AS = { wide: { a: 1376 / 768, book: { x: 0.5, y: 0.765, w: 0.205, h: 0.2, rot: -6 } }, tall: { a: 768 / 1376, book: { x: 0.445, y: 0.775, w: 0.42, h: 0.165, rot: -4 } } };
+    const AS = { wide: { a: 1376 / 768, book: { x: 0.5, y: 0.765, w: 0.205, h: 0.2, rot: -6 }, bookOpen: { x: 0.43, y: 0.71, w: 0.275, h: 0.24, rot: -4 } }, tall: { a: 768 / 1376, book: { x: 0.445, y: 0.775, w: 0.42, h: 0.165, rot: -4 }, bookOpen: { x: 0.32, y: 0.7, w: 0.54, h: 0.24, rot: -3 } } };
     const still = () => {
       const W = cove.clientWidth, H = cove.clientHeight, sa = W / H, sc = sa < 1 ? AS.tall : AS.wide;
       const c = sa > sc.a ? { sx: 1, sy: sc.a / sa } : { sx: sa / sc.a, sy: 1 };
@@ -86,6 +102,22 @@ function init(root: HTMLElement) {
   const dust = (on: boolean) => gl?.run(on && onScreen && !calm() && !document.hidden && stage.hidden);
   dust(true);
   document.addEventListener('visibilitychange', () => dust(true));
+
+  addEventListener('ascent:vault', (e) => setApi((e as CustomEvent<Api | null>).detail));
+  setApi(api);
+  // wrong passcode: the plate shakes and the slot flashes dim red
+  let lastErr = '';
+  new MutationObserver(() => {
+    const err = lockWrap.querySelector('.f-err')?.textContent || '';
+    if (err && err !== lastErr && !calm()) { plate.classList.remove('nope'); void plate.offsetWidth; plate.classList.add('nope'); setTimeout(() => plate.classList.remove('nope'), 700); }
+    lastErr = err;
+  }).observe(lockWrap, { childList: true, subtree: true, characterData: true });
+  // hidden debug key: D toggles the living-photo effects (compare before / after)
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'd' && e.key !== 'D') return;
+    const t = e.target as HTMLElement; if (t.matches?.('input, textarea, select') || !stage.hidden || !gl) return;
+    const on = gl.toggleFx(); hint.textContent = on ? 'Effects on' : 'Effects off'; setTimeout(() => { hint.textContent = api ? 'Open the book' : 'The book is sealed.'; }, 1200);
+  });
 
   // ambient sound (water + soft wind), only if Gym sound is on — starts on the first tap
   let actx: AudioContext | undefined, amb: GainNode | undefined;
@@ -138,7 +170,7 @@ function init(root: HTMLElement) {
 
   // the book in the sand
   const knock = () => {
-    const card = lockWrap.querySelector<HTMLElement>('.card'); lockWrap.querySelector<HTMLInputElement>('input[type="password"], input')?.focus();
+    const card = plate; lockWrap.querySelector<HTMLInputElement>('input[type="password"], input')?.focus();
     if (card && !calm()) card.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(7px)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(0)' }], { duration: 380 });
   };
   sbook.addEventListener('click', () => (api ? openBook() : knock()));
