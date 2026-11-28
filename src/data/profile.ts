@@ -120,6 +120,7 @@ export const goals = {
     { id: 'd-github-commit', name: 'GitHub commit', cat: 'Study' },
     { id: 'd-internship-learning', name: 'Internship learning', cat: 'Study' },
     { id: 'd-linkedin-activity', name: 'LinkedIn activity', cat: 'Study' },
+    { id: 'd-morning-weigh-in', name: 'Morning weigh-in', cat: 'Health', time: '07:00' },
     { id: 'd-gym', name: 'Gym', cat: 'Health', time: '17:30' },
     { id: 'd-diet-plan-followed', name: 'Diet plan followed', cat: 'Health' },
     { id: 'd-protein-creatine', name: 'Protein & creatine', cat: 'Health', time: '18:30' },

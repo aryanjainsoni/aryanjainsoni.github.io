@@ -199,3 +199,41 @@
   .f-ring { padding: 16px 10px 14px; }
   .f-stat b { font-size: 1.5rem; }
 }
+
+/* lock / vault */
+.f-lockbar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; color: var(--muted); margin-bottom: -4px; }
+.f-vault { max-width: 640px; width: 100%; justify-self: center; }
+.f-vault h2 { font-size: clamp(2rem, 5vw, 2.8rem); }
+.f-pass { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; margin-bottom: 12px; }
+.f-pass.one { grid-template-columns: 1fr auto; }
+.f-pass input { font-size: 18px; letter-spacing: .2em; }
+.f-backup { margin-bottom: 16px; }
+.f-backup input { font-size: 13px; padding: 9px 10px; }
+.f-err { margin: 4px 0 12px; color: var(--accent); font-size: .88rem; font-weight: 500; }
+.f-err:empty { display: none; }
+.f-chg { width: 100%; }
+.f-chg summary { cursor: pointer; font-size: .88rem; color: var(--muted); }
+.f-chg form { margin-top: 12px; }
+.f-chg .f-err { grid-column: 1 / -1; margin: 0; }
+
+/* morning weigh-in */
+.f-weigh { display: grid; grid-template-columns: 1fr auto; gap: 14px 20px; align-items: center; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)) !important; }
+.f-weigh.done { border-color: var(--line) !important; }
+.f-weigh h3 em { font-style: italic; }
+.f-weigh .fine { margin-top: 6px; }
+.f-weigh .wr { display: flex; gap: 10px; align-items: end; }
+.f-weigh .wr .f-in { width: 130px; }
+.f-dots { display: flex; align-items: center; gap: 5px; margin-top: 12px; }
+.f-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.f-dots i.on { background: var(--accent); }
+.f-dots span { margin-left: 6px; font: 500 10px 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: .06em; }
+.f-cal { grid-column: 1 / -1; padding-top: 14px; border-top: 1px solid var(--line); margin: 0; }
+.f-cal .h { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin-bottom: 8px; }
+.f-cal .tr { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.f-cal .tr span { display: block; height: 100%; background: var(--sun); border-radius: inherit; }
+.f-cal.ok { font-size: .88rem; color: #2f9e6b; font-weight: 500; }
+@media (max-width: 560px) {
+  .f-pass { grid-template-columns: minmax(0, 1fr); }
+  .f-weigh { grid-template-columns: minmax(0, 1fr); }
+  .f-weigh .wr .f-in { flex: 1; width: auto; }
+}

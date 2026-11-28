@@ -206,10 +206,12 @@ export function ledger(opts: {
 }
 
 // ---------- adaptive TDEE (weekly recalibration from real weight trend) ----------
+// Needs ~2 weeks of data inside the last 21 days: morning weigh-ins + logged food.
+export const CALIB = { weighIns: 12, foodDays: 12, window: 21 };
 export function adaptiveTdee(points: { date: string; weight?: number; balance?: number }[]) {
   const w = points.filter((p) => p.weight != null) as { date: string; weight: number }[];
   const b = points.filter((p) => p.balance != null) as { date: string; balance: number }[];
-  if (w.length < 8 || b.length < 8 || diffDays(w[0].date, w[w.length - 1].date) < 10) return { adj: 0, ready: false, slope: 0 };
+  if (w.length < CALIB.weighIns || b.length < CALIB.foodDays || diffDays(w[0].date, w[w.length - 1].date) < 13) return { adj: 0, ready: false, slope: 0 };
   const xs = w.map((p) => diffDays(w[0].date, p.date)), ys = w.map((p) => p.weight);
   const mx = xs.reduce((a, c) => a + c, 0) / xs.length, my = ys.reduce((a, c) => a + c, 0) / ys.length;
   const slope = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / xs.reduce((a, x) => a + (x - mx) ** 2, 0); // kg/day

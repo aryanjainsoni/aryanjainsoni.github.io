@@ -1,12 +1,27 @@
-// /gym/ — Today · Plan · Diet · Body tabs. Everything personal stays in THIS browser (localStorage "fit:*").
+// /gym/ — Today · Plan · Diet · Body tabs. Everything personal stays in THIS browser, ENCRYPTED with the
+// owner's passcode (src/lib/vault.ts -> localStorage "fit:vault"). Decrypted data lives only in memory (`mem`).
 import * as F from '../lib/fit';
 import type { Scan, Goal, DayLog, GoalType, Macros, Targets } from '../lib/fit';
 import { meals, micros } from '../data/meals';
+import { seal, unseal, deriveKey, newSalt, ITER, type Vault } from '../lib/vault';
 
 // ---------------- store ----------------
 const K = { scans: 'fit:scans', goal: 'fit:goal', week: 'fit:dietweek', log: (d: string) => `fit:log:${d}` };
-const load = <T,>(k: string, d: T): T => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch { return d; } };
-const put = (k: string, v: unknown) => { localStorage.setItem(k, JSON.stringify(v)); render(); };
+const VAULT = 'fit:vault';
+let mem: Record<string, unknown> | null = null;          // null = locked
+let vkey: { key: CryptoKey; salt: Uint8Array; it: number } | null = null;
+let chain: Promise<void> = Promise.resolve();
+const vault = (): Vault | null => { try { return JSON.parse(localStorage.getItem(VAULT) || 'null'); } catch { return null; } };
+const persist = () => {
+  if (!mem || !vkey) return;
+  const text = JSON.stringify(mem), k = vkey;
+  chain = chain.then(async () => localStorage.setItem(VAULT, JSON.stringify(await seal(k.key, k.salt, text, k.it)))).catch(() => {});
+};
+const load = <T,>(k: string, d: T): T => ((mem?.[k] as T) ?? d);
+const set = (k: string, v: unknown) => { if (!mem) return; if (v === undefined) delete mem[k]; else mem[k] = v; persist(); };
+const put = (k: string, v: unknown) => { set(k, v); render(); };
+// plaintext fit:* keys from before the lock existed -> moved into the vault on setup
+const plainKeys = () => Object.keys(localStorage).filter((k) => k.startsWith('fit:') && k !== VAULT);
 
 const scans = (): Scan[] => load<Scan[]>(K.scans, []).filter((s) => s && s.date && s.weight).sort((a, b) => a.date.localeCompare(b.date));
 const goal = (): Goal | null => load<Goal | null>(K.goal, null);
@@ -75,9 +90,9 @@ const ring = (v: number | undefined, target: number, label: string, unit = '') =
 };
 const bar = (label: string, v: number, t: number, unit = 'g', more = false) =>
   `<div class="f-bar"><div class="h"><span>${label}</span><span><b>${n0(v)}</b> / ${n0(t)}${unit}</span></div><div class="tr"><span class="${v > t * 1.08 && !more ? 'over' : v >= t * 0.92 ? 'ok' : ''}" style="width:${Math.min(100, (v / Math.max(t, 1)) * 100)}%"></span></div></div>`;
-const locked = (title: string, line: string, cta = true) => `<div class="card f-lock"><span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private</p><h2>${title}</h2><p class="lead">${line}</p>
-  ${cta ? `<div class="f-row"><button class="btn primary" data-act="go-body">Add first scan</button><label class="btn ghost f-file">Import data<input type="file" accept="application/json" data-act="import" hidden></label></div>` : ''}
-  <p class="fine">Body data never leaves this browser — it isn't on the public site.</p></div>`;
+const locked = (title: string, line: string, cta = true) => `<div class="card f-lock"><span class="f-lk" aria-hidden="true">✦</span><p class="label">Start here</p><h2>${title}</h2><p class="lead">${line}</p>
+  ${cta ? `<div class="f-row"><button class="btn primary" data-act="go-body">Add first scan</button><label class="btn ghost f-file">Import backup<input type="file" accept="application/json" data-act="import" hidden></label></div>` : ''}
+  <p class="fine">Encrypted on this device — it isn't on the public site.</p></div>`;
 const NOTE = `<p class="f-note">Estimates from published formulas, not medical advice. Check with a doctor or dietitian before big changes.</p>`;
 
 // mini line chart (no text inside the SVG, so it scales cleanly)
@@ -122,6 +137,7 @@ function renderToday(root: HTMLElement) {
       <h2>${fmtD(view, { weekday: 'short', day: 'numeric', month: 'long' })}</h2></div>
     <div class="f-row"><button class="f-nav" data-act="day" data-d="-1" aria-label="Previous day">‹</button><input type="date" class="f-date" data-act="pick" value="${view}" max="${TODAY}"><button class="f-nav" data-act="day" data-d="1" aria-label="Next day" ${view >= TODAY ? 'disabled' : ''}>›</button></div>
   </div>
+  ${view === TODAY ? weighCard(log.weight) : ''}
   <div class="f-rings">
     ${ring(food?.kcal, t.kcal, 'Calories eaten', '')}${ring(food?.p, t.p, 'Protein', ' g')}${ring(steps, t.steps, 'Steps')}${ring(actBurn || undefined, t.burn, 'Activity burn', '')}
   </div>
@@ -163,6 +179,29 @@ function renderToday(root: HTMLElement) {
     </div>
     <p class="fine">Tip: weigh yourself most mornings (after the loo, before food). After ~2 weeks the system learns your real maintenance calories.</p>
   </form>${NOTE}`;
+}
+
+// Morning weigh-in: the reminder lives here, plus progress toward calibrating real maintenance calories
+function weighCard(w?: number) {
+  let wi = 0, fd = 0; const dots: string[] = [];
+  for (let i = F.CALIB.window - 1; i >= 0; i--) { const k = F.addDays(TODAY, -i); if (logOf(k)?.weight) wi++; if (eatenOn(k)) fd++; }
+  for (let i = 6; i >= 0; i--) { const k = F.addDays(TODAY, -i); dots.push(`<i class="${logOf(k)?.weight ? 'on' : ''}" title="${fmtD(k, { weekday: 'short', day: 'numeric' })}"></i>`); }
+  const adj = tdeeAdj(TODAY), ready = wi >= F.CALIB.weighIns && fd >= F.CALIB.foodDays;
+  const prev = [1, 2, 3, 4, 5, 6, 7].map((i) => logOf(F.addDays(TODAY, -i))?.weight).filter(Boolean) as number[];
+  const avg = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
+  const calib = ready ? `<p class="f-cal ok">✓ Calibrated from your real weight trend${adj ? ` · maintenance ${adj > 0 ? '+' : ''}${adj} kcal vs formula` : ' · formula matches you'}</p>`
+    : `<div class="f-cal"><div class="h"><span>Learning your real maintenance</span><span>${Math.min(wi, F.CALIB.weighIns)}/${F.CALIB.weighIns} weigh-ins · ${Math.min(fd, F.CALIB.foodDays)}/${F.CALIB.foodDays} food days</span></div>
+       <div class="tr"><span style="width:${(Math.min(wi / F.CALIB.weighIns, fd / F.CALIB.foodDays, 1)) * 100}%"></span></div></div>`;
+  return `<form class="card f-weigh${w ? ' done' : ''}" data-form="weigh" autocomplete="off">
+    <div class="wl">
+      <p class="label">Morning weigh-in</p>
+      ${w ? `<h3>Weighed <em>✓</em> ${n1(w)} kg</h3><p class="fine">${avg ? `${w - avg >= 0 ? '+' : '−'}${n1(Math.abs(w - avg))} kg vs your 7-day average — daily swings of ±1 kg are just water.` : 'Same time tomorrow.'}</p>`
+        : `<h3>Step on the scale <em>before breakfast.</em></h3><p class="fine">After the loo, before food or water — same time every day.</p>`}
+      <div class="f-dots" aria-label="Weigh-ins in the last 7 days">${dots.join('')}<span>last 7 days</span></div>
+    </div>
+    <div class="wr">${w ? '' : `<label class="f-in"><input type="number" inputmode="decimal" step="0.05" min="20" max="250" name="weight" placeholder="kg"><span>today’s weight</span></label><button class="btn primary sm" type="submit">Save</button>`}</div>
+    ${calib}
+  </form>`;
 }
 const sign = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${n0(Math.abs(v))}`;
 const inp = (name: string, label: string, v?: number, step = '1') => `<label class="f-in"><input type="number" inputmode="decimal" min="0" step="${step}" name="${name}" value="${v ?? ''}" placeholder="—"><span>${label}</span></label>`;
@@ -269,7 +308,7 @@ function ensureWeek() {
   if (Object.keys(w).length === 7) return w;
   const out: Week = {}; let prev: Record<string, string> = {};
   for (let i = 0; i < 7; i++) { const { t } = dietTargets(String(i)); out[i] = w[i] ?? F.buildDay(meals, t, 7919 * (i + 3), prev); prev = out[i]; }
-  localStorage.setItem(K.week, JSON.stringify(out));
+  set(K.week, out);
   return out;
 }
 function renderDiet(root: HTMLElement) {
@@ -322,7 +361,12 @@ function renderBody(root: HTMLElement) {
       <button class="btn primary" data-act="add-scan">Save scan</button>
     </form></details>`;
   const data = `<div class="card f-data"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then, and import it on your phone.</p></div>
-    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div></div>`;
+    <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div>
+    <details class="f-chg"><summary>Change passcode</summary><form data-form="pass" class="f-grid4" autocomplete="off">
+      <label class="f-in"><input type="password" name="cur" required autocomplete="current-password"><span>current</span></label>
+      <label class="f-in"><input type="password" name="n1" minlength="6" required autocomplete="new-password"><span>new · 6+</span></label>
+      <label class="f-in"><input type="password" name="n2" minlength="6" required autocomplete="new-password"><span>repeat new</span></label>
+      <button class="btn primary sm" type="submit">Change</button><p class="f-err" role="alert"></p></form></details></div>`;
   if (!last) return (root.innerHTML = locked('Body reports', 'Scan history, trends and progress since your first measurement.', false) + form + data);
   const dAgo = F.diffDays(last.date, TODAY);
   root.innerHTML = `
@@ -344,32 +388,113 @@ function renderBody(root: HTMLElement) {
 // ---------------- events ----------------
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
 function render() {
+  if (!mem) {
+    Object.values(roots).forEach((r) => r && (r.innerHTML = lockCard()));
+    return;
+  }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
   if (roots.plan) renderPlan(roots.plan);
   if (roots.diet) renderDiet(roots.diet);
   if (roots.body) renderBody(roots.body);
+  Object.values(roots).forEach((r) => r?.insertAdjacentHTML('afterbegin', lockBar()));
   if (name && form) { const el = document.querySelector(`form[data-form="${form}"] [name="${name}"]`) as HTMLInputElement | null; if (el && el.type !== 'checkbox') { el.focus(); try { const v = el.value; el.value = ''; el.value = v; } catch {} } }
 }
 const goTab = (t: string) => (document.querySelector(`[data-tab="${t}"]`) as HTMLElement | null)?.click();
 
 function exportData() {
-  const out: Record<string, unknown> = {};
-  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i)!; if (k.startsWith('fit:')) out[k] = JSON.parse(localStorage.getItem(k)!); }
+  if (!mem) return;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: 'ascent-fit', v: 1, exported: TODAY, data: out }, null, 2)], { type: 'application/json' }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: 'ascent-fit', v: 1, exported: TODAY, data: mem }, null, 2)], { type: 'application/json' }));
   a.download = `ascent-fit-${TODAY}.json`; a.click(); URL.revokeObjectURL(a.href);
 }
+async function readBackup(file: File): Promise<Record<string, unknown>> {
+  const j = JSON.parse(await file.text()), data = j?.data ?? j;
+  const out: Record<string, unknown> = {};
+  Object.keys(data).filter((k) => k.startsWith('fit:') && k !== VAULT).forEach((k) => (out[k] = data[k]));
+  if (!Object.keys(out).length) throw new Error('no fit data');
+  return out;
+}
 async function importData(file: File) {
+  if (!mem) return;
   try {
-    const j = JSON.parse(await file.text()), data = j?.data ?? j;
-    const keys = Object.keys(data).filter((k) => k.startsWith('fit:'));
-    if (!keys.length) throw new Error('no fit data');
-    if (!confirm(`Import ${keys.length} items? Matching items in this browser will be replaced.`)) return;
-    keys.forEach((k) => localStorage.setItem(k, JSON.stringify(data[k])));
-    render();
+    const data = await readBackup(file);
+    if (!confirm(`Import ${Object.keys(data).length} items? Matching items will be replaced.`)) return;
+    Object.assign(mem, data); persist(); render();
   } catch { alert('That file doesn’t look like an Ascent fitness backup.'); }
 }
+
+// ---------------- lock ----------------
+let tries = 0, waitUntil = 0, lockMsg = '';
+function lockCard() {
+  const v = vault(), wait = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
+  if (!v) return `<form class="card f-lock f-vault" data-form="setup" autocomplete="off">
+    <span class="f-lk" aria-hidden="true">🔐</span><p class="label">Private space</p><h2>Set a <em>passcode.</em></h2>
+    <p class="lead">Body scans, goals and daily logs are encrypted on this device with your passcode (AES-256). Without it, nobody can open them — not even with developer tools.</p>
+    <div class="f-pass">
+      <label class="f-in"><input type="password" name="p1" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>passcode · 6+ characters</span></label>
+      <label class="f-in"><input type="password" name="p2" minlength="6" required autocomplete="new-password" placeholder="••••••"><span>repeat passcode</span></label>
+    </div>
+    <label class="f-in f-backup"><input type="file" name="backup" accept="application/json"><span>start from a backup file (optional)</span></label>
+    ${lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : ''}
+    <div class="f-row"><button class="btn primary" type="submit">Create & unlock</button></div>
+    <p class="fine">There’s no “forgot passcode”. If you lose it, the data can’t be recovered — export a backup now and then.</p></form>`;
+  return `<form class="card f-lock f-vault" data-form="unlock" autocomplete="off">
+    <span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private</p><h2>Locked.</h2>
+    <p class="lead">Enter your passcode to open Today, Plan, Diet and Body.</p>
+    <div class="f-pass one"><label class="f-in"><input type="password" name="p" required autocomplete="current-password" placeholder="••••••" ${wait ? 'disabled' : ''}><span>passcode</span></label>
+      <button class="btn primary" type="submit" ${wait ? 'disabled' : ''}>${wait ? `Wait ${wait}s` : 'Unlock'}</button></div>
+    ${lockMsg ? `<p class="f-err" role="alert">${esc(lockMsg)}</p>` : ''}
+    <p class="fine">Encrypted on this device. <button type="button" class="f-link" data-act="reset-vault">Forgot it? Erase & start over</button></p></form>`;
+}
+const lockBar = () => `<div class="f-lockbar"><span>🔓 Unlocked · encrypted on this device</span><button type="button" class="f-link" data-act="lock">Lock</button></div>`;
+function lockNow() { mem = null; vkey = null; editingGoal = false; lockMsg = ''; render(); }
+async function unlock(form: HTMLFormElement) {
+  if (Date.now() < waitUntil) return;
+  const v = vault(); if (!v) return;
+  const p = String(new FormData(form).get('p') || '');
+  const btn = form.querySelector('button[type=submit]') as HTMLButtonElement; btn.disabled = true; btn.textContent = 'Unlocking…';
+  try {
+    const r = await unseal(p, v);
+    mem = JSON.parse(r.text); vkey = { key: r.key, salt: r.salt, it: r.it }; tries = 0; lockMsg = ''; render();
+  } catch {
+    tries++; lockMsg = tries >= 5 ? 'Too many tries — wait 30 seconds.' : `Wrong passcode${tries >= 3 ? ` (${5 - tries} tries left before a pause)` : ''}.`;
+    if (tries >= 5) { waitUntil = Date.now() + 30_000; tries = 0; setTimeout(() => { lockMsg = ''; render(); }, 30_500); }
+    render(); (document.querySelector('.panel:not([hidden]) form[data-form="unlock"] input') as HTMLInputElement | null)?.focus();
+  }
+}
+async function setup(form: HTMLFormElement) {
+  const f = new FormData(form), p1 = String(f.get('p1') || ''), p2 = String(f.get('p2') || '');
+  if (p1.length < 6) { lockMsg = 'Use at least 6 characters.'; return render(); }
+  if (p1 !== p2) { lockMsg = 'The two passcodes don’t match.'; return render(); }
+  let data: Record<string, unknown> = {};
+  plainKeys().forEach((k) => { try { data[k] = JSON.parse(localStorage.getItem(k)!); } catch {} });
+  const file = (form.elements.namedItem('backup') as HTMLInputElement).files?.[0];
+  if (file) { try { data = { ...data, ...(await readBackup(file)) }; } catch { lockMsg = 'That backup file couldn’t be read.'; return render(); } }
+  const salt = newSalt(), key = await deriveKey(p1, salt);
+  vkey = { key, salt, it: ITER }; mem = data; lockMsg = '';
+  localStorage.setItem(VAULT, JSON.stringify(await seal(key, salt, JSON.stringify(mem))));
+  plainKeys().forEach((k) => localStorage.removeItem(k)); // no plaintext left behind
+  render();
+}
+async function changePass(form: HTMLFormElement) {
+  const f = new FormData(form), v = vault(), cur = String(f.get('cur') || ''), p1 = String(f.get('n1') || ''), p2 = String(f.get('n2') || '');
+  const out = form.querySelector('.f-err') as HTMLElement;
+  try { if (v) await unseal(cur, v); } catch { out.textContent = 'Current passcode is wrong.'; return; }
+  if (p1.length < 6 || p1 !== p2) { out.textContent = p1.length < 6 ? 'Use at least 6 characters.' : 'New passcodes don’t match.'; return; }
+  const salt = newSalt(); vkey = { key: await deriveKey(p1, salt), salt, it: ITER }; persist(); await chain;
+  out.textContent = ''; alert('Passcode changed.'); render();
+}
+// auto-lock after 5 minutes in the background
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (mem && hiddenAt && Date.now() - hiddenAt > 5 * 60_000) lockNow(); });
+document.addEventListener('submit', (e) => {
+  const form = e.target as HTMLFormElement; if (!form.closest('[data-fit]')) return;
+  const t = form.dataset.form;
+  if (t === 'unlock' || t === 'setup' || t === 'pass') { e.preventDefault(); if (t === 'unlock') unlock(form); else if (t === 'setup') setup(form); else changePass(form); }
+  else if (t === 'weigh') { e.preventDefault(); const w = num(new FormData(form).get('weight')); if (w && w > 20 && w < 250) saveLog(TODAY, { weight: w }); }
+  else e.preventDefault();
+});
 
 document.addEventListener('click', (e) => {
   const el = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null; if (!el || !el.closest('[data-fit]')) return;
@@ -388,7 +513,7 @@ document.addEventListener('click', (e) => {
   } else if (a === 'save-goal') {
     e.preventDefault(); const g = readGoal(el.closest('form') as HTMLFormElement);
     if (F.validateGoal(g, scans().at(-1)!).some((i) => i.level === 'error')) return;
-    editingGoal = false; localStorage.removeItem(K.week); put(K.goal, g);
+    editingGoal = false; set(K.week, undefined); put(K.goal, g);
   } else if (a === 'add-scan') {
     e.preventDefault(); const form = el.closest('form') as HTMLFormElement; if (!form.reportValidity()) return;
     const f = new FormData(form), s: Scan = { date: String(f.get('date')), weight: 0, fatPct: 0, smm: 0 };
@@ -396,9 +521,13 @@ document.addEventListener('click', (e) => {
     put(K.scans, [...scans().filter((x) => x.date !== s.date), s]);
   } else if (a === 'del-scan') { if (confirm(`Delete the scan from ${el.dataset.d}?`)) put(K.scans, scans().filter((x) => x.date !== el.dataset.d)); }
   else if (a === 'export') exportData();
+  else if (a === 'lock') lockNow();
+  else if (a === 'reset-vault') {
+    if (confirm('Erase ALL private fitness data on this device and start over? This cannot be undone.') && confirm('Really erase? Make sure you have a backup file.')) { localStorage.removeItem(VAULT); plainKeys().forEach((k) => localStorage.removeItem(k)); lockMsg = ''; render(); }
+  }
   else if (a === 'wd') { dietDay = el.dataset.i!; render(); }
   else if (a === 'build-day') { const w = ensureWeek(); w[dietDay] = F.buildDay(meals, dietTargets(dietDay).t, Date.now() % 2147483646, w[dietDay]); put(K.week, w); }
-  else if (a === 'build-week') { localStorage.removeItem(K.week); render(); }
+  else if (a === 'build-week') { put(K.week, undefined); }
 });
 document.addEventListener('change', (e) => {
   const el = e.target as HTMLInputElement; if (!el.closest('[data-fit]')) return;
