@@ -403,3 +403,12 @@ details.f-secrow[open] summary span::after { content: ' −'; }
 [data-sd-gym] h3 { margin: 0 0 6px; font: 400 1.1rem 'Fraunces', serif; }
 [data-sd-gym] .f-err { margin: 0 0 8px; color: var(--accent); font-size: .86rem; }
 [data-sd-gym] .btn.sm { padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit; }
+/* lock / setup / recovery screens inside the Settings drawer */
+[data-sd-gym] .f-vault { padding: 18px !important; max-width: none; }
+[data-sd-gym] .f-vault h2 { margin: 6px 0 4px; font: 400 1.6rem/1.15 'Fraunces', serif !important; }
+[data-sd-gym] .f-vault h2 em { color: var(--accent); }
+[data-sd-gym] .lead { margin: 4px 0 12px; font-size: .9rem; color: var(--muted); }
+[data-sd-gym] .f-pass, [data-sd-gym] .f-pass.one { grid-template-columns: minmax(0, 1fr); }
+[data-sd-gym] .f-code { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-sd-gym] .btn { cursor: pointer; font-family: inherit; }
+[data-sd-gym] .sd-lockrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; font: 500 11px 'JetBrains Mono', monospace; color: var(--muted); }

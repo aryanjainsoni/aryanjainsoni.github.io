@@ -8,6 +8,7 @@ import { foods, foodById, type Food } from '../data/foods';
 import * as V from '../lib/vault';
 import type { AnyVault, VaultV2, KeySlot, OwnerKey } from '../lib/vault';
 import { repo } from '../data/dailyLog';
+import '../styles/fit.css'; // also needed when Settings loads this on other pages
 
 // ---------------- store ----------------
 const K = { scans: 'fit:scans', goal: 'fit:goal', week: 'fit:dietweek', log: (d: string) => `fit:log:${d}` };
@@ -590,17 +591,18 @@ function renderBody(root: HTMLElement) {
 const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), diet: $('[data-fit="diet"]'), body: $('[data-fit="body"]') };
 
 // Settings drawer (Base layout) — Gym data + security are rendered into it while this page is open
-function settingsHtml() {
-  if (!mem) return `<p class="sd-note">Unlock the Gym (any tab above) to manage backups and security.</p>`;
-  return `<div class="card f-data sd-gym"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then — and import it on your other devices.</p></div>
+function settingsHtml(gate = '') {
+  if (gate) return gate; // locked / setup / recovery key / fingerprint offer — handled right inside Settings
+  const lockRow = lockOff() ? '' : `<div class="sd-lockrow"><span>🔓 Unlocked · encrypted on this device</span><button type="button" class="btn ghost sm" data-act="lock">Lock now</button></div>`;
+  return lockRow + `<div class="card f-data sd-gym"><div><p class="label">Your data</p><p class="fine">Lives only in this browser. Export a backup now and then — and import it on your other devices.</p></div>
     <div class="f-row"><button class="btn ghost sm" data-act="export">Export backup</button><label class="btn ghost sm f-file">Import<input type="file" accept="application/json" data-act="import" hidden></label></div></div>
     ${securityCard()}`;
 }
-function renderSettings() { const r = document.querySelector('[data-sd-gym]') as HTMLElement | null; if (r) r.innerHTML = settingsHtml(); }
+function renderSettings(gate = '') { const r = document.querySelector('[data-sd-gym]') as HTMLElement | null; if (r) r.innerHTML = settingsHtml(gate); }
 function render() {
   const gate = !mem ? lockCard() : pendingCode ? codeCard(pendingCode) : publishJson ? publishCard(publishJson) : needNewPass ? newPassCard() : settingUp ? setupCard() : offerFinger ? fingerCard() : '';
   if (!mem) ensureTick();
-  renderSettings();
+  renderSettings(gate);
   if (gate) { Object.values(roots).forEach((r) => r && (r.innerHTML = gate)); return eyes(); }
   const keep = document.activeElement as HTMLInputElement | null, name = keep?.name, form = keep?.closest('form')?.dataset.form;
   if (roots.today) renderToday(roots.today);
@@ -712,7 +714,7 @@ function ownerGate() {
 }
 function privateCard() {
   return `<div class="card f-lock f-vault"><span class="f-lk" aria-hidden="true">🔒</span><p class="label">Private · owner only</p><h2>Private.</h2>
-    <p class="lead">Body data, goals and diet logs on this page are private. The <button type="button" class="f-link" data-act="go-steps">Steps</button> tab is public.</p>
+    <p class="lead">Body data, goals and diet logs are private to the owner.</p>
     <p class="fine">Owner? <button type="button" class="f-link" data-act="owner-setup">Set up the private space</button></p></div>`;
 }
 function publishCard(json: string) {

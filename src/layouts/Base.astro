@@ -55,9 +55,6 @@ const last = [...'Jain'];
             {first.map((c, i) => <i style={`--i:${i}`}>{c}</i>)}<i class="gap"></i>{last.map((c, i) => <i class="sun" style={`--i:${i + 6}`}>{c}</i>)}<i class="dot" style="--i:10">.</i>
           </span>
         </a>
-        <button id="settings-open" class="toggle gear" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4Z" /></svg>
-        </button>
         <nav aria-label="Main">
           {nav.map((item) => (
             <a href={item.href} aria-current={path === item.href ? 'page' : undefined}>{item.label}</a>
@@ -67,6 +64,9 @@ const last = [...'Jain'];
           </a>
           <button id="theme-toggle" class="toggle" type="button" aria-label="Toggle light and dark mode">
             <span class="sunicon">☀️</span><span class="moon">🌙</span>
+          </button>
+          <button id="settings-open" class="toggle gear" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4Z" /></svg>
           </button>
         </nav>
       </div>
@@ -99,8 +99,8 @@ const last = [...'Jain'];
           <div class="sd-row"><div><b>Learned words</b><p data-learned>Words you use often, kept in this browser.</p></div><button type="button" class="sd-btn" data-clear-words>Clear</button></div>
         </section>
         <section class="sd-sec">
-          <h3>Gym · security &amp; data</h3>
-          <div data-sd-gym data-fit="settings"><p class="sd-note">Your private gym data, backups and lock settings appear here on the <a href="/gym/#body">Gym page →</a></p></div>
+          <h3>Security &amp; data</h3>
+          <div data-sd-gym data-fit="settings"><p class="sd-note">Loading…</p></div>
         </section>
       </div>
     </aside>
@@ -263,7 +263,6 @@ const last = [...'Jain'];
     nav > a:first-child { display: none; } /* Home — logo already links home */
     #theme-toggle { display: none; } /* theme lives in Settings on phones */
     nav a[href="/explore/"] { display: none; } /* the search icon opens the Index */
-    .gear { margin-left: 2px; }
     .toggle { width: 34px; height: 34px; font-size: 14px; flex-shrink: 0; }
   }
 </style>

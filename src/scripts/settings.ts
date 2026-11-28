@@ -5,9 +5,13 @@ const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document)
 const drawer = $('#settings')!, scrim = $('.sd-scrim')!, opener = $('#settings-open')!;
 let lastFocus: HTMLElement | null = null;
 
+// Gym vault (lock, backups, security): on the Gym page it's already running; elsewhere load it the first time Settings opens
+let vaultLoaded = !!document.querySelector('[data-fit="today"]');
+function loadVault() { if (vaultLoaded) return; vaultLoaded = true; import('./fit-app'); }
+
 function open() {
   lastFocus = document.activeElement as HTMLElement;
-  sync();
+  sync(); loadVault();
   drawer.hidden = false; scrim.hidden = false;
   requestAnimationFrame(() => { drawer.classList.add('in'); scrim.classList.add('in'); });
   document.documentElement.classList.add('sd-open');
