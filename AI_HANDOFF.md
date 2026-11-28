@@ -139,6 +139,13 @@ decisions that are truly mine.
   (frontmatter: n, title, icon, summary, updated, visual, caption, sources[]). Charts/diagrams live in
   src/components/GuideVisual.astro (energy, rate, protein, macros, phases, matador, sleep, incline, vshape,
   checkin, protein-foods). To add/update: edit or add a .md file, bump `updated`, cite sources.
+  Shown as a REAL spiral notebook "Altitude — The rules I train by" by Aryan Jain (src/components/Notebook.astro +
+  src/scripts/notebook.ts): closed bottle-green cover every time the tab opens → tap → 3D page turns. JS cuts the
+  chapters into ruled pages that fit the screen (page numbers + index change with screen size): p1 name page,
+  p2 index (clickable), chapters, last page Notes. Desktop = two-page spread, phone = one page. Arrows, ← →,
+  swipe, page corners, Index/Search tabs (sticky-note search → jumps + yellow highlighter), chart tap = zoom.
+  Deep links #guide/p-5 and #nb-<chapter-file>; last page remembered (nb:last) → "Continue · p. N" on the cover.
+  Paper-flip sound only when Gym sound is on. Calm mode / reduced motion = no 3D turn.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -182,6 +189,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym Notebook → real spiral notebook "Altitude": green cover, ruled pages, page flip, index, search.
 - 2026-11-28 Header logo: photo badge → animated Circle Summit mark (draw-on-load once per visit, hover re-climb).
 - 2026-11-28 New brand mark "Circle Summit": favicon, app icons (incl. maskable), share preview image (og.png).
 - 2026-11-28 Settings v2: My targets, calendar reminders (.ics), privacy screen + auto-lock timer, full backup/restore + reminder dot, install app + offline (service worker), calm mode + text size, units (kg/lb, km/mi, 12/24h, week start), keyboard shortcuts.
