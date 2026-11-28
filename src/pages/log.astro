@@ -52,7 +52,7 @@ const icons: Record<string, string> = {
                 {q.type === 'text' && <input id={`f-${q.id}`} name={q.id} type="text" />}
                 {(q.type === 'long' || q.type === 'list') && <textarea id={`f-${q.id}`} name={q.id} rows={q.type === 'list' ? 3 : 2} placeholder={q.type === 'list' ? 'One per line' : ''}></textarea>}
                 {q.auto && q.auto !== 'github' && <div class="auto"><span class="ad" id={`ad-${q.id}`}>auto</span><button type="button" class="link" data-redraft={q.id}>⟳ Re-draft</button></div>}
-                {q.auto === 'github' && <div class="auto"><button type="button" class="link" id="gh-fetch">⟳ Fetch from GitHub</button><span id="gh-status" aria-live="polite"></span></div>}
+                {q.auto === 'github' && <div class="auto"><span class="ad" id="ad-github">auto</span><button type="button" class="link" id="gh-fetch">⟳ Fetch from GitHub</button><span id="gh-status" aria-live="polite"></span></div>}
                 {q.type === 'number' && <span class="num"><input id={`f-${q.id}`} name={q.id} type="number" min="0" step={q.step ?? 0.5} inputmode={q.step === 1 ? "numeric" : "decimal"} />{q.unit && <em>{q.unit}</em>}</span>}
                 {q.type === 'rate' && (
                   <div class="rate" role="radiogroup" aria-label={q.label} id={`f-${q.id}`}>
@@ -253,9 +253,10 @@ const icons: Record<string, string> = {
       };
       // GitHub -> "what did you commit" (public commits by date, IST). Never overwrites what you typed unless you press ⟳.
       const ghStatus = (t) => { const el = $('#gh-status'); if (el) el.textContent = t; };
+      const setGhBadge = (mine) => { const b = $('#ad-github'); if (b) { b.textContent = mine ? 'your words ✓' : 'auto · live'; b.classList.toggle('mine', mine); } };
+      let lastGh = 0;
       const ghFetch = async (force) => {
         const el = form.elements['github']; if (!el) return;
-        if (!force && el.value.trim() && ghData[dateIn.value]) return;
         const d = dateIn.value, q = `author:${CFG.repo.owner} author-date:${d}T00:00:00+05:30..${d}T23:59:59+05:30`;
         ghStatus('Fetching your commits…');
         try {
@@ -270,14 +271,22 @@ const icons: Record<string, string> = {
           const count = (name) => items.filter((i) => i.repository.name === name).length;
           const text = [...byRepo].map(([name, msgs]) => `${name} (${count(name)} commit${count(name) > 1 ? 's' : ''}): ${msgs.slice(0, 8).join('; ')}${msgs.length > 8 ? `; +${msgs.length - 8} more` : ''}`).join('\n');
           ghData[d] = { n: items.length, repos: [...byRepo].map(([name, msgs]) => [name, count(name), msgs]) };
-          if (!force && el.value.trim()) { ghStatus(`✓ ${items.length} commits found — box already has your text`); update(); return; } // you started typing meanwhile
-          el.value = text; el.dispatchEvent(new Event('input', { bubbles: true }));
-          ghStatus(`✓ ${items.length} commit${items.length > 1 ? 's' : ''} from GitHub · edit freely`);
+          lastGh = Date.now();
+          const mine = el.value.trim() && el.value !== (autoMem.github ?? '');
+          const at = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+          if (mine && !force) { ghStatus(`${items.length} commits today · your text kept (⟳ to refresh)`); setGhBadge(true); update(); return; }
+          el.value = text; autoMem.github = text; setGhBadge(false);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          ghStatus(`✓ ${items.length} commit${items.length > 1 ? 's' : ''} · updated ${at}`);
         } catch (e) {
           ghStatus(String(e.message) === '403' || String(e.message) === '429' ? 'GitHub says “slow down” — try ⟳ again in a minute.' : 'Couldn’t reach GitHub right now — try ⟳ again.');
         }
       };
-      $('#gh-fetch')?.addEventListener('click', () => { const el = form.elements['github']; if (el?.value.trim() && !confirm('Replace what’s in the GitHub box with your commits?')) return; ghFetch(true); });
+      $('#gh-fetch')?.addEventListener('click', () => { const el = form.elements['github']; if (el?.value.trim() && el.value !== autoMem.github && !confirm('Replace your text with the latest commits?')) return; ghFetch(true); });
+      // keep everything fresh while the page is open: every 5 min, and whenever you come back to the tab
+      setInterval(() => { if (!document.hidden) ghFetch(false); }, 5 * 60_000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastGh > 60_000) ghFetch(false); });
+      form.elements['github']?.addEventListener('input', () => { const el = form.elements['github']; setGhBadge(!!el.value.trim() && el.value !== autoMem.github); });
 
       // remind about drafts from other days that were never published
       const showDrafts = () => {

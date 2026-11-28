@@ -55,7 +55,8 @@ decisions that are truly mine.
 
 ## HOW THINGS WORK (don't break these)
 - Daily Log GitHub box auto-fills from my public commits for that date (GitHub search API, IST day,
-  grouped by repo; never overwrites typed text unless I press ⟳ Fetch).
+  grouped by repo) and stays LIVE (refetch every 5 min + when the tab is reopened) until I edit it
+  (badge "your words ✓"); ⟳ Fetch replaces with the latest.
 - Daily Log reflection auto-drafts "Biggest win", "What was hard", "Tomorrow top 3" from the day's data
   (GitHub commits, LeetCode build data, Goals ticks, form answers). Each keeps updating until I edit it
   (then badge = "your words ✓"); ⟳ Re-draft resets. "Anything else" = my own words. Drafts save on every
@@ -138,6 +139,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Daily Log GitHub box + reflection stay live all day (5-min refresh, on tab return) until edited.
 - 2026-11-28 Gym app tabs (Today…Notebook) use a compact hero + compact lock card so they fit one screen; 6 tabs fit on phones.
 - 2026-11-28 Daily Log: auto-drafted win/hard/tomorrow (live until edited), own-words field, saved time, unpublished-draft reminder.
 - 2026-11-28 Daily Log: GitHub box auto-fills from that date's public commits (+ ⟳ Fetch button).
