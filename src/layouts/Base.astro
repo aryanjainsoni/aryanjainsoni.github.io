@@ -26,8 +26,16 @@ const last = [...'Jain'];
     <meta name="theme-color" content="#0e0b0a" />
     <!-- App icon + "Add to Home screen" support -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Brand mark "Circle Summit" (peak breaking out of a circle + climbing trail). Source: public/brand/ascent-mark.svg -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta property="og:site_name" content="Ascent" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={new URL('/brand/og.png', Astro.site ?? 'https://aryanjainsoni.github.io').href} />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Ascent" />
     <meta name="application-name" content="Ascent" />
