@@ -711,7 +711,7 @@ function securityCard() {
 }
 const lockBar = () => lockOff()
   ? `<div class="f-lockbar"><span>Lock is off on this device</span><button type="button" class="f-link" data-act="turn-on">Turn on</button></div>`
-  : `<div class="f-lockbar"><span>🔓 Unlocked · encrypted on this device</span><button type="button" class="f-link" data-act="lock">Lock</button></div>`;
+  : `<div class="f-lockbar">${owner === null ? '<button type="button" class="f-link f-pub" data-act="go-publish">⚠ Publish owner key</button>' : ''}<span>🔓 Unlocked · encrypted on this device</span><button type="button" class="f-link" data-act="lock">Lock</button></div>`;
 
 function lockNow() { if (lockOff()) return; mem = null; dk = null; editingGoal = false; lockMsg = ''; secMsg = ''; screen = 'unlock'; pendingCode = ''; needNewPass = false; offerFinger = false; render(); }
 function failed() {
@@ -860,6 +860,11 @@ document.addEventListener('click', (e) => {
   else if (a === 'export') exportData();
   else if (a === 'eye') toggleEye(el);
   else if (a === 'go-steps') goTab('steps');
+  else if (a === 'go-publish') {
+    goTab('body');
+    const d = [...document.querySelectorAll<HTMLDetailsElement>('[data-fit="body"] details.f-secrow')].find((x) => x.querySelector('form[data-form="publish"]'));
+    if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); (d.querySelector('input') as HTMLInputElement | null)?.focus({ preventScroll: true }); }
+  }
   else if (a === 'owner-setup') { ownerSetup = true; lockMsg = ''; render(); }
   else if (a === 'copy-owner') { navigator.clipboard?.writeText(publishJson).then(() => (el.textContent = 'Copied ✓')); }
   else if (a === 'owner-done') { publishJson = ''; render(); }
