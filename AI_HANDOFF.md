@@ -67,7 +67,9 @@ decisions that are truly mine.
   kcal/macros/steps/incline-walk targets → check-in → 7-day ledger rebalances next 3–7 days within caps.
   Diet tab (today): tick meals (checklist + diet streak), "Ate something else?" food search with auto
   macros, live calorie calculator (food in vs rest + steps + strength + incline + digestion) that raises
-  today's food allowance when the logged workout beats the plan.
+  today's food allowance when the logged workout beats the plan. Diet tab is DATE-based (week strip
+  with dates, ‹ › weeks, date picker, History list); every log lives at fit:log:YYYY-MM-DD and keeps a
+  `plan` snapshot so past days never change when the weekly template does.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)

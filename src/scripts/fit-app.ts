@@ -58,7 +58,8 @@ const fmtD = (k: string, o: Intl.DateTimeFormatOptions = { day: 'numeric', month
 const WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TODAY = F.todayKey();
 let view = TODAY;      // Today tab date
-let dietDay = String(F.weekdayIdx(TODAY));
+let dietDate = TODAY; // Diet tab shows one DATE; its weekday picks the weekly template
+const wdOf = (d: string) => String(F.weekdayIdx(d));
 let editingGoal = false;
 
 const scanOn = (d: string) => { const all = scans(); return [...all].reverse().find((s) => s.date <= d) ?? all[0]; };
@@ -84,17 +85,18 @@ const refMacros = (d: string, ref: string): (Macros & { name: string }) | undefi
 };
 const eatenOn = (d: string) => F.eaten(logOf(d), (ref) => refMacros(d, ref));
 const refOf = (d: string, slot: string) => (logOf(d)?.meals ?? []).find((m) => m.startsWith(slot + ':'));
-const planOpt = (d: string, slot: string) => { const s = meals.find((x) => x.id === slot)!; const id = week()[String(F.weekdayIdx(d))]?.[slot]; return s.options.find((o) => o.id === id) ?? s.options[0]; };
+const dayPlan = (d: string): Record<string, string> => logOf(d)?.plan ?? week()[wdOf(d)] ?? {};
+const planOpt = (d: string, slot: string) => { const s = meals.find((x) => x.id === slot)!; const id = dayPlan(d)[slot]; return s.options.find((o) => o.id === id) ?? s.options[0]; };
 function tickMeal(d: string, slot: string, on: boolean) {
   const rest = (logOf(d)?.meals ?? []).filter((m) => !m.startsWith(slot + ':'));
   const ref = otherOf(d, slot).length ? `${slot}:other` : `${slot}:${planOpt(d, slot).id}`;
-  saveLog(d, { meals: on ? [...rest, ref] : rest });
+  saveLog(d, { meals: on ? [...rest, ref] : rest, plan: { ...dayPlan(d) } });
 }
 function setOther(d: string, slot: string, items: Item[]) {
   const log = logOf(d), other = { ...(log?.other ?? {}) };
   if (items.length) other[slot] = items; else delete other[slot];
   const rest = (log?.meals ?? []).filter((m) => !m.startsWith(slot + ':'));
-  saveLog(d, { other: Object.keys(other).length ? other : undefined, meals: items.length ? [...rest, `${slot}:other`] : rest });
+  saveLog(d, { other: Object.keys(other).length ? other : undefined, meals: items.length ? [...rest, `${slot}:other`] : rest, plan: { ...dayPlan(d) } });
 }
 const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 const stepsOn = (d: string) => logOf(d)?.steps ?? journalSteps.get(d);
@@ -298,10 +300,10 @@ function dietStreak() {
   for (let i = 13; i >= 0; i--) { const k = F.addDays(TODAY, -i), ok = onTarget(k); dots.push(`<i class="${ok ? 'on' : ok === false ? 'part' : ''}" title="${fmtD(k, { weekday: 'short', day: 'numeric' })} · ${ok ? 'on target' : ok === false ? 'logged, off target' : 'not logged'}"></i>`); }
   return { cur, best, dots: dots.join('') };
 }
-function checklistCard() {
-  const ticked = meals.filter((s) => refOf(TODAY, s.id)).length, food = eatenOn(TODAY), E = energy(TODAY), st = dietStreak();
+function checklistCard(d = TODAY) {
+  const ticked = meals.filter((s) => refOf(d, s.id)).length, food = eatenOn(d), E = energy(d), st = dietStreak();
   return `<div class="card f-checklist">
-    <div class="f-loghead"><div><p class="label">Today’s checklist</p><h3><b class="big">${ticked}</b> / ${meals.length} meals</h3></div>
+    <div class="f-loghead"><div><p class="label">${d === TODAY ? 'Today’s checklist' : 'Checklist · ' + fmtD(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</p><h3><b class="big">${ticked}</b> / ${meals.length} meals</h3></div>
       <div class="f-streak"><b>🔥 ${st.cur}</b><span>day streak · best ${st.best}</span></div></div>
     <div class="f-bar"><div class="tr"><span class="${ticked === meals.length ? 'ok' : ''}" style="width:${(ticked / meals.length) * 100}%"></span></div></div>
     <div class="f-cl-meta"><span>${food ? `${n0(food.kcal)}${E ? ` / ${n0(E.canEat)}` : ''} kcal · P ${n0(food.p)}${E ? ` / ${n0(E.P.t.p)}` : ''} g` : 'Tick each meal as you eat it.'}</span>
@@ -400,36 +402,42 @@ function checkGoal(root: HTMLElement) {
 
 // ---------------- DIET ----------------
 const SAMPLE: Macros = { kcal: 2300, p: 120, c: 300, f: 65, fib: 32 };
-function dietTargets(dayIdx: string) {
-  const isToday = dayIdx === String(F.weekdayIdx(TODAY));
-  const P = plan(TODAY);
+function dietTargets(d: string) {
+  const P = plan(d <= TODAY ? d : TODAY);
   if (!P) return { t: SAMPLE, sample: true, adjusted: false };
-  return { t: isToday ? P.t : P.base, sample: false, adjusted: isToday && (P.L.adj.kcal !== 0 || P.L.adj.protein !== 0) };
+  if (d > TODAY) return { t: P.base as Macros, sample: false, adjusted: false };
+  return { t: P.t as Macros, sample: false, adjusted: P.L.adj.kcal !== 0 || P.L.adj.protein !== 0 };
+}
+// change the plan for a date: past dates keep their own snapshot; today/future also update the weekly template
+function setDayPlan(d: string, next: Record<string, string>) {
+  if (logOf(d)?.plan || d < TODAY) saveLog(d, { plan: next });
+  if (d >= TODAY) { const w = ensureWeek(); w[wdOf(d)] = next; put(K.week, w); }
 }
 function ensureWeek() {
   const w = week();
   if (Object.keys(w).length === 7) return w;
   const out: Week = {}; let prev: Record<string, string> = {};
-  for (let i = 0; i < 7; i++) { const { t } = dietTargets(String(i)); out[i] = w[i] ?? F.buildDay(meals, t, 7919 * (i + 3), prev); prev = out[i]; }
+  for (let i = 0; i < 7; i++) { const { t } = dietTargets(F.addDays(TODAY, 1)); out[i] = w[i] ?? F.buildDay(meals, t, 7919 * (i + 3), prev); prev = out[i]; }
   set(K.week, out);
   return out;
 }
 
 let otherOpen = '', foodMsg = '';
-function slotCard(s: (typeof meals)[number], day: Record<string, string>, isToday: boolean) {
+function slotCard(s: (typeof meals)[number], day: Record<string, string>, canLog: boolean) {
+  const D = dietDate;
   const o = s.options.find((x) => x.id === day[s.id]) ?? s.options[0];
-  const ref = isToday ? refOf(TODAY, s.id) : undefined, its = isToday ? otherOf(TODAY, s.id) : [];
+  const ref = canLog ? refOf(D, s.id) : undefined, its = canLog ? otherOf(D, s.id) : [];
   const usingOther = ref?.endsWith(':other') && its.length, tot = its.length ? F.sumMacros(its.map(itemMacros)) : null;
-  const open = isToday && otherOpen === s.id;
+  const open = canLog && otherOpen === s.id;
   return `<div class="card f-slot${ref ? ' done' : ''}${usingOther ? ' other' : ''}">
     <div class="st"><span class="tm">${fmt12(s.time)}</span><span class="sn">${s.name}</span>
-      ${isToday ? `<button type="button" class="f-tick${ref ? ' on' : ''}" data-act="tick" data-slot="${s.id}" aria-pressed="${!!ref}" aria-label="Mark ${s.name} as eaten"><span aria-hidden="true">✓</span>${ref ? 'Eaten' : 'Tick'}</button>` : ''}</div>
+      ${canLog ? `<button type="button" class="f-tick${ref ? ' on' : ''}" data-act="tick" data-slot="${s.id}" aria-pressed="${!!ref}" aria-label="Mark ${s.name} as eaten"><span aria-hidden="true">✓</span>${ref ? 'Eaten' : 'Tick'}</button>` : ''}</div>
     <label class="f-pick"><select data-act="swap" data-slot="${s.id}" aria-label="${s.name} option">${s.options.map((x) => `<option value="${x.id}" ${x.id === o.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
     <p class="pt">${esc(o.portion)}</p>
     <p class="mc"><b>${n0(o.kcal)}</b> kcal <span>P ${n1(o.p)}</span><span>C ${n1(o.c)}</span><span>F ${n1(o.f)}</span><span>Fib ${n1(o.fib)}</span></p>
     ${o.tags?.length ? `<p class="tg">${o.tags.map((x) => `<i>${micros.find((m) => m.tag === x)?.name.replace('Vitamin ', 'Vit ') ?? x}</i>`).join('')}</p>` : ''}
     ${its.length && !open ? `<div class="f-ate"><p class="label">Ate instead</p><p>${its.map((i) => esc(itemLabel(i))).join(' · ')}</p><p class="mc"><b>${n0(tot!.kcal)}</b> kcal <span>P ${n1(tot!.p)}</span><span>C ${n1(tot!.c)}</span><span>F ${n1(tot!.f)}</span><span>Fib ${n1(tot!.fib)}</span></p></div>` : ''}
-    ${isToday && !open ? `<button type="button" class="f-link f-else" data-act="other-open" data-slot="${s.id}">${its.length ? 'Edit what I ate' : '+ Ate something else?'}</button>` : ''}
+    ${canLog && !open ? `<button type="button" class="f-link f-else" data-act="other-open" data-slot="${s.id}">${its.length ? 'Edit what I ate' : '+ Ate something else?'}</button>` : ''}
     ${open ? otherBuilder(s.id, its) : ''}
   </div>`;
 }
@@ -464,26 +472,40 @@ function foodPreview(box: HTMLElement) {
   out.innerHTML = `<b>${esc(qtyLabel(food, qty, sel.value === 'g'))}</b> = ${n0(m.kcal)} kcal · P ${n1(m.p)} · C ${n1(m.c)} · F ${n1(m.f)} · Fib ${n1(m.fib)}`;
 }
 
+
+// date-wise history of every logged day (data is stored per date: fit:log:YYYY-MM-DD)
+function historyCard() {
+  const days = Object.keys(mem ?? {}).filter((k) => k.startsWith('fit:log:')).map((k) => k.slice(8)).filter((d) => d <= TODAY).sort().reverse();
+  const rows = days.filter((d) => { const l = logOf(d); return l && ((l.meals?.length ?? 0) || l.weight || l.steps || l.extraKcal); }).slice(0, 60);
+  if (!rows.length) return `<div class="card f-hist"><p class="label">History · by date</p><p class="fine">Every day you tick meals is saved under its date (e.g. ${fmtD(TODAY, { day: 'numeric', month: 'short', year: 'numeric' })}) and shows up here.</p></div>`;
+  return `<div class="card f-hist"><div class="f-loghead"><p class="label">History · by date</p><span class="fine">${rows.length} day${rows.length > 1 ? 's' : ''} logged</span></div><div class="f-tbl"><table><thead><tr><th>Date</th><th>Meals</th><th>Kcal</th><th>Protein</th><th>Weight</th><th>Steps</th><th></th></tr></thead><tbody>
+    ${rows.map((d) => { const l = logOf(d)!, f = eatenOn(d), ok = onTarget(d);
+      return `<tr class="f-hrow${d === dietDate ? ' sel' : ''}" data-act="dd" data-d="${d}" tabindex="0"><td>${fmtD(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</td><td>${l.meals?.length ?? 0}/${meals.length}</td><td>${f ? n0(f.kcal) : '—'}</td><td>${f ? n0(f.p) + ' g' : '—'}</td><td>${l.weight ? n1(l.weight) : '—'}</td><td>${stepsOn(d) != null ? n0(stepsOn(d)!) : '—'}</td><td>${ok ? '<span class="ok">✓</span>' : ok === false ? '<span class="off">·</span>' : ''}</td></tr>`; }).join('')}
+  </tbody></table></div><p class="fine">Tap a day to open it. Older days: use the date picker above. Export backup keeps everything, date by date.</p></div>`;
+}
 function renderDiet(root: HTMLElement) {
-  const w = ensureWeek(), day = w[dietDay], { t, sample, adjusted } = dietTargets(dietDay);
+  const D = dietDate, day = (ensureWeek(), dayPlan(D)), { t, sample, adjusted } = dietTargets(D), canLog = D <= TODAY;
   const chosen = meals.map((s) => s.options.find((o) => o.id === day[s.id]) ?? s.options[0]);
   const tot = F.sumMacros(chosen), tags = new Map<string, number>();
   chosen.forEach((o) => (o.tags ?? []).forEach((x) => tags.set(x, (tags.get(x) ?? 0) + 1)));
-  const todayIdx = String(F.weekdayIdx(TODAY)), isToday = dietDay === todayIdx;
+  const mon = F.addDays(D, -F.weekdayIdx(D)), wk = Array.from({ length: 7 }, (_, i) => F.addDays(mon, i));
+  const label = D === TODAY ? 'Today' : D < TODAY ? 'Logged day' : 'Upcoming';
   root.innerHTML = `
-  <div class="f-dayhead"><div><p class="label">Pure veg · dairy · Indian</p><h2>Fuel, <em>planned.</em></h2></div>
-    <div class="f-row"><button class="btn ghost sm" data-act="build-day">✦ Build my day</button><button class="btn ghost sm" data-act="build-week">Rebuild week</button></div></div>
-  <div class="f-wd" role="tablist" aria-label="Day of week">${WD.map((d, i) => `<button role="tab" aria-selected="${String(i) === dietDay}" data-act="wd" data-i="${i}">${d}${String(i) === todayIdx ? '<i></i>' : ''}</button>`).join('')}</div>
+  <div class="f-dayhead"><div><p class="label">Pure veg · dairy · Indian · ${label}</p><h2>${fmtD(D, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2></div>
+    <div class="f-row"><button class="f-nav" data-act="dweek" data-d="-7" aria-label="Previous week">‹</button><input type="date" class="f-date" data-act="dpick" value="${D}"><button class="f-nav" data-act="dweek" data-d="7" aria-label="Next week">›</button>${D !== TODAY ? '<button class="btn ghost sm" data-act="dd" data-d="' + TODAY + '">Today</button>' : ''}</div></div>
+  <div class="f-wd" role="tablist" aria-label="Days of this week">${wk.map((k, i) => `<button role="tab" aria-selected="${k === D}" data-act="dd" data-d="${k}" class="${k > TODAY ? 'fut' : ''}${logOf(k)?.meals?.length ? ' has' : ''}">${WD[i]}<small>${fmtD(k, { day: 'numeric', month: 'short' })}</small>${k === TODAY ? '<i></i>' : ''}</button>`).join('')}</div>
+  <div class="f-row f-dayact"><button class="btn ghost sm" data-act="build-day">✦ Build this day</button><button class="btn ghost sm" data-act="build-week">Rebuild weekly plan</button></div>
   <div class="card f-totals">
-    <div class="f-loghead"><p class="label">${sample ? 'Sample targets — your own appear once your goal is set' : dietDay === todayIdx ? `Today’s targets${adjusted ? ' · rebalanced' : ''}` : 'Base targets'}</p><span class="fine">${n0(tot.kcal)} / ${n0(t.kcal)} kcal</span></div>
+    <div class="f-loghead"><p class="label">${sample ? 'Sample targets — your own appear once your goal is set' : D === TODAY ? `Today’s targets${adjusted ? ' · rebalanced' : ''}` : D < TODAY ? 'Targets that day' : 'Planned targets'}</p><span class="fine">${n0(tot.kcal)} / ${n0(t.kcal)} kcal</span></div>
     <div class="f-bars">${bar('Calories', tot.kcal, t.kcal, '')}${bar('Protein', tot.p, t.p)}${bar('Carbs', tot.c, t.c)}${bar('Fat', tot.f, t.f)}${bar('Fibre', tot.fib, t.fib, 'g', true)}</div>
     ${tot.p < t.p * 0.95 ? `<p class="fine">Short ${n0(t.p - tot.p)} g protein — add a glass of milk (8 g), 100 g hung curd (10 g) or 50 g paneer (9 g).</p>` : ''}
   </div>
-  ${isToday ? checklistCard() + calcCard(TODAY, true) : `<p class="fine f-center">Ticks, “ate something else” and the calorie calculator work on today’s tab (${WD[+todayIdx]}).</p>`}
-  <div class="f-slots">${meals.map((s) => slotCard(s, day, isToday)).join('')}</div>
+  ${canLog ? checklistCard(D) + calcCard(D, true) : `<p class="fine f-center">This day is ahead — plan it now; ticks open on the day.</p>`}
+  <div class="f-slots">${meals.map((s) => slotCard(s, day, canLog)).join('')}</div>
+  ${historyCard()}
   <datalist id="f-foods">${foods.map((f) => `<option value="${esc(f.name)}">${esc(f.unit)}${f.aka ? ' · ' + esc(f.aka) : ''}</option>`).join('')}</datalist>
   <div class="f-two">
-    <div class="card f-micro"><p class="label">Vitamins & minerals · ${WD[+dietDay]}</p><ul>${micros.map((m) => { const c = tags.get(m.tag) ?? 0;
+    <div class="card f-micro"><p class="label">Vitamins & minerals · ${fmtD(D, { weekday: 'short', day: 'numeric', month: 'short' })}</p><ul>${micros.map((m) => { const c = tags.get(m.tag) ?? 0;
       return `<li class="${c >= 2 ? 'ok' : c === 1 ? 'mid' : 'low'}"><span class="dot"></span><div><b>${m.name}</b> <em>${c ? `${c} source${c > 1 ? 's' : ''}` : 'not covered'}</em><p>${esc(c ? m.note : m.food + '. ' + m.note)}</p></div></li>`; }).join('')}</ul></div>
     <div class="card f-supp"><p class="label">Supplements</p>
       <ul>
@@ -540,6 +562,8 @@ function render() {
   if (roots.today) renderToday(roots.today);
   if (roots.plan) renderPlan(roots.plan);
   if (roots.diet) renderDiet(roots.diet);
+  const strip = roots.diet?.querySelector('.f-wd') as HTMLElement | null, sel = strip?.querySelector('[aria-selected="true"]') as HTMLElement | null;
+  if (strip && sel) strip.scrollLeft = sel.offsetLeft - (strip.clientWidth - sel.offsetWidth) / 2 - strip.offsetLeft;
   if (roots.body) renderBody(roots.body);
   Object.values(roots).forEach((r) => r?.insertAdjacentHTML('afterbegin', lockBar()));
   eyes();
@@ -819,6 +843,7 @@ let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (mem && hiddenAt && Date.now() - hiddenAt > 5 * 60_000) lockNow(); });
 document.addEventListener('keydown', (e) => {
   const el = e.target as HTMLElement;
+  if (e.key === 'Enter' && el.classList.contains('f-hrow')) { e.preventDefault(); el.click(); return; }
   if (e.key === 'Enter' && el.closest('.f-other') && el.hasAttribute('data-food')) { e.preventDefault(); (el.closest('.f-other')!.querySelector('[data-act=food-add]') as HTMLElement).click(); }
 });
 document.addEventListener('submit', (e) => {
@@ -844,7 +869,7 @@ document.addEventListener('click', (e) => {
   else if (a === 'go-body') goTab('body');
   else if (a === 'go-plan') goTab('plan');
   else if (a === 'go-today') goTab('today');
-  else if (a === 'go-diet') { dietDay = String(F.weekdayIdx(TODAY)); goTab('diet'); }
+  else if (a === 'go-diet') { dietDate = TODAY; goTab('diet'); }
   else if (a === 'edit-goal') { editingGoal = true; render(); }
   else if (a === 'cancel-goal') { editingGoal = false; render(); }
   else if (a === 'suggest') {
@@ -898,21 +923,22 @@ document.addEventListener('click', (e) => {
   else if (a === 'reset-vault') {
     if (confirm('Erase ALL private fitness data on this device and start over? This cannot be undone.') && confirm('Really erase? Make sure you have a backup file.')) { localStorage.removeItem(VAULT); plainKeys().forEach((k) => localStorage.removeItem(k)); lockMsg = ''; screen = 'unlock'; render(); }
   }
-  else if (a === 'wd') { dietDay = el.dataset.i!; otherOpen = ''; render(); }
-  else if (a === 'tick') tickMeal(TODAY, el.dataset.slot!, !refOf(TODAY, el.dataset.slot!));
+  else if (a === 'dd') { dietDate = el.dataset.d!; otherOpen = ''; render(); if (el.classList.contains('f-hrow')) document.querySelector('[data-fit="diet"]')?.scrollIntoView({ behavior: 'smooth' }); }
+  else if (a === 'dweek') { dietDate = F.addDays(dietDate, +el.dataset.d!); otherOpen = ''; render(); }
+  else if (a === 'tick') tickMeal(dietDate, el.dataset.slot!, !refOf(dietDate, el.dataset.slot!));
   else if (a === 'other-open') { otherOpen = el.dataset.slot!; foodMsg = ''; render(); (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus(); }
   else if (a === 'other-done') { otherOpen = ''; foodMsg = ''; render(); }
-  else if (a === 'other-clear') { setOther(TODAY, el.dataset.slot!, []); otherOpen = ''; }
-  else if (a === 'food-del') { const its = [...otherOf(TODAY, el.dataset.slot!)]; its.splice(+el.dataset.n!, 1); setOther(TODAY, el.dataset.slot!, its); }
+  else if (a === 'other-clear') { setOther(dietDate, el.dataset.slot!, []); otherOpen = ''; }
+  else if (a === 'food-del') { const its = [...otherOf(dietDate, el.dataset.slot!)]; its.splice(+el.dataset.n!, 1); setOther(dietDate, el.dataset.slot!, its); }
   else if (a === 'food-add') {
     const box = el.closest('.f-other') as HTMLElement, q = (box.querySelector('[name=food]') as HTMLInputElement).value;
     const food = findFood(q), qty = num((box.querySelector('[name=qty]') as HTMLInputElement).value);
     if (!food) { foodMsg = q ? `“${q}” isn’t in the list yet — use Today → “Anything else” to enter kcal/protein by hand.` : 'Type a food first.'; return render(); }
     if (!qty || qty <= 0) { foodMsg = 'Enter a quantity.'; return render(); }
-    foodMsg = ''; setOther(TODAY, el.dataset.slot!, [...otherOf(TODAY, el.dataset.slot!), { id: food.id, q: qty, ...((box.querySelector('[name=unit]') as HTMLSelectElement).value === 'g' ? { u: 'g' as const } : {}) }]);
+    foodMsg = ''; setOther(dietDate, el.dataset.slot!, [...otherOf(dietDate, el.dataset.slot!), { id: food.id, q: qty, ...((box.querySelector('[name=unit]') as HTMLSelectElement).value === 'g' ? { u: 'g' as const } : {}) }]);
     (document.querySelector('.f-other [name=food]') as HTMLInputElement | null)?.focus();
   }
-  else if (a === 'build-day') { const w = ensureWeek(); w[dietDay] = F.buildDay(meals, dietTargets(dietDay).t, Date.now() % 2147483646, w[dietDay]); put(K.week, w); }
+  else if (a === 'build-day') { ensureWeek(); setDayPlan(dietDate, F.buildDay(meals, dietTargets(dietDate).t, Date.now() % 2147483646, dayPlan(dietDate))); }
   else if (a === 'build-week') { put(K.week, undefined); }
 });
 document.addEventListener('change', (e) => {
@@ -921,7 +947,8 @@ document.addEventListener('change', (e) => {
   if (el.name === 'ack') { const b = el.closest('form')?.querySelector('[data-ack-btn]') as HTMLButtonElement | null; if (b) b.disabled = !el.checked; return; }
   if (el.dataset.act === 'import' && el.files?.[0]) return void importData(el.files[0]);
   if (el.dataset.act === 'pick' && el.value) { view = el.value > TODAY ? TODAY : el.value; return render(); }
-  if (el.dataset.act === 'swap') { const w = ensureWeek(); w[dietDay] = { ...w[dietDay], [el.dataset.slot!]: el.value }; return put(K.week, w); }
+  if (el.dataset.act === 'swap') { ensureWeek(); return setDayPlan(dietDate, { ...dayPlan(dietDate), [el.dataset.slot!]: el.value }); }
+  if (el.dataset.act === 'dpick' && el.value) { dietDate = el.value; otherOpen = ''; return render(); }
   const form = el.closest('form') as HTMLFormElement | null;
   if (form?.dataset.form === 'log') {
     if (el.name === 'meal') return tickMeal(view, el.dataset.slot!, el.checked);

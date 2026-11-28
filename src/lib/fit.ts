@@ -23,6 +23,7 @@ export type DayLog = {
   date: string;
   meals?: string[];                       // eaten: "slot:optionId" (from the plan) or "slot:other" (custom foods)
   other?: Record<string, { id: string; q: number; u?: 'g' }[]>; // custom foods per slot (src/data/foods.ts ids)
+  plan?: Record<string, string>;          // snapshot of that DATE's diet plan (slot -> option id), so history never changes
   extraKcal?: number; extraP?: number; extraC?: number; extraF?: number;
   steps?: number; cardioMin?: number; workoutMin?: number; water?: number; sleep?: number; weight?: number;
 };
