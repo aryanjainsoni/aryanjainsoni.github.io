@@ -8,6 +8,7 @@ import Heatmap from '../components/Heatmap.astro';
 import { site } from '../data/site';
 import { getEntries } from '../lib/journal';
 import { stepStats, milestones, KM_PER_STEP, KCAL_PER_STEP } from '../lib/steps';
+import '../styles/fit.css';
 
 const goal = site.stepGoal;
 const s = stepStats(await getEntries(), goal);
@@ -36,8 +37,9 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       <h1>Strength is a <em>daily habit.</em></h1>
       <p class="lead">Every step logged, every day counted. Training since 2025 — this is the quiet part of the work.</p>
       <div class="tabs" role="tablist" aria-label="Gym sections">
-        <button role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="true" data-tab="steps">Steps</button>
-        <button role="tab" id="tab-diet" aria-controls="p-diet" aria-selected="false" data-tab="diet" tabindex="-1">Diet plan <span class="soon">soon</span></button>
+        {[['steps', 'Steps'], ['today', 'Today'], ['plan', 'Plan'], ['diet', 'Diet'], ['body', 'Body']].map(([id, label], i) => (
+          <button role="tab" id={`tab-${id}`} aria-controls={`p-${id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={id}>{label}</button>
+        ))}
       </div>
     </div>
   </section>
@@ -151,22 +153,12 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
     </div>
   </section>
 
-  <!-- ================= DIET ================= -->
-  <section class="panel" id="p-diet" role="tabpanel" aria-labelledby="tab-diet" hidden>
-    <div class="wrap">
-      <div class="card soon-card">
-        <p class="label">Diet plan · in the works</p>
-        <h2>Fuel, <em>planned.</em></h2>
-        <p class="lead">A weekly plan built around my training, my goals and balanced nutrition — with several options for every meal, so it never gets boring.</p>
-        <ul class="feat">
-          <li><b>Mon → Sun</b><span>A plan for every day of the week</span></li>
-          <li><b>5 options</b><span>per meal — breakfast to dinner</span></li>
-          <li><b>Balanced</b><span>protein, fibre, vitamins & minerals</span></li>
-          <li><b>Supplements</b><span>only where food falls short</span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
+  <!-- ================= PRIVATE: TODAY · PLAN · DIET · BODY (rendered in the browser from localStorage) ================= -->
+  {['today', 'plan', 'diet', 'body'].map((id) => (
+    <section class="panel fit" id={`p-${id}`} role="tabpanel" aria-labelledby={`tab-${id}`} hidden>
+      <div class="wrap" data-fit={id}><p class="muted">Loading…</p></div>
+    </section>
+  ))}
 
   <script is:inline type="application/json" id="steps-data" set:html={JSON.stringify({ goal, today: s.today, days: s.days })}></script>
   <script is:inline>
@@ -293,10 +285,14 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       }));
       let t; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(draw, 120); });
 
-      show(location.hash === '#diet' ? 'diet' : 'steps');
-      addEventListener('hashchange', () => show(location.hash === '#diet' ? 'diet' : 'steps'));
+      const fromHash = () => { const h = location.hash.slice(1); return tabs.some((t) => t.dataset.tab === h) ? h : 'steps'; };
+      show(fromHash());
+      addEventListener('hashchange', () => show(fromHash()));
       draw();
     })();
+  </script>
+  <script>
+    import '../scripts/fit-app.ts';
   </script>
 </Base>
 
@@ -312,11 +308,10 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   h2 { margin: 0; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 400; }
 
   /* tabs */
-  .tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
-  .tabs button { border: none; background: transparent; color: var(--muted); font: 600 14px 'Inter', sans-serif; padding: 10px 20px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .25s, color .25s; }
+  .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .tabs button { border: none; background: transparent; color: var(--muted); font: 600 14px 'Inter', sans-serif; padding: 10px 20px; border-radius: 999px; cursor: pointer; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; transition: background .25s, color .25s; }
   .tabs button[aria-selected='true'] { background: var(--ink); color: var(--bg); }
   .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .soon { font: 500 9px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); border: 1px solid currentColor; border-radius: 999px; padding: 2px 6px; }
 
   .panel { padding-block: 36px 24px; }
   .panel .wrap { display: grid; gap: 16px; }
@@ -379,7 +374,7 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   /* rhythm + journey */
   .duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
   h3 { margin: 0 0 20px; font: 400 1.35rem/1.25 'Fraunces', serif; }
-  h3 em, .soon-card h2 em, h1 em { color: var(--accent); }
+  h3 em, h1 em { color: var(--accent); }
   .wd { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 150px; }
   .wdc { display: grid; grid-template-rows: 1fr auto; gap: 8px; justify-items: center; }
   .wdt { width: 100%; max-width: 34px; background: color-mix(in srgb, var(--line) 50%, transparent); border-radius: 10px; display: flex; align-items: flex-end; overflow: hidden; }
@@ -402,24 +397,14 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   .how p { margin: 0; max-width: 620px; color: var(--muted); font-size: .92rem; }
   .how b { color: var(--ink); }
 
-  /* diet (soon) */
-  .soon-card { padding: clamp(28px, 5vw, 56px); }
-  .soon-card h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin: 8px 0 14px; }
-  .feat { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); }
-  .feat li { padding: 20px 18px 4px 0; display: grid; gap: 4px; }
-  .feat li + li { padding-left: 18px; border-left: 1px solid var(--line); }
-  .feat b { font: 400 1.3rem 'Fraunces', serif; }
-  .feat span { color: var(--muted); font-size: .88rem; }
 
   @media (prefers-reduced-motion: reduce) { .bar, .plot :global(.b) { animation: none; } }
   @media (max-width: 860px) {
     .top, .duo { grid-template-columns: minmax(0, 1fr); }
-    .feat { grid-template-columns: 1fr 1fr; }
-    .feat li:nth-child(3) { padding-left: 0; border-left: none; }
-  }
+      }
   @media (max-width: 520px) {
     .sum { grid-template-columns: 1fr 1fr; }
     .tile { min-height: 120px; padding: 18px; }
-    .tabs button { padding: 9px 16px; }
+    .tabs button { padding: 8px 11px; font-size: 13px; }
   }
 </style>
