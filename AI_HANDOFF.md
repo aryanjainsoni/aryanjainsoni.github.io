@@ -90,6 +90,8 @@ decisions that are truly mine.
   word suggestions while typing (tap / Tab), autocorrect of common typos on space (Backspace = undo),
   spelling chip for unknown words, proper-name casing, learns my words locally ("smart:vocab").
   Skips passwords, numbers, the food search and anything with data-nosmart.
+- Gym page layout: Steps tab keeps the big hero; other tabs add `.head.compact` (smaller title, no lead) so the
+  tab fits one laptop screen with only the footer below. Keep new Gym UI compact.
 - Gym Notebook (/gym/#guide): evidence-based guideline chapters. ONE FILE PER CHAPTER in src/content/guide/
   (frontmatter: n, title, icon, summary, updated, visual, caption, sources[]). Charts/diagrams live in
   src/components/GuideVisual.astro (energy, rate, protein, macros, phases, matador, sleep, incline, vshape,
@@ -136,6 +138,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym app tabs (Today…Notebook) use a compact hero + compact lock card so they fit one screen; 6 tabs fit on phones.
 - 2026-11-28 Daily Log: auto-drafted win/hard/tomorrow (live until edited), own-words field, saved time, unpublished-draft reminder.
 - 2026-11-28 Daily Log: GitHub box auto-fills from that date's public commits (+ ⟳ Fetch button).
 - 2026-11-28 Gym Notebook tab: 12 sourced chapters with 11 charts/diagrams (from the 100-day video + research).
