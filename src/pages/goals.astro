@@ -1,12 +1,13 @@
 ---
-// GOALS — daily & weekly habits from my Habit Tracker.
-// The Google Sheet is the master copy; ticks on this page are a quick checklist saved in this browser.
+// GOALS — daily & weekly habits.
+// Storage (this browser only, never sent anywhere):
+//   goals:2026-11-28  -> { "<daily id>": true }                 (one per day)
+//   goals:2026-W48    -> { "<weekly id>@wed": true }             (one per ISO week, ticked by weekday)
+//   goals:config      -> your edited goal list (names, times, days) — overrides the public defaults
+// The Google Sheet stays the master record; Export / Import moves everything between devices.
 import Base from '../layouts/Base.astro';
 import { site } from '../data/site';
 import { goals } from '../data/profile';
-
-const cats = [...new Set(goals.daily.map((g) => g.cat))];
-const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 ---
 <Base title="Goals" description="Aryan Jain's daily and weekly goals — study, health and mind, tracked every day.">
   <section class="head">
@@ -15,131 +16,467 @@ const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       <h1>Small things, <em>every day.</em></h1>
       <p class="lead">The habits I track daily and weekly. Discipline is the real portfolio — this is where it lives.</p>
       <div class="cta">
-        {site.trackerUrl ? (
-          <a class="btn primary" href={site.trackerUrl} target="_blank" rel="noopener">Open my tracker ↗</a>
-        ) : (
-          <span class="note">Full tracker: Google Sheet (link coming soon)</span>
-        )}
+        {site.trackerUrl && <a class="btn primary" href={site.trackerUrl} target="_blank" rel="noopener">Open my tracker ↗</a>}
         <a class="btn ghost" href="/journal/">Today’s journal →</a>
+        <button type="button" class="btn ghost" id="edit-open">✎ Edit goals</button>
       </div>
     </div>
   </section>
 
+  <!-- ============ OVERVIEW ============ -->
+  <section class="overview">
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat"><b data-stat="streak">0</b><span>day streak</span></div>
+        <div class="stat"><b data-stat="best">0</b><span>best streak</span></div>
+        <div class="stat"><b data-stat="week">0%</b><span>this week</span></div>
+        <div class="stat"><b data-stat="month">0%</b><span>this month</span></div>
+      </div>
+      <div class="card cal">
+        <div class="calhead">
+          <div><p class="label">History</p><h2>Every day, at a glance</h2></div>
+          <p class="muted small">A day counts towards the streak at <b>50%+</b>. Click any square to open that day.</p>
+        </div>
+        <div class="calscroll"><div class="calgrid" data-cal aria-label="Daily goals history"></div></div>
+        <div class="legend"><span>0%</span><i class="c l0"></i><i class="c l1"></i><i class="c l2"></i><i class="c l3"></i><i class="c l4"></i><span>100%</span></div>
+      </div>
+      <div class="habits card">
+        <p class="label">Last 30 days</p>
+        <div class="hgrid">
+          <div><p class="hk">Strongest habit</p><p class="hv" data-best-habit>—</p></div>
+          <div><p class="hk">Needs attention</p><p class="hv" data-weak-habit>—</p></div>
+          <div><p class="hk">Days logged</p><p class="hv" data-logged>0</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DAY ============ -->
   <section class="board">
-    <div class="wrap grid">
-      <!-- TODAY -->
+    <div class="wrap">
       <div class="panel" data-scope="day">
         <header>
-          <div>
-            <p class="label">Today</p>
-            <h2 id="today-date">—</h2>
+          <div class="dayhead">
+            <p class="label" data-day-label>Today</p>
+            <div class="daynav">
+              <button type="button" class="nav" data-shift="-1" aria-label="Previous day">‹</button>
+              <h2 id="day-title">—</h2>
+              <button type="button" class="nav" data-shift="1" aria-label="Next day">›</button>
+            </div>
+            <div class="daytools">
+              <label class="pick"><span>Pick a date</span><input type="date" id="pick" /></label>
+              <button type="button" class="link" id="to-today" hidden>Back to today</button>
+            </div>
           </div>
           <div class="ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" /><circle class="fg" cx="22" cy="22" r="19" /></svg><span data-pct>0%</span></div>
         </header>
-        {cats.map((c) => (
-          <div class="cat">
-            <p class="catname">{c}</p>
-            <ul>
-              {goals.daily.filter((g) => g.cat === c).map((g) => (
-                <li>
-                  <label>
-                    <input type="checkbox" data-id={`d-${key(g.name)}`} />
-                    <span class="box" aria-hidden="true"></span>
-                    <span class="txt">{g.name}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-        <p class="done" data-done>0 of {goals.daily.length} done</p>
+        <p class="future" data-future hidden>That day hasn’t happened yet — come back then.</p>
+        <div data-daily></div>
+        <p class="done" data-done>—</p>
       </div>
 
-      <!-- THIS WEEK -->
-      <div class="panel" data-scope="week">
+      <!-- ============ WEEK (by weekday) ============ -->
+      <div class="panel week" data-scope="week">
         <header>
           <div>
-            <p class="label">This week</p>
-            <h2 id="week-label">—</h2>
+            <p class="label" data-week-label>This week</p>
+            <h2 id="week-title">—</h2>
           </div>
           <div class="ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" /><circle class="fg" cx="22" cy="22" r="19" /></svg><span data-pct>0%</span></div>
         </header>
-        <ul>
-          {goals.weekly.map((g) => (
-            <li>
-              <label>
-                <input type="checkbox" data-id={`w-${key(g.name + '-' + g.when)}`} />
-                <span class="box" aria-hidden="true"></span>
-                <span class="txt">{g.name}</span>
-                <span class="when">{g.when}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
-        <p class="done" data-done>0 of {goals.weekly.length} done</p>
-        <p class="fine">Ticks here are saved in this browser only and reset each day / week. The Google Sheet is the master record.</p>
+        <div class="wscroll"><table class="wgrid" data-weekly></table></div>
+        <p class="fine">Tick the day you actually did it. <span class="plan-dot"></span> marks a planned day. A task is done when it hits its times-per-week.</p>
+        <p class="done" data-done>—</p>
+      </div>
+
+      <div class="panel backup">
+        <p class="label">Backup &amp; sync</p>
+        <p class="fine">Everything here — ticks and your edited goals — lives in this browser only. Export a file to back it up, or import it on your phone/laptop.</p>
+        <div class="bbtns">
+          <button type="button" class="btn ghost small-btn" id="export">Export history</button>
+          <label class="btn ghost small-btn importlbl">Import file<input type="file" id="import" accept="application/json" hidden /></label>
+        </div>
+        <p class="fine" id="backup-msg" aria-live="polite"></p>
       </div>
     </div>
   </section>
+
+  <!-- ============ EDITOR ============ -->
+  <dialog id="editor" class="editor" aria-label="Edit goals">
+    <form method="dialog" class="ehead">
+      <div><p class="label">Edit goals</p><h2>Your list, your rules.</h2></div>
+      <button class="x" aria-label="Close">✕</button>
+    </form>
+    <p class="fine privacy">🔒 Your edits are saved only in this browser — they are <b>not</b> published on the website. Private items (like medicine) are safe to add here.</p>
+
+    <h3>Daily</h3>
+    <div class="erows" data-edit-daily></div>
+    <button type="button" class="add" data-add="daily">+ Add daily goal</button>
+
+    <h3>Weekly</h3>
+    <div class="erows" data-edit-weekly></div>
+    <button type="button" class="add" data-add="weekly">+ Add weekly goal</button>
+
+    <div class="efoot">
+      <button type="button" class="link danger" id="edit-reset">Reset to default list</button>
+      <div class="ebtns">
+        <button type="button" class="btn ghost small-btn" id="edit-cancel">Cancel</button>
+        <button type="button" class="btn primary small-btn" id="edit-save">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="application/json" id="goal-defaults" set:html={JSON.stringify(goals)} />
 
   <script is:inline>
     (() => {
-      const now = new Date();
+      const DEFAULTS = JSON.parse(document.getElementById('goal-defaults').textContent);
+      const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      const DAYLBL = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+      const CATS = ['Study', 'Health', 'Mind', 'Other'];
+      const THRESH = 0.5;
+      const $ = (s, r = document) => r.querySelector(s);
+      const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const pad = (n) => String(n).padStart(2, '0');
-      const dayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      // ISO week number
-      const t = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
-      const week = Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
-      const weekKey = `${t.getUTCFullYear()}-W${week}`;
+      const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+      const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+      const monday = (d) => { const x = new Date(d); while (x.getDay() !== 1) x.setDate(x.getDate() - 1); return x; };
+      const isoWeek = (d) => {
+        const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+        const w = Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
+        return { key: `${t.getUTCFullYear()}-W${w}`, week: w };
+      };
+      const fmtTime = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`; };
+      const load = (k) => { try { return JSON.parse(localStorage.getItem(`goals:${k}`) || '{}'); } catch { return {}; } };
+      const save = (k, v) => { try { localStorage.setItem(`goals:${k}`, JSON.stringify(v)); } catch {} };
 
-      document.getElementById('today-date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-      document.getElementById('week-label').textContent = `Week ${week}`;
+      // ---------- Config (your edited list, or the defaults) ----------
+      const getConfig = () => {
+        const c = load('config');
+        return c && Array.isArray(c.daily) && Array.isArray(c.weekly) ? c : JSON.parse(JSON.stringify(DEFAULTS));
+      };
+      let CFG = getConfig();
+      const sortedDaily = () => {
+        const byTime = (a, b) => (a.time || '99') .localeCompare(b.time || '99');
+        const cats = [...new Set([...CATS, ...CFG.daily.map((g) => g.cat || 'Other')])];
+        return cats.map((c) => ({ cat: c, list: CFG.daily.filter((g) => (g.cat || 'Other') === c).sort(byTime) })).filter((g) => g.list.length);
+      };
+      const dayPct = (k) => { const v = load(k); const n = CFG.daily.length; return n ? CFG.daily.filter((g) => v[g.id]).length / n : 0; };
+
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const todayKey = ymd(today);
+      let sel = new Date(today);
+      const qp = new URLSearchParams(location.search);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(qp.get('date') || '') && parse(qp.get('date')) <= today) sel = parse(qp.get('date'));
 
       const C = 2 * Math.PI * 19;
-      document.querySelectorAll('.panel').forEach((panel) => {
-        const store = `goals:${panel.dataset.scope === 'day' ? dayKey : weekKey}`;
-        let saved = {};
-        try { saved = JSON.parse(localStorage.getItem(store) || '{}'); } catch {}
-        const boxes = [...panel.querySelectorAll('input[type=checkbox]')];
-        const update = () => {
-          const n = boxes.filter((b) => b.checked).length;
-          const pct = Math.round((n / boxes.length) * 100);
-          panel.querySelector('[data-pct]').textContent = pct + '%';
-          panel.querySelector('.fg').style.strokeDashoffset = String(C * (1 - n / boxes.length));
-          panel.querySelector('[data-done]').textContent = `${n} of ${boxes.length} done`;
-          panel.classList.toggle('complete', n === boxes.length);
-        };
-        panel.querySelector('.fg').style.strokeDasharray = String(C);
-        boxes.forEach((b) => {
-          b.checked = !!saved[b.dataset.id];
-          b.addEventListener('change', () => {
-            saved[b.dataset.id] = b.checked;
-            try { localStorage.setItem(store, JSON.stringify(saved)); } catch {}
-            update();
-          });
+      const ring = (panel, done, total, unit = '') => {
+        const pct = total ? done / total : 0;
+        panel.querySelector('[data-pct]').textContent = Math.round(pct * 100) + '%';
+        const fg = panel.querySelector('.fg');
+        fg.style.strokeDasharray = String(C);
+        fg.style.strokeDashoffset = String(C * (1 - pct));
+        panel.querySelector('[data-done]').textContent = `${done} of ${total} ${unit}done`;
+        panel.classList.toggle('complete', total > 0 && done >= total);
+      };
+
+      // ---------- DAY ----------
+      const dayPanel = $('[data-scope="day"]');
+      const pick = $('#pick'); pick.max = todayKey;
+      const renderDaily = (k, readOnly) => {
+        const v = load(k);
+        $('[data-daily]', dayPanel).innerHTML = sortedDaily().map((g) => `
+          <div class="cat"><p class="catname">${esc(g.cat)}</p><ul>
+          ${g.list.map((x) => `<li><label class="chk">
+              <input type="checkbox" data-id="${esc(x.id)}" ${v[x.id] ? 'checked' : ''} ${readOnly ? 'disabled' : ''}/>
+              <span class="box" aria-hidden="true"></span><span class="txt">${esc(x.name)}</span>
+              ${x.time ? `<span class="time">${fmtTime(x.time)}</span>` : ''}
+            </label></li>`).join('')}
+          </ul></div>`).join('');
+        const boxes = $$('input[type=checkbox]', dayPanel);
+        boxes.forEach((b) => b.addEventListener('change', () => {
+          const cur = load(k); cur[b.dataset.id] = b.checked; save(k, cur);
+          ring(dayPanel, boxes.filter((x) => x.checked).length, boxes.length);
+          renderOverview();
+        }));
+        ring(dayPanel, boxes.filter((x) => x.checked).length, boxes.length);
+      };
+
+      // ---------- WEEK (Mon–Sun grid) ----------
+      const weekPanel = $('[data-scope="week"]');
+      const renderWeekly = (d, readOnly) => {
+        const w = isoWeek(d);
+        const mon = monday(d);
+        const v = load(w.key);
+        const dates = DAYS.map((_, i) => addDays(mon, i));
+        $('#week-title').textContent = `${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${dates[6].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+        $('[data-week-label]').textContent = `Week ${w.week}${ymd(monday(today)) === ymd(mon) ? ' · this week' : ''}`;
+        const head = `<thead><tr><th class="tname">Task</th>${DAYS.map((dd, i) => `<th class="${ymd(dates[i]) === todayKey ? 'today' : ''}">${DAYLBL[dd]}<small>${dates[i].getDate()}</small></th>`).join('')}<th class="tcount">Done</th></tr></thead>`;
+        const body = CFG.weekly.map((t) => {
+          const ticks = DAYS.filter((dd) => v[`${t.id}@${dd}`]).length;
+          const target = Math.max(1, Number(t.target) || 1);
+          return `<tr class="${ticks >= target ? 'met' : ''}">
+            <th class="tname" scope="row">${esc(t.name)}<span class="tmeta">${(t.days && t.days.length ? t.days.map((x) => DAYLBL[x]).join(' & ') : 'Any day')}${t.time ? ' · ' + fmtTime(t.time) : ''}</span></th>
+            ${DAYS.map((dd, i) => {
+              const fut = dates[i] > today;
+              const planned = t.days && t.days.includes(dd);
+              return `<td class="${planned ? 'planned' : ''}"><label class="cell-chk" title="${esc(t.name)} — ${DAYLBL[dd]}">
+                <input type="checkbox" data-wid="${esc(t.id)}@${dd}" ${v[`${t.id}@${dd}`] ? 'checked' : ''} ${readOnly || fut ? 'disabled' : ''}/>
+                <span class="box" aria-hidden="true"></span><span class="sr">${esc(t.name)} ${DAYLBL[dd]}</span></label></td>`;
+            }).join('')}
+            <td class="tcount">${Math.min(ticks, target)}/${target}</td></tr>`;
+        }).join('');
+        $('[data-weekly]').innerHTML = head + `<tbody>${body}</tbody>`;
+        const total = CFG.weekly.reduce((s, t) => s + Math.max(1, Number(t.target) || 1), 0);
+        const doneCount = () => { const cur = load(w.key); return CFG.weekly.reduce((s, t) => s + Math.min(DAYS.filter((dd) => cur[`${t.id}@${dd}`]).length, Math.max(1, Number(t.target) || 1)), 0); };
+        $$('input[data-wid]', weekPanel).forEach((b) => b.addEventListener('change', () => {
+          const cur = load(w.key); cur[b.dataset.wid] = b.checked; save(w.key, cur);
+          renderWeekly(d, readOnly);
+        }));
+        ring(weekPanel, doneCount(), total, 'times ');
+      };
+
+      const renderDay = () => {
+        const k = ymd(sel);
+        const future = sel > today;
+        const diff = Math.round((today - sel) / 86400000);
+        $('#day-title').textContent = sel.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', ...(sel.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
+        $('[data-day-label]').textContent = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : future ? 'Upcoming' : `${diff} days ago`;
+        $('[data-future]').hidden = !future;
+        $('#to-today').hidden = diff === 0;
+        $('[data-shift="1"]').disabled = sel >= today;
+        pick.value = k;
+        renderDaily(k, future);
+        renderWeekly(sel, future);
+        $$('.cell').forEach((c) => c.classList.toggle('sel', c.dataset.day === k));
+        const url = new URL(location.href);
+        k === todayKey ? url.searchParams.delete('date') : url.searchParams.set('date', k);
+        history.replaceState(null, '', url);
+      };
+      $$('[data-shift]').forEach((b) => b.addEventListener('click', () => { const n = addDays(sel, Number(b.dataset.shift)); if (n <= today) { sel = n; renderDay(); } }));
+      $('#to-today').addEventListener('click', () => { sel = new Date(today); renderDay(); });
+      pick.addEventListener('change', () => { if (pick.value) { const d = parse(pick.value); if (d <= today) { sel = d; renderDay(); } } });
+
+      // ---------- OVERVIEW ----------
+      const cal = $('[data-cal]');
+      const WEEKS = 52; // poora ek saal
+      const renderOverview = () => {
+        const end = new Date(today);
+        const start = monday(addDays(end, -(WEEKS * 7 - 1)));
+        cal.innerHTML = '';
+        let lastMonth = -1;
+        for (let d = new Date(start); d <= end;) {
+          const colEl = document.createElement('div'); colEl.className = 'col';
+          const m = document.createElement('span'); m.className = 'mon';
+          if (d.getMonth() !== lastMonth) { m.textContent = d.toLocaleDateString('en', { month: 'short' }); lastMonth = d.getMonth(); }
+          colEl.appendChild(m);
+          for (let r = 0; r < 7; r++, d = addDays(d, 1)) {
+            const k = ymd(d);
+            const cell = document.createElement('button');
+            cell.type = 'button'; cell.className = 'cell c';
+            if (d > end) { cell.classList.add('future'); cell.disabled = true; colEl.appendChild(cell); continue; }
+            const p = dayPct(k);
+            cell.classList.add(p === 0 ? 'l0' : p < 0.25 ? 'l1' : p < 0.5 ? 'l2' : p < 1 ? 'l3' : 'l4');
+            cell.dataset.day = k;
+            cell.title = `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} — ${Math.round(p * 100)}%`;
+            cell.setAttribute('aria-label', cell.title);
+            if (k === ymd(sel)) cell.classList.add('sel');
+            cell.addEventListener('click', () => { sel = parse(k); renderDay(); dayPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+            colEl.appendChild(cell);
+          }
+          cal.appendChild(colEl);
+        }
+        const sc = cal.parentElement; sc.scrollLeft = sc.scrollWidth;
+
+        const good = (d) => dayPct(ymd(d)) >= THRESH;
+        let cur = 0; let d = new Date(today);
+        if (!good(d)) d = addDays(d, -1);
+        while (good(d)) { cur++; d = addDays(d, -1); }
+        const keys = Object.keys(localStorage).filter((k) => /^goals:\d{4}-\d{2}-\d{2}$/.test(k)).map((k) => k.slice(6)).sort();
+        let best = 0, run = 0, prev = null;
+        keys.forEach((k) => {
+          if (dayPct(k) >= THRESH) { const dd = parse(k); run = prev && Math.round((dd - prev) / 86400000) === 1 ? run + 1 : 1; prev = dd; best = Math.max(best, run); }
+          else { run = 0; prev = null; }
         });
-        update();
+        $('[data-stat="streak"]').textContent = cur;
+        $('[data-stat="best"]').textContent = Math.max(best, cur);
+        const avg = (from) => { let s = 0, n = 0; for (let x = new Date(from); x <= today; x = addDays(x, 1)) { s += dayPct(ymd(x)); n++; } return n ? Math.round((s / n) * 100) : 0; };
+        $('[data-stat="week"]').textContent = avg(monday(today)) + '%';
+        $('[data-stat="month"]').textContent = avg(new Date(today.getFullYear(), today.getMonth(), 1)) + '%';
+
+        const counts = Object.fromEntries(CFG.daily.map((g) => [g.id, 0]));
+        let logged = 0;
+        for (let i = 0; i < 30; i++) {
+          const v = load(ymd(addDays(today, -i)));
+          if (!Object.values(v).some(Boolean)) continue;
+          logged++;
+          CFG.daily.forEach((g) => { if (v[g.id]) counts[g.id]++; });
+        }
+        $('[data-logged]').textContent = logged;
+        if (logged && CFG.daily.length) {
+          const ranked = CFG.daily.map((g) => ({ ...g, n: counts[g.id] })).sort((a, b) => b.n - a.n);
+          $('[data-best-habit]').textContent = `${ranked[0].name} · ${ranked[0].n}/${logged}`;
+          const w = ranked[ranked.length - 1];
+          $('[data-weak-habit]').textContent = `${w.name} · ${w.n}/${logged}`;
+        } else {
+          $('[data-best-habit]').textContent = 'Start ticking ✦';
+          $('[data-weak-habit]').textContent = '—';
+        }
+      };
+
+      // ---------- EDITOR ----------
+      const dlg = $('#editor');
+      let draft;
+      const uid = (p) => `${p}-c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+      const renderEditor = () => {
+        $('[data-edit-daily]').innerHTML = draft.daily.map((g, i) => `
+          <div class="erow" data-i="${i}" data-kind="daily">
+            <input class="ename" aria-label="Goal name" value="${esc(g.name)}" placeholder="Goal name" data-f="name"/>
+            <select aria-label="Category" data-f="cat">${CATS.map((c) => `<option ${((g.cat || 'Other') === c) ? 'selected' : ''}>${c}</option>`).join('')}</select>
+            <input type="time" aria-label="Time (optional)" value="${esc(g.time || '')}" data-f="time"/>
+            <button type="button" class="del" aria-label="Remove ${esc(g.name)}" data-del>✕</button>
+          </div>`).join('');
+        $('[data-edit-weekly]').innerHTML = draft.weekly.map((t, i) => `
+          <div class="erow wrow" data-i="${i}" data-kind="weekly">
+            <input class="ename" aria-label="Task name" value="${esc(t.name)}" placeholder="Task name" data-f="name"/>
+            <div class="days" role="group" aria-label="Planned days">${DAYS.map((dd) => `<button type="button" class="dchip ${(t.days || []).includes(dd) ? 'on' : ''}" data-day="${dd}" aria-pressed="${(t.days || []).includes(dd)}">${DAYLBL[dd].slice(0, 2)}</button>`).join('')}</div>
+            <label class="tgt">×<input type="number" min="1" max="7" value="${Number(t.target) || 1}" aria-label="Times per week" data-f="target"/>/wk</label>
+            <input type="time" aria-label="Time (optional)" value="${esc(t.time || '')}" data-f="time"/>
+            <button type="button" class="del" aria-label="Remove ${esc(t.name)}" data-del>✕</button>
+          </div>`).join('');
+      };
+      dlg.addEventListener('input', (e) => {
+        const row = e.target.closest('.erow'); if (!row || !e.target.dataset.f) return;
+        const item = draft[row.dataset.kind][row.dataset.i];
+        item[e.target.dataset.f] = e.target.dataset.f === 'target' ? Number(e.target.value) || 1 : e.target.value;
       });
+      dlg.addEventListener('click', (e) => {
+        const row = e.target.closest('.erow');
+        if (e.target.matches('[data-del]') && row) { draft[row.dataset.kind].splice(row.dataset.i, 1); renderEditor(); }
+        if (e.target.matches('.dchip') && row) {
+          const t = draft.weekly[row.dataset.i]; t.days = t.days || [];
+          const dd = e.target.dataset.day;
+          t.days = t.days.includes(dd) ? t.days.filter((x) => x !== dd) : DAYS.filter((x) => x === dd || t.days.includes(x));
+          if (t.days.length > (Number(t.target) || 1)) t.target = t.days.length;
+          renderEditor();
+        }
+        if (e.target.matches('[data-add]')) {
+          const kind = e.target.dataset.add;
+          draft[kind].push(kind === 'daily' ? { id: uid('d'), name: '', cat: 'Study' } : { id: uid('w'), name: '', days: [], target: 1 });
+          renderEditor();
+          const rows = $$(`[data-kind="${kind}"] .ename`, dlg); rows[rows.length - 1]?.focus();
+        }
+      });
+      $('#edit-open').addEventListener('click', () => { draft = JSON.parse(JSON.stringify(CFG)); renderEditor(); dlg.showModal(); });
+      $('#edit-cancel').addEventListener('click', () => dlg.close());
+      $('#edit-save').addEventListener('click', () => {
+        draft.daily = draft.daily.filter((g) => g.name.trim()).map((g) => ({ ...g, name: g.name.trim(), time: g.time || undefined }));
+        draft.weekly = draft.weekly.filter((t) => t.name.trim()).map((t) => ({ ...t, name: t.name.trim(), time: t.time || undefined }));
+        save('config', draft); CFG = getConfig(); dlg.close(); renderOverview(); renderDay();
+        $('#backup-msg').textContent = 'Goals updated — saved in this browser.';
+      });
+      $('#edit-reset').addEventListener('click', () => {
+        if (!confirm('Go back to the default goal list? Your ticks stay; only the list resets.')) return;
+        localStorage.removeItem('goals:config'); CFG = getConfig(); draft = JSON.parse(JSON.stringify(CFG)); renderEditor(); renderOverview(); renderDay();
+      });
+
+      // ---------- EXPORT / IMPORT ----------
+      const msg = $('#backup-msg');
+      $('#export').addEventListener('click', () => {
+        const data = {};
+        Object.keys(localStorage).filter((k) => k.startsWith('goals:')).forEach((k) => (data[k] = JSON.parse(localStorage.getItem(k))));
+        const blob = new Blob([JSON.stringify({ app: 'ascent-goals', exported: new Date().toISOString(), data }, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = `ascent-goals-${todayKey}.json`; a.click(); URL.revokeObjectURL(a.href);
+        msg.textContent = `Exported ${Object.keys(data).length} entries (ticks + your goal list).`;
+      });
+      $('#import').addEventListener('change', async (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        try {
+          const json = JSON.parse(await f.text());
+          let n = 0;
+          Object.entries(json.data || {}).forEach(([k, v]) => {
+            if (typeof v !== 'object' || v === null) return;
+            if (k === 'goals:config') { if (Array.isArray(v.daily) && Array.isArray(v.weekly)) { save('config', v); n++; } return; }
+            if (!/^goals:\d{4}-(\d{2}-\d{2}|W\d{1,2})$/.test(k)) return;
+            save(k.slice(6), { ...load(k.slice(6)), ...v }); n++;
+          });
+          CFG = getConfig();
+          msg.textContent = `Imported ${n} entries — merged with what was here.`;
+          renderOverview(); renderDay();
+        } catch { msg.textContent = 'That file could not be read. Use a file exported from this page.'; }
+        e.target.value = '';
+      });
+
+      renderOverview();
+      renderDay();
     })();
   </script>
 </Base>
 
 <style>
-  .head { padding-block: 72px 24px; }
+  .head { padding-block: 72px 8px; }
   h1 { font-size: clamp(2.8rem, 7vw, 5.4rem); font-weight: 400; margin: 10px 0 16px; letter-spacing: -.03em; }
   h1 em { color: var(--accent); }
   .lead { color: var(--muted); font-size: 1.12rem; max-width: 560px; margin: 0 0 30px; }
   .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .note { font: 500 12px 'JetBrains Mono', monospace; letter-spacing: .08em; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 11px 16px; }
+  .cta button.btn { cursor: pointer; font-family: inherit; }
+  .label, :global(.catname) { margin: 0 0 6px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); } .small { font-size: .88rem; margin: 0; max-width: 340px; }
+  .fine { margin: 10px 0 0; font-size: .85rem; color: var(--muted); }
 
+  /* Overview */
+  .overview { padding-block: 40px 8px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .stat b { display: block; font: 400 2.2rem/1 'Fraunces', serif; color: var(--ink); margin-bottom: 6px; }
+  .stat span { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(20px, 3vw, 30px); box-shadow: var(--shadow); }
+  .cal { margin-bottom: 14px; }
+  .calhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .calhead h2 { margin: 0; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 400; }
+  .calscroll { overflow-x: auto; padding-bottom: 6px; }
+  .calgrid { display: flex; gap: 4px; width: max-content; }
+  .calgrid :global(.col) { display: grid; grid-template-rows: 16px repeat(7, 15px); gap: 4px; }
+  .calgrid :global(.mon) { font: 500 10px 'JetBrains Mono', monospace; color: var(--muted); white-space: nowrap; }
+  .c, .calgrid :global(.c) { width: 15px; height: 15px; border-radius: 4px; border: none; padding: 0; display: inline-block; }
+  .calgrid :global(.cell) { cursor: pointer; transition: transform .15s, outline-color .15s; outline: 2px solid transparent; outline-offset: 1px; }
+  .calgrid :global(.cell:hover) { transform: scale(1.25); }
+  .calgrid :global(.cell.sel) { outline-color: var(--ink); }
+  .calgrid :global(.cell.future) { visibility: hidden; }
+  .l0, .calgrid :global(.l0) { background: var(--line); }
+  .l1, .calgrid :global(.l1) { background: color-mix(in srgb, var(--accent) 25%, var(--line)); }
+  .l2, .calgrid :global(.l2) { background: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .l3, .calgrid :global(.l3) { background: color-mix(in srgb, var(--accent) 78%, var(--line)); }
+  .l4, .calgrid :global(.l4) { background: var(--accent); }
+  .legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; font: 500 11px 'JetBrains Mono', monospace; color: var(--muted); }
+  .legend span:first-child { margin-right: 4px; } .legend span:last-child { margin-left: 4px; }
+  .hgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .hk { margin: 0 0 4px; font-size: .85rem; color: var(--muted); }
+  .hv { margin: 0; font: 400 1.25rem/1.3 'Fraunces', serif; }
+
+  /* Panels */
   .board { padding-top: 32px; }
-  .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
-  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(22px, 3vw, 34px); box-shadow: var(--shadow); transition: border-color .4s; }
+  .board .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .panel { min-width: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(22px, 3vw, 34px); box-shadow: var(--shadow); transition: border-color .4s; scroll-margin-top: 100px; }
   .panel.complete { border-color: var(--accent); }
-  .panel header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 20px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
-  .label, .catname { margin: 0 0 6px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
-  .panel h2 { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); font-weight: 400; }
+  .panel header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 20px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .panel h2 { margin: 0; font-size: clamp(1.3rem, 2.4vw, 1.8rem); font-weight: 400; }
+  .daynav { display: flex; align-items: center; gap: 10px; }
+  .nav { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; flex-shrink: 0; }
+  .nav:hover:not(:disabled) { border-color: var(--accent); }
+  .nav:disabled { opacity: .3; cursor: default; }
+  .daytools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+  .pick { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 12px; border: 1px solid var(--line); border-radius: 999px; }
+  .pick span { font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .pick input { border: none; background: transparent; color: var(--ink); font: 500 13px 'Inter', sans-serif; }
+  .link { border: none; background: none; color: var(--accent); font: 600 13px 'Inter', sans-serif; cursor: pointer; padding: 4px 0; }
+  .danger { color: #c0392b; }
+  .future { margin: 14px 0 0; color: var(--muted); font-style: italic; }
 
   .ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
   .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -147,21 +484,79 @@ const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   .ring .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.2,.7,.2,1); }
   .ring span { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px 'JetBrains Mono', monospace; }
 
-  .cat { margin-top: 18px; }
-  ul { list-style: none; margin: 0; padding: 0; }
-  li + li { border-top: 1px solid var(--line); }
-  label { display: flex; align-items: center; gap: 14px; padding: 13px 4px; cursor: pointer; }
-  input { position: absolute; opacity: 0; pointer-events: none; }
-  .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--muted); flex-shrink: 0; display: grid; place-items: center; transition: all .25s; }
-  .box::after { content: ''; width: 6px; height: 11px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); margin-top: -2px; transition: transform .25s cubic-bezier(.2,.7,.3,1.4); }
-  input:checked + .box { background: var(--accent); border-color: var(--accent); }
-  input:checked + .box::after { transform: rotate(45deg) scale(1); }
-  input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 3px; }
-  .txt { flex: 1; font: 400 1.08rem 'Fraunces', serif; transition: color .25s; }
-  input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--accent); }
-  .when { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  /* Daily list (rendered by JS) */
+  [data-daily] :global(.cat) { margin-top: 18px; }
+  [data-daily] :global(ul) { list-style: none; margin: 0; padding: 0; }
+  [data-daily] :global(li + li) { border-top: 1px solid var(--line); }
+  .board :global(.chk) { display: flex; align-items: center; gap: 14px; padding: 13px 4px; cursor: pointer; }
+  .board :global(input[type=checkbox]) { position: absolute; opacity: 0; pointer-events: none; }
+  .board :global(.box) { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--muted); flex-shrink: 0; display: grid; place-items: center; transition: all .25s; }
+  .board :global(.box::after) { content: ''; width: 6px; height: 11px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); margin-top: -2px; transition: transform .25s cubic-bezier(.2,.7,.3,1.4); }
+  .board :global(input:checked + .box) { background: var(--accent); border-color: var(--accent); }
+  .board :global(input:checked + .box::after) { transform: rotate(45deg) scale(1); }
+  .board :global(input:focus-visible + .box) { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .board :global(input:disabled + .box) { opacity: .35; }
+  .board :global(.txt) { flex: 1; font: 400 1.08rem 'Fraunces', serif; transition: color .25s; }
+  .board :global(input:checked ~ .txt) { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--accent); }
+  .board :global(.time) { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
   .done { margin: 18px 0 0; font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
-  .fine { margin: 14px 0 0; font-size: .85rem; color: var(--muted); }
 
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  /* Weekly grid */
+  .wscroll { overflow-x: auto; margin-top: 8px; }
+  .wgrid { width: 100%; border-collapse: collapse; min-width: 560px; }
+  .wgrid :global(th), .wgrid :global(td) { padding: 10px 6px; text-align: center; border-bottom: 1px solid var(--line); }
+  .wgrid :global(thead th) { font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .wgrid :global(thead th small) { display: block; font-size: 10px; letter-spacing: 0; opacity: .7; margin-top: 2px; }
+  .wgrid :global(thead th.today) { color: var(--accent); }
+  .wgrid :global(.tname) { text-align: left; font: 400 1.05rem/1.25 'Fraunces', serif; color: var(--ink); min-width: 170px; }
+  .wgrid :global(thead .tname) { font: 500 11px 'JetBrains Mono', monospace; color: var(--muted); }
+  .wgrid :global(.tmeta) { display: block; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+  .wgrid :global(.tcount) { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); width: 52px; }
+  .wgrid :global(tr.met .tcount) { color: var(--accent); }
+  .wgrid :global(tr.met .tname) { text-decoration: line-through; text-decoration-color: var(--accent); color: var(--muted); }
+  /* position: relative — chhupe checkbox/label isi ke andar rahein (warna page chauda ho jaata hai) */
+  .wgrid :global(.cell-chk) { position: relative; display: inline-grid; place-items: center; cursor: pointer; padding: 4px; border-radius: 8px; }
+  .board :global(.chk) { position: relative; }
+  .wgrid :global(td.planned .cell-chk) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .wgrid :global(.sr) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .plan-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+
+  .bbtns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .small-btn { padding: 9px 16px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .importlbl { display: inline-flex; }
+
+  /* Editor dialog */
+  .editor { width: min(760px, 94vw); max-height: 88vh; overflow: auto; padding: clamp(20px, 3vw, 32px); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); color: var(--ink); box-shadow: 0 40px 100px rgba(0,0,0,.5); }
+  .editor::backdrop { background: rgba(10, 8, 7, .7); backdrop-filter: blur(6px); }
+  .ehead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .ehead h2 { margin: 0; font-size: 1.7rem; font-weight: 400; }
+  .x { border: none; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .privacy { padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); }
+  .editor h3 { margin: 26px 0 10px; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .editor :global(.erow) { display: grid; grid-template-columns: 1fr 110px 120px 32px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .editor :global(.wrow) { grid-template-columns: 1fr auto 88px 120px 32px; }
+  .editor :global(input), .editor :global(select) { width: 100%; min-width: 0; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 500 14px 'Inter', sans-serif; }
+  .editor :global(input:focus), .editor :global(select:focus) { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .editor :global(.days) { display: flex; gap: 3px; }
+  .editor :global(.dchip) { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 600 11px 'Inter', sans-serif; cursor: pointer; }
+  .editor :global(.dchip.on) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .editor :global(.tgt) { display: flex; align-items: center; gap: 4px; font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+  .editor :global(.tgt input) { width: 46px; padding: 8px 6px; text-align: center; }
+  .editor :global(.del) { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .editor :global(.del:hover) { color: #c0392b; border-color: #c0392b; }
+  .add { margin-top: 10px; border: 1px dashed var(--line); background: transparent; color: var(--accent); font: 600 13px 'Inter', sans-serif; padding: 10px 14px; border-radius: 12px; cursor: pointer; width: 100%; }
+  .efoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+  .ebtns { display: flex; gap: 10px; }
+
+  @media (max-width: 860px) {
+    /* Task ka naam scroll karte waqt left mein chipka rahe */
+    .wgrid { min-width: 520px; }
+    .wgrid :global(.tname) { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 130px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .hgrid { grid-template-columns: 1fr; gap: 12px; }
+    .editor :global(.erow) { grid-template-columns: 1fr 1fr 32px; }
+    .editor :global(.erow .ename) { grid-column: 1 / -1; }
+    .editor :global(.wrow) { grid-template-columns: 1fr 1fr 32px; }
+    .editor :global(.wrow .days) { grid-column: 1 / -1; }
+  }
 </style>

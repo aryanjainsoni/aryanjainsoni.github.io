@@ -111,14 +111,24 @@ section { padding-block: clamp(72px, 10vw, 128px); }
 /* ============ Live effects ============ */
 
 /* Cursor ke peeche chalne wala warm glow */
+/* Cursor glow — sabse UPAR ki transparent layer (clicks block nahi karti), taaki
+   hero, cards aur har page par dikhe. Dark: "screen" = roshni; light: halka warm tint. */
 .spotlight {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, -20%),
-    color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%);
-  transition: opacity 0.3s;
+  z-index: 60;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background: radial-gradient(560px circle at var(--mx, 50%) var(--my, -20%),
+    rgba(240, 121, 76, .16), rgba(226, 61, 109, .06) 35%, transparent 65%);
+  transition: opacity .6s ease;
+}
+:root.glow-on .spotlight { opacity: 1; }
+:root[data-theme='light'] .spotlight {
+  mix-blend-mode: multiply;
+  background: radial-gradient(560px circle at var(--mx, 50%) var(--my, -20%),
+    rgba(240, 138, 75, .16), rgba(226, 61, 109, .05) 35%, transparent 65%);
 }
 main, header, footer { position: relative; z-index: 1; }
 

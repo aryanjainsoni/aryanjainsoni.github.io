@@ -109,28 +109,30 @@ export const projects = [
 
 // Daily / weekly goals — Habit Tracker (Google Sheet) se.
 // Privacy: medicine aur supplements ki detail jaan-boojh kar public site par nahi.
+// DEFAULT goals — public. Page par "Edit goals" se aap ise apne browser mein badal sakte ho
+// (naam, time, din, naye goals). Wo personal list sirf aapke browser mein rehti hai — public nahi.
+// time: 24-hour "HH:MM" (Reminders sheet se). days: weekly ke liye ['mon'..'sun'], khaali = any day.
 export const goals = {
   daily: [
-    { name: 'Study session', cat: 'Study' },
-    { name: 'Vedantu lecture', cat: 'Study' },
-    { name: '1 LeetCode question', cat: 'Study' },
-    { name: 'GitHub commit', cat: 'Study' },
-    { name: 'Internship learning', cat: 'Study' },
-    { name: 'LinkedIn activity', cat: 'Study' },
-    { name: 'Gym', cat: 'Health' },
-    { name: 'Diet plan followed', cat: 'Health' },
-    { name: 'Protein & creatine', cat: 'Health' },
-    { name: 'Supplements', cat: 'Health' },
-    { name: 'Skin care', cat: 'Health' },
-    { name: '108 Jain mala', cat: 'Mind' },
-    { name: 'Fun time', cat: 'Mind' },
+    { id: 'd-study-session', name: 'Study session', cat: 'Study' },
+    { id: 'd-vedantu-lecture', name: 'Vedantu lecture', cat: 'Study', time: '19:30' },
+    { id: 'd-1-leetcode-question', name: '1 LeetCode question', cat: 'Study' },
+    { id: 'd-github-commit', name: 'GitHub commit', cat: 'Study' },
+    { id: 'd-internship-learning', name: 'Internship learning', cat: 'Study' },
+    { id: 'd-linkedin-activity', name: 'LinkedIn activity', cat: 'Study' },
+    { id: 'd-gym', name: 'Gym', cat: 'Health', time: '17:30' },
+    { id: 'd-diet-plan-followed', name: 'Diet plan followed', cat: 'Health' },
+    { id: 'd-protein-creatine', name: 'Protein & creatine', cat: 'Health', time: '18:30' },
+    { id: 'd-supplements', name: 'Supplements', cat: 'Health', time: '09:15' },
+    { id: 'd-skin-care', name: 'Skin care', cat: 'Health', time: '22:00' },
+    { id: 'd-108-jain-mala', name: '108 Jain mala', cat: 'Mind', time: '06:30' },
+    { id: 'd-fun-time', name: 'Fun time', cat: 'Mind' },
   ],
   weekly: [
-    { name: 'Wash clothes', when: 'Any day' },
-    { name: 'Change pillow cover', when: 'Any day' },
-    { name: 'Hair oiling', when: 'Wednesday' },
-    { name: 'Hair oiling', when: 'Sunday' },
-    { name: 'Call friends / relatives', when: 'Any day' },
-    { name: 'Face + neck pack', when: 'Any day' },
+    { id: 'w-wash-clothes', name: 'Wash clothes', days: [], target: 1 },
+    { id: 'w-change-pillow-cover', name: 'Change pillow cover', days: [], target: 1 },
+    { id: 'w-hair-oiling', name: 'Hair oiling', days: ['wed', 'sun'], target: 2, time: '20:00' },
+    { id: 'w-call-friends-relatives', name: 'Call friends / relatives', days: ['sun'], target: 1, time: '18:00' },
+    { id: 'w-face-neck-pack', name: 'Face + neck pack', days: [], target: 1 },
   ],
 };

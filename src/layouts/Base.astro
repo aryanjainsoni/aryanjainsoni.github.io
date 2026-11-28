@@ -130,8 +130,10 @@ const last = [...'Jain'];
         addEventListener('pointermove', (e) => {
           root.style.setProperty('--mx', e.clientX + 'px');
           root.style.setProperty('--my', e.clientY + 'px');
+          root.classList.add('glow-on');
         }, { passive: true });
-
+        document.documentElement.addEventListener('mouseleave', () => root.classList.remove('glow-on'));
+        addEventListener('blur', () => root.classList.remove('glow-on'));
       }
     </script>
   </body>
