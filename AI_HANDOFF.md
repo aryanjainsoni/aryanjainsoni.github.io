@@ -156,6 +156,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Settings gear: 3D glass button; hover/open = orange fill + orange ring + glow.
 - 2026-11-28 Settings gear moved to the right corner; Security & data usable from any page (unlock inside Settings).
 - 2026-11-28 Settings drawer (gear icon): theme, music, motion, glow, typing, Gym backups + security; phone header fixed.
 - 2026-11-28 Gym Body: "Add a scan" styled as an orange call-to-action card.

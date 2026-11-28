@@ -203,3 +203,11 @@ html.sd-open { overflow: hidden; }
 .sw[aria-checked='true']::after { transform: translateX(20px); }
 .sw:focus-visible, .sd-seg button:focus-visible, .sd-btn:focus-visible, .sd-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .sd, .sd-scrim, .sw::after, .gear svg { transition: none; } }
+
+/* gear: 3D glass button; hover fills with the orange theme + ring */
+.toggle.gear { position: relative; background: radial-gradient(circle at 32% 26%, color-mix(in srgb, #fff 16%, var(--surface)) 0%, var(--surface) 55%, color-mix(in srgb, #000 22%, var(--surface)) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -3px 6px rgba(0, 0, 0, .28), 0 4px 12px -4px rgba(0, 0, 0, .45); transition: background .3s, box-shadow .3s, transform .3s cubic-bezier(.2, .8, .2, 1.3), color .3s, border-color .3s; }
+.toggle.gear:hover, .toggle.gear:focus-visible, html.sd-open .toggle.gear { background: radial-gradient(circle at 32% 26%, #ffb07a 0%, var(--accent) 48%, var(--accent-2) 100%); color: #fff; border-color: transparent; transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -4px 8px rgba(0, 0, 0, .25), 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 10px 26px -6px color-mix(in srgb, var(--accent) 85%, transparent); }
+.toggle.gear:active { transform: translateY(0) scale(.96); }
+.toggle.gear svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
+html.sd-open .toggle.gear svg { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .toggle.gear { transition: none; } .toggle.gear:hover { transform: none; } }
