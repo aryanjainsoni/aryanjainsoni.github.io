@@ -126,6 +126,7 @@ export const goals = {
     { id: 'd-supplements', name: 'Supplements', cat: 'Health', time: '09:15' },
     { id: 'd-skin-care', name: 'Skin care', cat: 'Health', time: '22:00' },
     { id: 'd-108-jain-mala', name: '108 Jain mala', cat: 'Mind', time: '06:30' },
+    { id: 'd-journal-entry', name: 'Journal entry (Daily Log)', cat: 'Mind', time: '22:15' },
     { id: 'd-fun-time', name: 'Fun time', cat: 'Mind' },
   ],
   weekly: [

@@ -21,20 +21,17 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
     <h2 class="section-title" data-reveal>Showing up, <em class="sun">daily.</em></h2>
   </>
 )}
-<Stats
-  items={[
-    { value: journal.current, label: 'journal streak' },
-    { value: journal.longest, label: 'longest streak' },
-    { value: journal.total, label: 'days journaled' },
-    ...(lc ? [
-      { value: lc.solved.all, label: 'LeetCode solved' },
-      { value: lcStreak!.current, label: 'LeetCode streak' },
-    ] : []),
-  ]}
-/>
+<!-- Har box ke apne numbers usi ke upar — Journal ke Journal par, LeetCode ke LeetCode par -->
 <div class="maps">
   <div class="card map" data-reveal>
     <div class="maphead"><h3>Journal</h3><span class="muted">one square = one day written</span></div>
+    <div class="mini">
+      <Stats items={[
+        { value: journal.current, label: 'day streak' },
+        { value: journal.longest, label: 'longest streak' },
+        { value: journal.total, label: 'days journaled' },
+      ]} />
+    </div>
     <Heatmap byDay={journal.byDay} empty="no entry" />
   </div>
   {lc && (
@@ -44,6 +41,13 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
         <span class="muted">
           <b class="e">{lc.solved.easy} easy</b> · <b class="m">{lc.solved.medium} medium</b> · <b class="h">{lc.solved.hard} hard</b> · auto-updated nightly
         </span>
+      </div>
+      <div class="mini">
+        <Stats items={[
+          { value: lc.solved.all, label: 'problems solved' },
+          { value: lcStreak!.current, label: 'day streak' },
+          { value: lc.activeDays, label: 'active days' },
+        ]} />
       </div>
       <Heatmap byDay={lcLevels} labels={lcLabels} empty="no submissions" />
     </div>
@@ -57,5 +61,10 @@ const lcStreak = lc ? streaks(lc.byDay.keys()) : null;
   .maphead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 14px; }
   .maphead h3 { margin: 0; font-size: 1.3rem; }
   .maphead .muted { font-size: 13px; }
+  /* Box ke andar ke chhote stat cards */
+  .mini { margin: 4px 0 18px; }
+  .mini :global(.stats) { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .mini :global(.stat) { box-shadow: none; background: color-mix(in srgb, var(--heat) 7%, var(--bg)); padding: 14px 16px; }
+  .mini :global(.stat b) { font-size: 1.9rem; }
   .e { color: #00b8a3; } .m { color: #ffa116; } .h { color: #ff375f; }
 </style>
