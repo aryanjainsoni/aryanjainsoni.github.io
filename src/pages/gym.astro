@@ -17,6 +17,16 @@ const chapters = await Promise.all((await getCollection('guide')).sort((a, b) =>
 const lastUpdate = chapters.reduce((m, c) => (c.e.data.updated > m ? c.e.data.updated : m), new Date(0));
 const fmtLong = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
+// Gym tabs: [id, label, media name, tint, SVG glyph]
+const orbs: [string, string, string, string, string][] = [
+  ['steps', 'Steps', 'steps', '#7aa7ff', '<path d="M8.5 3.5c1.7 0 2.5 1.8 2.5 4s-1 3.6-2.6 3.6S6 9.8 6 7.6 6.8 3.5 8.5 3.5Z"/><path d="M6.6 13.4h3.8l-.3 2.3a1.9 1.9 0 0 1-3.8 0Z"/><path d="M15.5 8.5c1.7 0 2.5 1.8 2.5 4s-1 3.6-2.6 3.6-2.4-1.3-2.4-3.5.8-4.1 2.5-4.1Z"/><path d="M13.6 18.4h3.8l-.3 2.3a1.9 1.9 0 0 1-3.8 0Z"/>'],
+  ['today', 'Today', 'today', '#ff9a3d', '<path d="M3 17.5h18"/><path d="M7 17.5a5 5 0 0 1 10 0"/><path d="M12 6v3M5.6 9.1l2 2M18.4 9.1l-2 2"/><path d="M8.5 20.5h7"/>'],
+  ['plan', 'Plan', 'plan', '#5b7bff', '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/>'],
+  ['diet', 'Diet', 'diet', '#3fd1a8', '<path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19c3-4 6-7 10-9"/>'],
+  ['body', 'Body', 'body', '#ff6a2a', '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>'],
+  ['guide', 'Notebook', 'notebook', '#c5d2ff', '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>'],
+];
+
 const goal = site.stepGoal;
 const s = stepStats(await getEntries(), goal);
 const n = (x: number) => Math.round(x).toLocaleString('en-IN');
@@ -43,14 +53,22 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       <p class="kicker">Gym</p>
       <h1>Strength is a <em>daily habit.</em></h1>
       <p class="lead">Every step logged, every day counted. Training since 2025 — this is the quiet part of the work.</p>
-      <!-- Round live-video icons (3D loops from MotionSites free backgrounds, compressed into public/videos/gym/) -->
-      <div class="tabs orbs" role="tablist" aria-label="Gym sections">
-        {[['steps', 'Steps', 'steps'], ['today', 'Today', 'today'], ['plan', 'Plan', 'plan'], ['diet', 'Diet', 'diet'], ['body', 'Body', 'body'], ['guide', 'Notebook', 'notebook']].map(([id, label, vid], i) => (
-          <button role="tab" id={`tab-${id}`} aria-controls={`p-${id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={id}>
-            <span class="orb" aria-hidden="true"><video muted loop playsinline preload="none" poster={`/videos/gym/${vid}.jpg`} data-src={`/videos/gym/${vid}.mp4`}></video></span>
-            <span class="orb-label">{label}</span>
-          </button>
-        ))}
+      <!-- Round live-video icons: 3D loop (MotionSites free backgrounds) + glass + symbol. Each tab has its own colour and music. -->
+      <div class="orbbar">
+        <div class="tabs orbs" role="tablist" aria-label="Gym sections">
+          {orbs.map(([id, label, vid, tint, glyph], i) => (
+            <button role="tab" id={`tab-${id}`} aria-controls={`p-${id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={id} data-track={vid} style={`--tint:${tint}`}>
+              <span class="orb" aria-hidden="true">
+                <video muted loop playsinline preload="none" poster={`/videos/gym/${vid}.jpg`} data-src={`/videos/gym/${vid}.mp4`}></video>
+                <svg class="glyph" viewBox="0 0 24 24" set:html={glyph} />
+              </span>
+              <span class="orb-label">{label}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" class="sound" id="gym-sound" aria-pressed="false" title="Background music — each tab has its own">
+          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="sl">Sound off</span>
+        </button>
       </div>
     </div>
   </section>
@@ -215,11 +233,49 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       const key = (d) => d.toISOString().slice(0, 10);
       const day = (k, o) => new Date(k).toLocaleDateString('en-IN', { timeZone: 'UTC', ...o });
 
-      // ---------- live video orbs: the open tab plays, others play on hover; off for reduced motion / data saver ----------
+      // ---------- live video orbs: all loop while on screen; hover = bigger, brighter, faster ----------
       const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
       const vidOf = (t) => t.querySelector('video');
       const play = (v) => { if (calm || !v) return; if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); };
-      const orbPlay = () => tabs.forEach((t) => { const v = vidOf(t); if (t.getAttribute('aria-selected') === 'true') play(v); else v?.pause(); });
+      const orbPlay = () => { soundSwitch(); };
+      const startOrbs = () => document.querySelectorAll('.orbs video').forEach(play);
+      if (!calm) {
+        const io = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target; if (e.isIntersecting) play(v); else v.pause(); }), { threshold: 0.1 });
+        document.querySelectorAll('.orbs video').forEach((v) => io.observe(v));
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) startOrbs(); });
+      }
+
+      // ---------- per-tab background music (off by default; crossfades when you switch tabs) ----------
+      const soundBtn = document.getElementById('gym-sound');
+      let actx = null, master = null, nowTrack = null, soundOn = localStorage.getItem('gym:sound') === 'on';
+      const tracks = {};
+      const VOL = 0.32;
+      const ensureCtx = () => { if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination); } if (actx.state === 'suspended') actx.resume(); };
+      const trackFor = (name) => {
+        if (tracks[name]) return tracks[name];
+        const el = new Audio(`/audio/gym/${name}.m4a`); el.loop = true; el.preload = 'auto';
+        const g = actx.createGain(); g.gain.value = 0; actx.createMediaElementSource(el).connect(g); g.connect(master);
+        return (tracks[name] = { el, g });
+      };
+      const fade = (t, to, sec) => { const now = actx.currentTime; t.g.gain.cancelScheduledValues(now); t.g.gain.setValueAtTime(t.g.gain.value, now); t.g.gain.linearRampToValueAtTime(to, now + sec); };
+      const activeTrack = () => tabs.find((t) => t.getAttribute('aria-selected') === 'true')?.dataset.track;
+      function soundSwitch() {
+        if (!soundOn || !actx) return;
+        const name = activeTrack(); if (!name || name === nowTrack) return;
+        if (nowTrack && tracks[nowTrack]) { const old = tracks[nowTrack]; fade(old, 0, 1.2); setTimeout(() => { if (nowTrack !== old.name) old.el.pause(); }, 1300); old.name = nowTrack; }
+        const t = trackFor(name); t.name = name; t.el.play().catch(() => {}); fade(t, VOL, 1.6); nowTrack = name;
+      }
+      const setSoundUi = () => { soundBtn.setAttribute('aria-pressed', String(soundOn)); soundBtn.querySelector('.sl').textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.classList.toggle('on', soundOn); };
+      const soundStop = () => { Object.values(tracks).forEach((t) => { fade(t, 0, 0.8); setTimeout(() => t.el.pause(), 900); }); nowTrack = null; };
+      soundBtn.addEventListener('click', () => {
+        soundOn = !soundOn; localStorage.setItem('gym:sound', soundOn ? 'on' : 'off'); setSoundUi();
+        if (soundOn) { ensureCtx(); soundSwitch(); } else if (actx) soundStop();
+      });
+      // remembered "on": browsers only allow audio after a tap/click, so start on the first interaction
+      if (soundOn) { const go = () => { ensureCtx(); soundSwitch(); removeEventListener('pointerdown', go); removeEventListener('keydown', go); }; addEventListener('pointerdown', go); addEventListener('keydown', go); }
+      document.addEventListener('visibilitychange', () => { if (!actx) return; if (document.hidden) actx.suspend(); else if (soundOn) actx.resume(); });
+      setSoundUi();
+
       // ---------- tabs ----------
       const tabs = [...document.querySelectorAll('[data-tab]')];
       const show = (name, focus) => {
@@ -236,9 +292,8 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
       };
       tabs.forEach((t, i) => {
         t.addEventListener('click', () => show(t.dataset.tab));
-        t.addEventListener('pointerenter', () => play(vidOf(t)));
-        t.addEventListener('pointerleave', () => { if (t.getAttribute('aria-selected') !== 'true') vidOf(t)?.pause(); });
-        t.addEventListener('focus', () => play(vidOf(t)));
+        t.addEventListener('pointerenter', () => { const v = vidOf(t); play(v); if (v) v.playbackRate = 1.6; });
+        t.addEventListener('pointerleave', () => { const v = vidOf(t); if (v) v.playbackRate = 1; });
         t.addEventListener('keydown', (e) => {
           if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
           const j = (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
@@ -369,16 +424,29 @@ const bestWd = s.weekday.some(Boolean) ? wdNames[s.weekday.indexOf(Math.max(...s
   .tabs button[aria-selected='true'] { background: var(--ink); color: var(--bg); }
   .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* round live-video icons */
+  .orbbar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
   .tabs.orbs { display: flex; gap: clamp(4px, 1.6vw, 26px); padding: 0; border: none; background: none; border-radius: 0; overflow: visible; }
   .orbs button { display: grid; justify-items: center; gap: 8px; padding: 0; background: none !important; color: var(--muted); font: 600 12.5px 'Inter', sans-serif; letter-spacing: .02em; border-radius: 16px; }
-  .orbs .orb { position: relative; width: clamp(48px, 7vw, 76px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--surface); box-shadow: 0 0 0 1px var(--line); transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .3s, filter .3s; filter: saturate(.75) brightness(.82); }
-  .orbs .orb::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), inset 0 -10px 18px rgba(0, 0, 0, .25); pointer-events: none; }
-  .orbs video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .orbs button:hover .orb { transform: translateY(-3px) scale(1.05); filter: none; }
+  .orbs .orb { position: relative; display: grid; place-items: center; width: clamp(48px, 7vw, 76px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: #050505; box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint) 30%, var(--line)); transition: transform .45s cubic-bezier(.2, .8, .2, 1.2), box-shadow .35s, filter .35s; filter: saturate(.9) brightness(.9); }
+  .orbs video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
+  .orbs .orb::before { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, .42) 0 34%, transparent 62%); transition: opacity .4s; }
+  .orbs .orb::after { content: ''; position: absolute; inset: 0; z-index: 3; border-radius: 50%; background: linear-gradient(160deg, rgba(255, 255, 255, .28), transparent 38%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), inset 0 -12px 22px rgba(0, 0, 0, .35); pointer-events: none; }
+  .orbs .glyph { position: relative; z-index: 2; width: 42%; height: 42%; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, .6)) drop-shadow(0 0 10px color-mix(in srgb, var(--tint) 60%, transparent)); transition: transform .45s cubic-bezier(.2, .8, .2, 1.2), opacity .4s; }
+  .orbs button:hover .orb, .orbs button:focus-visible .orb { transform: translateY(-4px) scale(1.12); filter: saturate(1.3) brightness(1.15); box-shadow: 0 0 0 1px var(--tint), 0 14px 38px -8px var(--tint), 0 0 26px -4px var(--tint); }
+  .orbs button:hover video { transform: scale(1.3); }
+  .orbs button:hover .glyph { transform: scale(.86); opacity: .55; }
+  .orbs button:hover .orb::before { opacity: .4; }
   .orbs button[aria-selected='true'] { color: var(--ink); }
-  .orbs button[aria-selected='true'] .orb { filter: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 10px 30px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
-  .orbs button[aria-selected='true'] .orb-label::after { content: ''; display: block; width: 14px; height: 2px; margin: 4px auto 0; border-radius: 2px; background: var(--accent); }
-  @media (prefers-reduced-motion: reduce) { .orbs .orb { transition: none; } .orbs button:hover .orb { transform: none; } }
+  .orbs button[aria-selected='true'] .orb { filter: saturate(1.15) brightness(1.05); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--tint), 0 10px 32px -8px var(--tint); }
+  .orbs button[aria-selected='true'] .orb-label::after { content: ''; display: block; width: 14px; height: 2px; margin: 4px auto 0; border-radius: 2px; background: var(--tint); }
+  .sound { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .06em; cursor: pointer; transition: border-color .2s, color .2s; }
+  .sound:hover, .sound.on { border-color: var(--accent); color: var(--ink); }
+  .sound .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+  .sound .eq i { width: 2px; height: 3px; border-radius: 1px; background: currentColor; transition: height .3s; }
+  .sound.on .eq i { background: var(--accent); animation: eq 1s ease-in-out infinite; }
+  .sound.on .eq i:nth-child(2) { animation-delay: -.25s; } .sound.on .eq i:nth-child(3) { animation-delay: -.5s; } .sound.on .eq i:nth-child(4) { animation-delay: -.75s; }
+  @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+  @media (prefers-reduced-motion: reduce) { .orbs .orb, .orbs video, .orbs .glyph { transition: none; } .orbs button:hover .orb { transform: none; } .sound.on .eq i { animation: none; height: 8px; } }
 
   .panel { padding-block: 36px 24px; }
   /* app tabs (Today…Notebook): compact hero so the whole tab fits one screen; only the footer is below */
