@@ -75,7 +75,10 @@ decisions that are truly mine.
   key, fingerprint/Touch ID (WebAuthn passkey PRF → HKDF). Body tab → Security: fingerprint devices, new
   recovery key, change passcode, lock off ("fit:plain") / on. public/owner.json = one-way PBKDF2 check
   value of my passcode (published by ME) → new devices show only "enter passcode"; visitors can't set
-  one. 5 wrong tries → 30 s wait. Nobody (not even the AI) can reset a lost passcode. NEVER commit my data.
+  one. Wrong tries ("fit:guard", survives refresh): 5 → 30s, 10 → 1m, 15 → 5m, 20 → 15m, 25+ → 1h pause;
+  each wrong try is logged on that device (time · passcode/recovery · browser + OS, no location) and shown
+  as a ⚠ alert after the next unlock + Body → Security → Unlock activity. No server = no remote alerts.
+  Nobody (not even the AI) can reset a lost passcode. NEVER commit my data.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -111,11 +114,11 @@ decisions that are truly mine.
    Still to add: my old diet plan (photo) merged into src/data/meals.ts; my exact supplements; my workout
    plan as a new Workout section (aesthetic V-shape, 60-min strength + incline walk); fingerprint on my
    Android phone failed once (errors now show name + browser — ask me for the screenshot);
-   optional: escalating lockout + "wrong attempts" log on the lock screen (offered, not built).
 4. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym lock: escalating lockout (survives refresh) + wrong-attempt log & alert after unlock.
 - 2026-11-28 Gym Diet tab date-based: week strip with dates, past-day ticks, per-date plan snapshots, History.
 - 2026-11-28 Owner-only lock gate (public/owner.json) + "Publish owner key" shortcut; clearer fingerprint errors.
 - 2026-11-28 Diet: 12-hour times, meal checklist + diet streak, "Ate something else?" (src/data/foods.ts),

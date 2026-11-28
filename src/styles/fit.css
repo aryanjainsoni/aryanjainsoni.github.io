@@ -343,3 +343,10 @@ details.f-secrow[open] summary span::after { content: ' −'; }
 .f-hrow.sel td:first-child { color: var(--accent); font-weight: 600; }
 .f-hist td .ok { color: #2f9e6b; font-weight: 700; } .f-hist td .off { color: #d99a1e; font-weight: 700; }
 @media (max-width: 560px) { .f-dayact { justify-content: stretch; } .f-dayact .btn { flex: 1; justify-content: center; } }
+
+/* wrong-attempt alert + log */
+.f-alert { border-color: color-mix(in srgb, #d99a1e 60%, var(--line)) !important; background: color-mix(in srgb, #d99a1e 7%, var(--surface)) !important; }
+.f-alert .label { color: #c4860c; }
+.f-alert ul, .f-log-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+.f-alert li, .f-log-list li { padding: 7px 10px; border-radius: 10px; background: color-mix(in srgb, var(--line) 40%, transparent); overflow-wrap: anywhere; }
+.f-log-list + .f-link { margin-top: 10px; font-size: .84rem; }
