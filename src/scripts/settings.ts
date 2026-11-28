@@ -4,6 +4,7 @@
 // 'ascent:prefs' (targets, units, privacy, calm, text size — see src/lib/prefs.ts).
 import { prefs, setPrefs, fmtTime, daysSinceBackup, applyRoot, type Prefs } from '../lib/prefs';
 import { goals as GOAL_DEFAULTS } from '../data/profile';
+import { allPhotos, putAllPhotos, type PhotoRec } from '../lib/photos';
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s);
 const drawer = $('#settings')!, scrim = $('.sd-scrim')!, opener = $('#settings-open')!;
 let lastFocus: HTMLElement | null = null;
@@ -163,12 +164,13 @@ $('[data-ics]', drawer)?.addEventListener('click', () => {
   toast(`${list.length} reminder${list.length > 1 ? 's' : ''} ready — open the file to add them`);
 });
 
-// ---- Full backup / restore (one JSON file) ----
+// ---- Full backup / restore (one JSON file) — also carries the encrypted bucket photos from IndexedDB ----
 const BACKUP_KEYS = (k: string) => k.startsWith('goals:') || k.startsWith('log:draft:') || k.startsWith('pref:') || ['smart:vocab', 'smart:off', 'theme', 'gym:sound', 'fit:vault', 'fit:plain'].includes(k);
 const hasData = () => Object.keys(localStorage).some((k) => k.startsWith('goals:') || k.startsWith('log:draft:') || k === 'fit:vault' || k === 'fit:plain');
-$('[data-backup]', drawer)?.addEventListener('click', () => {
+$('[data-backup]', drawer)?.addEventListener('click', async () => {
   const data: Record<string, string> = {};
   for (const k of Object.keys(localStorage)) if (BACKUP_KEYS(k)) data[k] = localStorage.getItem(k)!;
+  try { const ph = await allPhotos(); if (ph.length) data['idb:bucket-photos'] = JSON.stringify(ph); } catch { /* no IndexedDB */ } // bucket memories (still encrypted)
   const when = new Date();
   download(`ascent-backup-${when.toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'ascent', kind: 'full-backup', v: 1, at: when.toISOString(), data }, null, 1), 'application/json');
   setPrefs({ lastBackup: when.toISOString() });
@@ -183,6 +185,7 @@ $('[data-restore]', drawer)?.addEventListener('change', async (e) => {
     const keys = Object.keys(j.data).filter(BACKUP_KEYS);
     if (!confirm(`Restore ${keys.length} items from ${new Date(j.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}?\n\nThis replaces the same items in this browser. The Gym data stays encrypted with its original passcode.`)) return;
     for (const k of keys) if (typeof j.data[k] === 'string') localStorage.setItem(k, j.data[k]);
+    if (typeof j.data['idb:bucket-photos'] === 'string') { try { await putAllPhotos(JSON.parse(j.data['idb:bucket-photos']) as PhotoRec[]); } catch {} }
     toast('Restored ✓ — reloading'); setTimeout(() => location.reload(), 900);
   } catch { toast('That file isn’t an Ascent full backup'); }
 });

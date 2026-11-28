@@ -599,7 +599,12 @@ const roots = { today: $('[data-fit="today"]'), plan: $('[data-fit="plan"]'), di
 // Bucket list (/bucket/) lives in the SAME encrypted vault (key "fit:bucket"): the page shows this lock while
 // locked, and gets a tiny get/set bridge through the 'ascent:vault' event once unlocked (null when locked again).
 const bucketRoot = $('[data-fit="bucket"]');
-const vaultApi = { get: <T,>(k: string, d: T) => load<T>(k, d), set: (k: string, v: unknown) => set(k, v), lock: () => lockNow() };
+const vaultApi = {
+  get: <T,>(k: string, d: T) => load<T>(k, d), set: (k: string, v: unknown) => set(k, v), lock: () => lockNow(),
+  // encrypt / decrypt big things (bucket memory photos) with the same data key — they live in IndexedDB
+  seal: async (text: string): Promise<{ iv: string; ct: string } | { plain: string }> => (dk ? V.sealData(dk, text) : { plain: text }),
+  open: async (d: { iv: string; ct: string } | { plain: string }) => ('plain' in d ? d.plain : dk ? V.openData(dk, d) : Promise.reject(new Error('locked'))),
+};
 let vaultOpen: boolean | null = null;
 function announceVault() {
   const open = !!mem && !pendingCode && !publishJson && !needNewPass && !settingUp && !offerFinger;

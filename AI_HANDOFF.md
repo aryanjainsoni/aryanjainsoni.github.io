@@ -171,6 +171,11 @@ decisions that are truly mine.
   Effects are deliberately visible: flowing lake + reflections, shore lapping line, boat rocking (mask warp),
   breathing beam + streaks + dust + flare, rippling wall caustics, lantern flame, travelling gold glints.
   GOTCHA: masks are read from the canvas ALPHA channel (blurred white-on-transparent keeps red = 255).
+  Each wish page ends with a date ledger (Inscribed = created, Fulfilled = done, "N months later") and an old
+  sepia MEMORY PHOTO (album corners; empty = undeveloped daguerreotype "A memory waits here"). Photos are shrunk
+  to ~1100px JPEG, ENCRYPTED with the vault key (bridge seal/open) and stored in IndexedDB "ascent"/"bucket-photos"
+  (src/lib/photos.ts) — localStorage is too small. Settings → Full backup includes them as "idb:bucket-photos".
+  Editor has "Written on" + "Fulfilled on" date fields.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
 
 ## MY PREFERENCES (follow these)
@@ -214,6 +219,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Bucket book: encrypted vintage memory photo + written/fulfilled date ledger on every wish.
 - 2026-11-28 Bucket cove: antique padlock, book-opens-in-photo unlock, stronger water/sun/caustic effects, D debug key.
 - 2026-11-28 Bucket cove: photoreal Gemini scene + WebGL cinemagraph (flowing water, sunbeam, dust, gold glints).
 - 2026-11-28 Bucket book: real leather cover + real aged-paper pages (Pexels textures), "Ascent · Vol. II".

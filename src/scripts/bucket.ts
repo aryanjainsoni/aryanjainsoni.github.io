@@ -4,11 +4,12 @@
 // Nothing here ever sends data anywhere; the page HTML contains no wishes.
 import { BOOK, CATS } from '../data/bucket';
 import { createCove } from './cove-gl';
+import { getPhoto, putPhoto, delPhoto, allPhotos, shrink, type Sealed } from '../lib/photos';
 
 type Step = { t: string; ok?: boolean };
 type Wish = { id: string; title: string; cat: string; month?: string; date?: string; why?: string; notes?: string; steps: Step[]; done?: string; created: string };
 type Store = { v: 1; wishes: Wish[] };
-type Api = { get<T>(k: string, d: T): T; set(k: string, v: unknown): void; lock(): void };
+type Api = { get<T>(k: string, d: T): T; set(k: string, v: unknown): void; lock(): void; seal(text: string): Promise<Sealed>; open(d: Sealed): Promise<string> };
 const KEY = 'fit:bucket';
 
 const root = document.querySelector<HTMLElement>('[data-bq]');
@@ -40,6 +41,7 @@ function init(root: HTMLElement) {
     const wasLocked = root.dataset.state !== 'open';
     api = a; clearTimeout(openTimer);
     if (!a) {
+      memUrl.clear(); memIds = null;
       root.dataset.state = 'locked'; hint.textContent = 'The book is sealed.'; hint.hidden = false;
       cove3?.setOpen(false, firstState); firstState = false; placeAgain(); closeBook(true); return;
     }
@@ -104,7 +106,7 @@ function init(root: HTMLElement) {
   document.addEventListener('visibilitychange', () => dust(true));
 
   addEventListener('ascent:vault', (e) => setApi((e as CustomEvent<Api | null>).detail));
-  setApi(api);
+  queueMicrotask(() => setApi(api)); // after everything below is defined
   // wrong passcode: the plate shakes and the slot flashes dim red
   let lastErr = '';
   new MutationObserver(() => {
@@ -236,18 +238,30 @@ function init(root: HTMLElement) {
   const BOX = '<path d="M3.5 4.5 C8 3.4 15 3.8 20.6 3.3 C21.2 9 20.4 15.5 21 20.8 C15 21.5 9.2 20.6 3.8 21.2 C3.2 15.2 4.1 9.4 3.5 4.5 Z"/>';
   const TICK = '<path class="tk" d="M6.5 12.5 L10.5 17.5 L23 1.5"/>';
 
+  const daysBetween = (a: string, b: string) => Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
+  function took(a: string, b: string) {
+    const d = daysBetween(a, b); if (d <= 0) return 'the same day';
+    if (d < 45) return `${d} day${d > 1 ? 's' : ''} later`;
+    const m = Math.round(d / 30.44); if (m < 12) return `${m} month${m > 1 ? 's' : ''} later`;
+    const y = Math.floor(m / 12), r2 = m % 12; return `${y} year${y > 1 ? 's' : ''}${r2 ? ` ${r2} month${r2 > 1 ? 's' : ''}` : ''} later`;
+  }
+  const CORNERS = '<span class="mc tl"></span><span class="mc tr"></span><span class="mc bl"></span><span class="mc br"></span>';
   function wishHtml(w: Wish) {
-    const steps = w.steps.filter((s) => s.t.trim()), shown = steps.slice(0, 6), ok = steps.filter((s) => s.ok).length;
+    const steps = w.steps.filter((s) => s.t.trim()), shown = steps.slice(0, 4), ok = steps.filter((s) => s.ok).length;
     return `<article class="wi ${w.done ? 'done' : ''}" data-wish="${esc(w.id)}">
-      <div class="wi-top">${icon(w.cat)}<span>${esc(catOf(w.cat).label)}</span><span class="when">${w.done ? 'fulfilled ' + esc(fmtDay(w.done)) : 'by ' + esc(when(w))}</span></div>
-      <div class="wi-title"><button type="button" class="wi-check" data-done="${esc(w.id)}" aria-pressed="${!!w.done}" aria-label="${w.done ? 'Fulfilled' : 'Mark as fulfilled'}: ${esc(w.title)}"><svg viewBox="0 0 24 24" aria-hidden="true">${BOX}${TICK}</svg></button><h3>${esc(w.title)}</h3></div>
+      <div class="wi-top">${icon(w.cat)}<span>${esc(catOf(w.cat).label)}</span><span class="when">${w.done ? 'fulfilled' : 'by ' + esc(when(w))}</span><button type="button" class="wi-edit" data-edit="${esc(w.id)}" aria-label="Amend this wish">✎</button></div>
+      <div class="wi-title"><button type="button" class="wi-check" data-done="${esc(w.id)}" aria-pressed="${!!w.done}" aria-label="${w.done ? 'Fulfilled' : 'Mark as fulfilled'}: ${esc(w.title)}"><svg viewBox="0 0 24 24" aria-hidden="true">${BOX}${TICK}</svg></button><h3${w.title.length > 38 ? ' class="long"' : ''}>${esc(w.title)}</h3></div>
       ${w.why ? `<p class="wi-why">${esc(w.why)}</p>` : ''}
       ${w.notes ? `<p class="wi-notes">${esc(w.notes)}</p>` : ''}
       ${steps.length ? `<ul class="wi-steps">${shown.map((s, i) => `<li class="${s.ok ? 'ok' : ''}"><button type="button" data-step="${esc(w.id)}:${w.steps.indexOf(s)}" aria-pressed="${!!s.ok}">${esc(s.t)}</button></li>`).join('')}${steps.length > shown.length ? `<li class="more">+ ${steps.length - shown.length} more steps (edit to see)</li>` : ''}</ul>
         <div class="wi-prog" role="progressbar" aria-label="Steps done" aria-valuemin="0" aria-valuemax="${steps.length}" aria-valuenow="${ok}"><i style="width:${Math.round((ok / steps.length) * 100)}%"></i></div>` : ''}
       ${w.done ? seal(w.id, w.done) : ''}
-      <span class="wi-made">written ${esc(fmtDay(w.created))}</span>
-      <button type="button" class="wi-edit" data-edit="${esc(w.id)}">✎ amend</button>
+      <div class="wi-foot">
+        <div class="wi-ledger"><span><i>Inscribed</i><b>${esc(fmtDay(w.created))}</b></span><span class="${w.done ? 'ok' : 'wait'}"><i>Fulfilled</i><b>${w.done ? esc(fmtDay(w.done)) : '— — —'}</b></span>${w.done ? `<em>${esc(took(w.created, w.done))}</em>` : ''}</div>
+        <figure class="mem empty" data-mem="${esc(w.id)}">
+          <div class="mem-ph">${CORNERS}<button type="button" class="mem-add" data-mem-add="${esc(w.id)}" aria-label="Add a memory photo for ${esc(w.title)}"><span class="mem-eye" aria-hidden="true"></span><b>${w.done ? 'Affix the memory' : 'A memory waits here'}</b><small>${w.done ? 'add the photo of this day' : 'add it the day this comes true'}</small></button></div>
+        </figure>
+      </div>
     </article>`;
   }
 
@@ -307,6 +321,31 @@ function init(root: HTMLElement) {
     out.forEach((p) => p.querySelectorAll<HTMLElement>('.toc-row').forEach((row) => { row.querySelector('.n')!.textContent = String(wishPage.get(row.dataset.gotoWish!) ?? ''); }));
     return out;
   }
+
+  // ---------------- memory photos (encrypted in IndexedDB) ----------------
+  const memUrl = new Map<string, string>(); let memIds: Set<string> | null = null;
+  async function memories() {
+    if (!api) return;
+    if (!memIds) { try { memIds = new Set((await allPhotos()).map((r) => r.id)); } catch { memIds = new Set(); } }
+    for (const fig of book.querySelectorAll<HTMLElement>('.bk-leaf:not(.far) .mem[data-mem]')) {
+      const id = fig.dataset.mem!; if (!memIds.has(id) || fig.querySelector('img')) continue;
+      let url = memUrl.get(id);
+      if (!url) { try { const rec = await getPhoto(id); if (!rec || !api) continue; url = await api.open(rec.data); memUrl.set(id, url); } catch { continue; } }
+      fig.classList.remove('empty');
+      fig.querySelector('.mem-ph')!.innerHTML = `${CORNERS}<img src="${url}" alt="Memory photo" data-mem-view="${esc(id)}"><button type="button" class="mem-x" data-mem-del="${esc(id)}" aria-label="Remove this photo">remove</button><button type="button" class="mem-x swap" data-mem-add="${esc(id)}" aria-label="Replace this photo">replace</button>`;
+    }
+  }
+  const memFile = document.createElement('input'); memFile.type = 'file'; memFile.accept = 'image/*'; memFile.hidden = true; root.append(memFile);
+  let memFor = '';
+  memFile.addEventListener('change', async () => {
+    const f = memFile.files?.[0]; memFile.value = ''; if (!f || !api || !memFor) return;
+    try {
+      const url = await shrink(f), data = await api.seal(url);
+      await putPhoto({ id: memFor, data, at: todayKey() }); memIds?.add(memFor); memUrl.set(memFor, url);
+      book.querySelectorAll<HTMLElement>(`.mem[data-mem="${CSS.escape(memFor)}"] img`).forEach((i) => i.remove());
+      memories(); say.textContent = 'Memory photo added.';
+    } catch { alert('That photo could not be saved.'); }
+  });
 
   // ---------------- leaves ----------------
   const blank = (back = false) => { const p = page('blank'); p.classList.add('blank'); if (back) p.classList.add('backside'); return p; };
@@ -378,6 +417,7 @@ function init(root: HTMLElement) {
     after();
   }
   function after() {
+    setTimeout(memories, 30);
     const closed = cur === 0, total = pages.length, p = firstPage();
     book.classList.toggle('closed', closed); root.classList.toggle('is-closed', closed);
     prevB.disabled = closed; nextB.disabled = cur >= maxCur();
@@ -434,6 +474,9 @@ function init(root: HTMLElement) {
     const gw = t.closest<HTMLElement>('[data-goto-wish]'); if (gw) return go(curFor(wishPage.get(gw.dataset.gotoWish!) ?? 1));
     if (t.closest('[data-newwish]')) return openEditor();
     const ed = t.closest<HTMLElement>('[data-edit]'); if (ed) return openEditor(ed.dataset.edit);
+    const ma = t.closest<HTMLElement>('[data-mem-add]'); if (ma) { memFor = ma.dataset.memAdd!; return memFile.click(); }
+    const md = t.closest<HTMLElement>('[data-mem-del]'); if (md) { if (!confirm('Remove this memory photo?')) return; const id = md.dataset.memDel!; delPhoto(id).then(() => { memIds?.delete(id); memUrl.delete(id); build(firstPage()); }); return; }
+    const mv = t.closest<HTMLImageElement>('[data-mem-view]'); if (mv) { const d = document.createElement('dialog'); d.className = 'bk-photo'; d.innerHTML = `<img src="${mv.src}" alt="Memory photo">`; d.addEventListener('click', () => { d.close(); d.remove(); }); root.append(d); d.showModal(); return; }
     const dn = t.closest<HTMLElement>('[data-done]'); if (dn) return toggleDone(dn.dataset.done!, dn);
     const st = t.closest<HTMLElement>('[data-step]'); if (st) return toggleStep(st.dataset.step!);
     const c = t.closest('.pp-corner'); if (c) return c.closest('.pp')!.classList.contains('left') ? prev() : next();
@@ -495,6 +538,8 @@ function init(root: HTMLElement) {
     catSel.value = w?.cat ?? 'travel';
     (form.elements.namedItem('month') as HTMLInputElement).value = w?.month ?? '';
     (form.elements.namedItem('date') as HTMLInputElement).value = w?.date ?? '';
+    (form.elements.namedItem('created') as HTMLInputElement).value = w?.created ?? todayKey();
+    (form.elements.namedItem('done') as HTMLInputElement).value = w?.done ?? '';
     (form.elements.namedItem('why') as HTMLTextAreaElement).value = w?.why ?? '';
     (form.elements.namedItem('notes') as HTMLTextAreaElement).value = w?.notes ?? '';
     stepsOl.innerHTML = (w?.steps ?? []).map(stepRow).join('');
@@ -508,7 +553,7 @@ function init(root: HTMLElement) {
   form.querySelector('[data-del]')!.addEventListener('click', () => {
     const w = wishes().find((x) => x.id === editing); if (!w) return;
     if (!confirm(`Tear out the page “${w.title}”? This cannot be undone.`)) return;
-    mutate((l) => l.splice(l.findIndex((x) => x.id === w.id), 1));
+    mutate((l) => l.splice(l.findIndex((x) => x.id === w.id), 1)); delPhoto(w.id).catch(() => {}); memIds?.delete(w.id);
     editor.close(); build(2); say.textContent = `Removed: ${w.title}`;
   });
   form.addEventListener('submit', (e) => {
@@ -516,11 +561,11 @@ function init(root: HTMLElement) {
     const v = (n: string) => ((form.elements.namedItem(n) as HTMLInputElement).value || '').trim();
     const title = v('title'); if (!title) return;
     const steps: Step[] = [...stepsOl.querySelectorAll('li')].map((li) => ({ t: (li.querySelector('input[type="text"]') as HTMLInputElement).value.trim(), ok: (li.querySelector('input[type="checkbox"]') as HTMLInputElement).checked || undefined })).filter((s) => s.t);
-    const data = { title, cat: catSel.value, month: v('month') || undefined, date: v('date') || undefined, why: v('why') || undefined, notes: v('notes') || undefined, steps };
+    const data = { title, cat: catSel.value, month: v('month') || undefined, date: v('date') || undefined, why: v('why') || undefined, notes: v('notes') || undefined, steps, created: v('created') || todayKey(), done: v('done') || undefined };
     let id = editing;
     mutate((l) => {
       if (id) Object.assign(l.find((x) => x.id === id)!, data);
-      else { id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); l.push({ id, created: todayKey(), ...data }); }
+      else { id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); l.push({ id, ...data }); }
     });
     editor.close();
     build(); go(curFor(wishPage.get(id!) ?? 2), { instant: true });

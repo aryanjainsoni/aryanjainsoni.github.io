@@ -91,6 +91,10 @@ import { BOOK } from '../data/bucket';
           <label class="fld"><span>By (month)</span><input name="month" type="month" /></label>
         </div>
         <label class="fld"><span>Exact date <i>(optional)</i></span><input name="date" type="date" /></label>
+        <div class="row2">
+          <label class="fld"><span>Written on</span><input name="created" type="date" /></label>
+          <label class="fld"><span>Fulfilled on <i>(blank = not yet)</i></span><input name="done" type="date" /></label>
+        </div>
         <label class="fld"><span>Why it matters</span><textarea name="why" rows="2" maxlength="500"></textarea></label>
         <label class="fld"><span>Notes</span><textarea name="notes" rows="3" maxlength="1500"></textarea></label>
         <fieldset class="fld steps"><legend>Steps on the way <i>(optional)</i></legend><ol data-steps></ol><button type="button" class="bk-mini" data-addstep>+ Add a step</button></fieldset>
@@ -322,12 +326,13 @@ import { BOOK } from '../data/bucket';
   .toc-new { display: block; margin: calc(var(--r) * .6) auto 0; }
   .toc-empty { text-align: center; font: italic 400 calc(var(--r) * .7)/1.5 'IM Fell English', serif; color: var(--ink2); margin-top: calc(var(--r) * 1.5); }
   /* a wish */
-  .wi { display: grid; gap: calc(var(--r) * .35); align-content: start; position: relative; height: 100%; }
+  .wi { display: flex; flex-direction: column; gap: calc(var(--r) * .3); position: relative; height: 100%; }
   .wi-top { display: flex; align-items: center; gap: 8px; font: 400 calc(var(--r) * .46)/1 'IM Fell English SC', serif; letter-spacing: .16em; color: var(--ink2); }
   .wi-top svg { width: calc(var(--r) * .9); height: calc(var(--r) * .9); fill: none; stroke: var(--ink2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   .wi-top .when { margin-left: auto; font-family: 'IM Fell English', serif; font-style: italic; letter-spacing: .02em; font-size: calc(var(--r) * .52); }
   .wi-title { display: flex; gap: 10px; align-items: flex-start; }
   .wi-title h3 { font: 400 calc(var(--r) * 1.05)/1.15 'IM Fell English', serif; color: var(--ink); flex: 1; }
+  .wi-title h3.long { font-size: calc(var(--r) * .86); }
   .wi-check { flex-shrink: 0; width: calc(var(--r) * 1.15); height: calc(var(--r) * 1.15); margin-top: 2px; padding: 0; border: 0; background: none; cursor: pointer; }
   .wi-check svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .wi-check .tk { stroke: var(--red); stroke-width: 3; stroke-dasharray: 40; stroke-dashoffset: 40; transition: stroke-dashoffset .5s .1s; }
@@ -336,7 +341,7 @@ import { BOOK } from '../data/bucket';
   .wi.done .wi-title h3 { text-decoration: line-through; text-decoration-color: rgba(126,26,26,.6); text-decoration-thickness: 2px; }
   .wi-why { margin: 0; font: italic 400 calc(var(--r) * .66)/1.4 'IM Fell English', serif; color: var(--ink2); }
   .wi-why::before { content: '“'; } .wi-why::after { content: '”'; }
-  .wi-notes { margin: 0; white-space: pre-line; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; font-size: calc(var(--r) * .6); line-height: 1.45; }
+  .wi-notes { margin: 0; white-space: pre-line; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: calc(var(--r) * .6); line-height: 1.45; }
   .wi-steps { list-style: none; margin: calc(var(--r) * .15) 0 0; padding: 0; display: grid; gap: 2px; }
   .wi-steps li button { display: flex; gap: 8px; align-items: baseline; width: 100%; padding: 1px 0; border: 0; background: none; color: inherit; font: 400 calc(var(--r) * .6)/1.35 'IM Fell English', serif; text-align: left; cursor: pointer; }
   .wi-steps li button::before { content: '▢'; color: var(--ink2); }
@@ -345,11 +350,44 @@ import { BOOK } from '../data/bucket';
   .wi-steps .more { font-style: italic; color: var(--ink2); font-size: calc(var(--r) * .55); }
   .wi-prog { height: 5px; border-radius: 3px; background: rgba(60,30,6,.2); overflow: hidden; margin-top: 4px; }
   .wi-prog i { display: block; height: 100%; background: linear-gradient(90deg, #9a6d1d, #e8c46a, #b0822a); box-shadow: 0 0 6px rgba(232,196,106,.6); transition: width .6s; }
-  .wi-edit { position: absolute; right: 0; bottom: 0; border: 0; background: none; color: var(--ink2); font: italic 400 calc(var(--r) * .55)/1 'IM Fell English', serif; cursor: pointer; padding: 4px; }
-  .wi-edit:hover { color: var(--red); }
-  .wi-made { position: absolute; left: 0; bottom: 4px; font: italic 400 calc(var(--r) * .48)/1 'IM Fell English', serif; color: var(--ink2); opacity: .7; }
+  .wi-edit { flex-shrink: 0; border: 0; background: none; color: var(--ink2); font: 400 calc(var(--r) * .7)/1 'IM Fell English', serif; cursor: pointer; padding: 2px 4px; opacity: .75; }
+  .wi-edit:hover, .wi-edit:focus-visible { color: var(--red); opacity: 1; }
+  /* footer: the date ledger + an old memory photo */
+  .wi-foot { margin-top: auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: calc(var(--r) * .4); }
+  .wi-ledger { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px calc(var(--r) * .8); padding-top: calc(var(--r) * .3); border-top: 1px solid rgba(60,30,6,.3); font: 400 calc(var(--r) * .55)/1.2 'IM Fell English', serif; color: var(--ink); }
+  .wi-ledger span { display: inline-flex; gap: 6px; align-items: baseline; }
+  .wi-ledger i { font: 400 calc(var(--r) * .44)/1 'IM Fell English SC', serif; letter-spacing: .14em; color: var(--ink2); font-style: normal; }
+  .wi-ledger b { font-weight: 400; font-style: italic; border-bottom: 1px dotted rgba(60,30,6,.5); padding: 0 2px; }
+  .wi-ledger .wait b { color: var(--ink2); opacity: .7; letter-spacing: .2em; }
+  .wi-ledger .ok b { color: var(--red); }
+  .wi-ledger em { font-size: .9em; color: var(--ink2); }
+  .mem { margin: 0; display: flex; justify-content: center; align-items: flex-end; flex: 1 1 auto; min-height: 0; }
+  .mem-ph { position: relative; width: 74%; height: 100%; max-height: calc(var(--r) * 6.2); min-height: calc(var(--r) * 3.2); padding: 7px 7px 18px; background: #efe4cc; transform: rotate(-1.6deg); border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(120,90,50,.25), 0 2px 3px rgba(40,20,4,.35), 0 10px 18px -8px rgba(30,12,0,.55); }
+  .mem-ph::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(90,60,20,.35)); }
+  /* black album photo-corners */
+  .mc { position: absolute; width: 16px; height: 16px; z-index: 2; background: linear-gradient(135deg, #1b140d 50%, transparent 50%); filter: drop-shadow(0 1px 0 rgba(255,240,210,.15)); }
+  .mc.tl { left: 2px; top: 2px; } .mc.tr { right: 2px; top: 2px; transform: rotate(90deg); } .mc.br { right: 2px; bottom: 13px; transform: rotate(180deg); } .mc.bl { left: 2px; bottom: 13px; transform: rotate(270deg); }
+  .mem-ph img { display: block; width: 100%; height: 100%; object-fit: cover; filter: sepia(.4) contrast(1.06) saturate(.85) brightness(.97); cursor: zoom-in; }
+  /* empty: an un-developed daguerreotype plate, faint and mysterious */
+  .mem-add { position: relative; width: 100%; height: 100%; border: 0; cursor: pointer; display: grid; place-content: center; justify-items: center; gap: 4px; padding: 6px; overflow: hidden; color: #d9c49a;
+    background: radial-gradient(70% 60% at 50% 42%, #5b4a33, #2c2116 70%, #17110b), #2c2116; box-shadow: inset 0 0 18px rgba(0,0,0,.7); }
+  .mem-add::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(230,215,180,.16) 50%, transparent 60%); animation: mem-sheen 6s ease-in-out infinite; }
+  @keyframes mem-sheen { 0%, 55% { transform: translateX(-60%); } 100% { transform: translateX(60%); } }
+  .mem-eye { width: calc(var(--r) * 1.3); height: calc(var(--r) * 1.3); opacity: .55;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9c49a' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='7' width='18' height='13' rx='2'/%3E%3Cpath d='M8 7l1.5-2.5h5L16 7'/%3E%3Ccircle cx='12' cy='13.5' r='3.6'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .mem-add b { font: italic 400 calc(var(--r) * .66)/1.1 'Pinyon Script', cursive; font-size: calc(var(--r) * .9); color: #e8d6ad; text-shadow: 0 0 10px rgba(255,230,170,.25); }
+  .mem-add small { font: italic 400 calc(var(--r) * .46)/1.2 'IM Fell English', serif; opacity: .65; }
+  .mem-add:hover b, .mem-add:focus-visible b { color: #fff1cc; }
+  .mem-add:focus-visible { outline: 1px dashed #e8d6ad; outline-offset: -5px; }
+  .mem-x { position: absolute; bottom: 2px; z-index: 3; border: 0; background: none; color: #5b3714; font: italic 400 11px 'IM Fell English', serif; cursor: pointer; opacity: 0; transition: opacity .2s; }
+  .mem-x { right: 8px; } .mem-x.swap { right: auto; left: 8px; }
+  .mem-ph:hover .mem-x, .mem-x:focus-visible { opacity: .9; }
+  .bk-photo { border: 0; padding: 12px 12px 34px; background: #efe4cc; max-width: 92vw; max-height: 90vh; box-shadow: 0 30px 80px rgba(0,0,0,.8); }
+  .bk-photo::backdrop { background: rgba(6,3,1,.8); }
+  .bk-photo img { display: block; max-width: 88vw; max-height: 78vh; filter: sepia(.3) contrast(1.05); }
   /* wax seal */
-  .seal { position: absolute; right: 4%; top: 36%; width: 38%; aspect-ratio: 1; pointer-events: none; transform: rotate(-12deg); filter: drop-shadow(2px 4px 4px rgba(40,6,4,.55)); }
+  .seal { position: absolute; right: 2%; top: 26%; width: 34%; aspect-ratio: 1; pointer-events: none; transform: rotate(-12deg); filter: drop-shadow(2px 4px 4px rgba(40,6,4,.55)); }
   .seal svg { width: 100%; height: 100%; display: block; overflow: visible; }
   .seal.stamp { animation: bk-stamp .75s cubic-bezier(.3,1.6,.5,1) both; }
   @keyframes bk-stamp { 0% { opacity: 0; transform: scale(2.3) rotate(-30deg); } 60% { opacity: 1; transform: scale(.94) rotate(-10deg); } 100% { opacity: 1; transform: scale(1) rotate(-12deg); } }
@@ -430,6 +468,6 @@ import { BOOK } from '../data/bucket';
   @media (max-width: 560px) { .cove-title { top: 12px; } .bk-edit .row2 { grid-template-columns: 1fr; } }
 
   /* ----- calm / reduced motion ----- */
-  html.calm .sbook-glow, .bq.reduce .sbook-glow { animation: none !important; }
+  html.calm .sbook-glow, .bq.reduce .sbook-glow, html.calm .mem-add::before, .bq.reduce .mem-add::before { animation: none !important; }
   .bq.reduce .bk-leaf, .bq.reduce .bk-book { transition: none !important; }
 </style>
