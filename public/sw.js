@@ -5,7 +5,7 @@
 // Bump VERSION to throw away old caches.
 const VERSION = 'v1';
 const PAGES = `ascent-pages-${VERSION}`, ASSETS = `ascent-assets-${VERSION}`;
-const CORE = ['/', '/gym/', '/goals/', '/log/', '/journal/', '/explore/', '/about/', '/manifest.webmanifest', '/icons/icon-192.png'];
+const CORE = ['/', '/gym/', '/goals/', '/log/', '/journal/', '/explore/', '/about/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(PAGES).then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
