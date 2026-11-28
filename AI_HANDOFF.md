@@ -45,6 +45,10 @@ decisions that are truly mine.
                           Socials (brand-colour hover), TopicCard, IndexRow; bits/ = React Bits components.
 - Pages: / (home) · /journal/ · /journal/[date]/ · /log/ (Daily Log form) · /post/ (weekly LinkedIn post
   generator) · /goals/ (habits) · /gym/ (Steps · Today · Plan · Diet · Body) · /explore/ (searchable Index + timeline) · /about/
+  · /projects/ (project folders → documents; linked from the Home "Projects" card, NOT in the header)
+- src/data/projects.ts → project FOLDERS for /projects/ (name, line, kind, status live|building|archived, since, tags, links, tone).
+  src/content/projects/<folder>/NN-name.md → one readable document each (front-matter: title, kind, order, summary,
+  status ready|draft|planned, version, updated). Pages: src/pages/projects/index.astro, [folder]/index.astro, [folder]/[doc].astro.
 - src/lib/steps.ts → steps stats for /gym/ (goal = site.stepGoal, 10,000).
 - src/lib/vault.ts → encryption for the private Gym tabs: passcode / recovery key / fingerprint (auto-lock time is a Setting, default 5 min).
 - src/lib/prefs.ts → ALL Settings preferences in one localStorage JSON "pref:settings" (only non-default values stored):
@@ -183,6 +187,12 @@ decisions that are truly mine.
   (src/lib/photos.ts) — localStorage is too small. Settings → Full backup includes them as "idb:bucket-photos".
   Editor has "Written on" + "Fulfilled on" date fields.
 - Weekly post (/post/): builds a LinkedIn draft from the last 7 days of journal + LeetCode submissions.
+- Projects (/projects/): each project = a CSS "folder" (tab + paper sheets + stitched front cover, sheets lift on hover).
+  Folder page = list of documents; document page = sticky Contents (h2s, highlights while reading; collapsible on phones)
+  + prose + prev/next. status 'planned' docs still get a page with a "Coming soon" notice. Folders now: Ascent (SRS IEEE 830,
+  System Design, Tech Stack & Deployment, Security & Privacy, Test Plan, Changelog & Roadmap — written from the real code;
+  UPDATE THEM when behaviour changes) and Parkinson's Disease Detection (Overview ready; SRS, Dataset, Model, Results planned).
+  "Also built" list under the folders reuses `projects` from profile.ts. Never put private data in these documents.
 
 ## MY PREFERENCES (follow these)
 - Everything FREE (no paid domain/services). URL stays aryanjainsoni.github.io for now.
@@ -221,10 +231,14 @@ decisions that are truly mine.
    Android phone failed (NotReadableError from Android credential manager, Chrome 158) — added a retry
    that registers without PRF eval and reads PRF at sign-in; ask me if it works now;
 4. Settings v2 is live — ask me if the phone install / offline / calendar reminders work on my phone.
-5. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
+5. Projects → Parkinson's Disease Detection: code is in ~/parkinson-detection (not in this repo). After real training,
+   fill 02-srs / 03-dataset / 04-model / 05-results (status → ready), add results table + Grad-CAM image, Hugging Face
+   demo link + GitHub code link in src/data/projects.ts. ASK ME the project's start date (and team/college course if any).
+6. New Google Sheet (Habit_Tracker_v2 with times + weekday weekly tab) → when I share its link, update
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Projects section (/projects/): document folders — Ascent (SRS, design, stack, security, tests, roadmap) + Parkinson's Disease Detection (overview + planned docs); Home card now live.
 - 2026-11-28 Cleanup: Gym → Basecamp, Goals merged into Today, header = Journal · Basecamp · About, Body → BMI, real padlock photos on the bucket lock.
 - 2026-11-28 Bucket book: encrypted vintage memory photo + written/fulfilled date ledger on every wish.
 - 2026-11-28 Bucket cove: antique padlock, book-opens-in-photo unlock, stronger water/sun/caustic effects, D debug key.

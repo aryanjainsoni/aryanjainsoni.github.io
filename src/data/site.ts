@@ -34,7 +34,7 @@ export const topics = [
   { slug: 'dsa', title: 'DSA', line: 'LeetCode + Apex DSA, daily.', href: 'https://leetcode.com/u/aryanjainsoni/', ready: true, external: true, emoji: '🧩', art: ['#ffb347', '#ff6a3d'] },
   { slug: 'ai', title: 'AI Course', line: 'Vedantu AI — daily notes.', href: '/ai/', ready: false, emoji: '🤖', art: ['#8f5cff', '#ff4d8d'] },
   { slug: 'notes', title: 'Notes', line: 'Handwritten. Scanned. Shared.', href: '/notes/', ready: false, emoji: '📚', art: ['#ff9a8b', '#ff6a88'] },
-  { slug: 'projects', title: 'Projects', line: "Things I've built.", href: '/projects/', ready: false, emoji: '🛠️', art: ['#f9844a', '#d64161'], size: 'wide' },
+  { slug: 'projects', title: 'Projects', line: "Things I've built.", href: '/projects/', ready: true, emoji: '🛠️', art: ['#f9844a', '#d64161'], size: 'wide' },
   { slug: 'achievements', title: 'Achievements', line: 'Certificates & wins.', href: '/achievements/', ready: false, emoji: '🏆', art: ['#ffd166', '#f78c35'] },
   { slug: 'football', title: 'Football', line: 'Tournament winners — in the newspaper.', href: '/football/', ready: false, emoji: '⚽', art: ['#43aa8b', '#f9c74f'] },
   { slug: 'art', title: 'Art', line: 'Drawings, published in print.', href: '/art/', ready: false, emoji: '🎨', art: ['#f15bb5', '#fee440'] },

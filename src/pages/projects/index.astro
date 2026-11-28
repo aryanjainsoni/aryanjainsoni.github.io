@@ -1,0 +1,137 @@
+---
+// PROJECTS — har project ek folder. Folder kholo → uske professional documents (SRS, design, tests…).
+// Folders: src/data/projects.ts · Documents: src/content/projects/<folder>/*.md
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { folders } from '../../data/projects';
+import { projects as earlier } from '../../data/profile';
+
+const docs = await getCollection('projects');
+const inFolder = (slug: string) =>
+  docs.filter((d) => d.id.split('/')[0] === slug).sort((a, b) => a.data.order - b.data.order);
+const statusLabel = { live: 'Live', building: 'In progress', archived: 'Archived' };
+const fmt = (s: string) => new Date(s).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+---
+<Base title="Projects" description="Projects by Aryan Jain — each one a folder of real documents: requirements, system design, security, tests and results.">
+  <section class="head wrap">
+    <p class="kicker">Projects</p>
+    <h1>Things I've built — <em class="sun">on paper too.</em></h1>
+    <p class="lead muted">Every project gets a folder. Inside: the documents a real team would write — requirements, design, security, tests, results. Open one.</p>
+  </section>
+
+  <section class="wrap shelf" aria-label="Project folders">
+    {folders.map((f, i) => {
+      const files = inFolder(f.slug);
+      const ready = files.filter((d) => d.data.status === 'ready').length;
+      return (
+        <a class="folder" href={`/projects/${f.slug}/`} style={`--c1:${f.tone[0]};--c2:${f.tone[1]};--d:${i * 0.08}s`} data-reveal>
+          <span class="f-back" aria-hidden="true"></span>
+          <span class="f-sheets" aria-hidden="true">
+            {files.slice(0, 3).map((d, j) => (
+              <span class="sheet" style={`--j:${j}`}>
+                <b>{d.data.kind}</b>
+                <i></i><i></i><i></i>
+              </span>
+            ))}
+          </span>
+          <span class="f-front">
+            <span class="f-kind">{f.kind}</span>
+            <span class="f-name">{f.name}</span>
+            <span class="f-line">{f.line}</span>
+            <span class="f-meta">
+              <span class={`dot ${f.status}`}></span>{statusLabel[f.status]}
+              <span class="sep">·</span>{ready} of {files.length} documents{f.since && <><span class="sep">·</span>since {fmt(f.since)}</>}
+            </span>
+          </span>
+        </a>
+      );
+    })}
+  </section>
+
+  {earlier.length > 0 && (
+    <section class="wrap earlier">
+      <p class="kicker">Also built</p>
+      <ul class="rows">
+        {earlier.map((p) => (
+          <li>
+            <span class="r-year">{p.year}</span>
+            <div class="r-main">
+              <b>{p.name}</b> <span class="muted r-kind">{p.kind}</span>
+              <p class="muted">{p.line}</p>
+            </div>
+            <span class="r-links">
+              {(p.links ?? []).map(([label, href]: string[]) => <a href={href} target="_blank" rel="noopener">{label} ↗</a>)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+</Base>
+
+<style>
+  .head { padding-block: 64px 28px; }
+  h1 { font-size: clamp(2.3rem, 6vw, 3.8rem); margin: 0 0 14px; max-width: 16ch; }
+  h1 em { padding-right: .08em; }
+  .lead { max-width: 58ch; font-size: 1.08rem; margin: 0; }
+
+  /* ---------- folders ---------- */
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 44px 32px; padding-block: 36px 40px; }
+  .folder { position: relative; display: block; height: 330px; color: #f6efe6; perspective: 1200px; text-decoration: none; }
+  .folder:hover { text-decoration: none; }
+  .folder:focus-visible { outline: 2px solid var(--accent); outline-offset: 8px; border-radius: 20px; }
+
+  /* back panel + tab */
+  .f-back { position: absolute; inset: 22px 0 0; border-radius: 6px 18px 18px 18px; background: color-mix(in srgb, var(--c1) 82%, #000); box-shadow: var(--shadow); }
+  .f-back::before { content: ''; position: absolute; left: 0; top: -22px; width: 42%; height: 24px; border-radius: 12px 14px 0 0; background: inherit; clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%); }
+  .f-back::after { content: ''; position: absolute; left: 22px; top: -13px; width: 64px; height: 3px; border-radius: 2px; background: var(--c2); opacity: .85; }
+
+  /* paper sheets peeking out */
+  .f-sheets { position: absolute; z-index: 1; inset: 40px 22px auto; height: 200px; }
+  .sheet { position: absolute; inset: 0; display: block; padding: 14px 16px; border-radius: 8px; background: #f7f1e6; color: #3b2f27; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); z-index: calc(3 - var(--j));
+    transform: translate(calc(var(--j) * 14px), calc(var(--j) * 10px)) rotate(calc((var(--j) - 1) * 1.4deg));
+    transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+  .sheet b { display: block; font: 600 9.5px/1 'JetBrains Mono', monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--c2); margin-bottom: 10px; filter: brightness(.8); }
+  .sheet i { display: block; height: 3px; margin: 7px 0; border-radius: 2px; background: rgba(59, 47, 39, .14); width: 78%; }
+  .sheet i:nth-of-type(2) { width: 60%; }
+  .sheet i:nth-of-type(3) { width: 70%; }
+  .folder:hover .sheet, .folder:focus-visible .sheet { transform: translate(calc(var(--j) * 22px), calc(var(--j) * 6px - 22px)) rotate(calc((var(--j) - 1) * 2.4deg)); }
+
+  /* front panel */
+  .f-front { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 232px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; padding: 24px 26px 22px; border-radius: 16px 16px 18px 18px;
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, .10), transparent 55%),
+      linear-gradient(160deg, var(--c1), color-mix(in srgb, var(--c1) 70%, #000));
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    box-shadow: 0 -10px 24px -12px rgba(0, 0, 0, .45), 0 30px 50px -30px rgba(0, 0, 0, .7);
+    transform-origin: 50% 100%; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+  .f-front::before { content: ''; position: absolute; inset: 10px; border: 1px dashed rgba(255, 255, 255, .14); border-radius: 10px; pointer-events: none; } /* stitched edge */
+  .folder:hover .f-front, .folder:focus-visible .f-front { transform: rotateX(-9deg); }
+  .f-kind { font: 500 10.5px/1 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: color-mix(in srgb, var(--c2) 70%, #fff); }
+  .f-name { font: 500 clamp(1.6rem, 3.4vw, 2.1rem)/1.05 'Fraunces', Georgia, serif; letter-spacing: -.02em; }
+  .f-line { font-size: .93rem; line-height: 1.5; color: rgba(246, 239, 230, .74); max-width: 46ch; }
+  .f-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font: 500 11.5px/1.4 'JetBrains Mono', monospace; color: rgba(246, 239, 230, .62); }
+  .sep { opacity: .5; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #9a8f86; }
+  .dot.live { background: #6fd39b; box-shadow: 0 0 0 3px rgba(111, 211, 155, .18); }
+  .dot.building { background: #f0b24c; box-shadow: 0 0 0 3px rgba(240, 178, 76, .18); }
+  @media (prefers-reduced-motion: reduce) { .sheet, .f-front { transition: none; } }
+
+  /* ---------- earlier projects ---------- */
+  .earlier { padding-block: 32px 88px; }
+  .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .rows li { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 18px; align-items: baseline; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .r-year { font: 500 12px 'JetBrains Mono', monospace; color: var(--muted); }
+  .r-main b { font: 500 1.15rem 'Fraunces', serif; }
+  .r-kind { font-size: .82rem; margin-left: 6px; }
+  .r-main p { margin: 4px 0 0; font-size: .93rem; }
+  .r-links { display: flex; gap: 14px; font-size: .88rem; white-space: nowrap; }
+
+  @media (max-width: 640px) {
+    .head { padding-block: 40px 12px; }
+    .folder { height: 340px; }
+    .f-front { height: 250px; padding: 22px 20px 20px; }
+    .rows li { grid-template-columns: 1fr; gap: 4px; }
+    .r-links { white-space: normal; flex-wrap: wrap; }
+  }
+</style>

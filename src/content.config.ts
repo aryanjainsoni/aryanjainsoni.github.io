@@ -31,4 +31,19 @@ const guide = defineCollection({
   }),
 });
 
-export const collections = { journal, guide };
+// PROJECTS — har project ek folder: src/content/projects/<folder>/<doc>.md
+// Folder ki details (naam, line, links) src/data/projects.ts mein. Naya document = nayi .md file.
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
+  schema: z.object({
+    title: z.string(),
+    kind: z.string(),                    // short label on the file tab: SRS, Design, Tests…
+    order: z.number(),                   // position inside the folder
+    summary: z.string(),
+    status: z.enum(['ready', 'draft', 'planned']).default('ready'),
+    version: z.string().optional(),      // e.g. "1.0"
+    updated: z.coerce.date().optional(),
+  }),
+});
+
+export const collections = { journal, guide, projects };
