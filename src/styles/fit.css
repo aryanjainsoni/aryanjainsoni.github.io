@@ -381,3 +381,14 @@ details.f-secrow[open] summary span::after { content: ' −'; }
 .f-vault .f-ack { margin: 10px 0 10px; }
 .f-vault .f-pass.one .f-in > span:not(.f-pw) { display: none; } /* the placeholder already says it */
 .f-vault .lead { margin-bottom: 12px; }
+
+/* "Add a scan" = the place to add new data: orange call-to-action card */
+.fit .f-add { position: relative; overflow: hidden; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, var(--surface) 60%); transition: border-color .25s, box-shadow .25s; }
+.fit .f-add::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--sun); }
+.fit .f-add:hover { border-color: var(--accent); box-shadow: 0 12px 34px -16px color-mix(in srgb, var(--accent) 80%, transparent); }
+.fit .f-add summary { align-items: center; }
+.fit .f-add summary .label { color: var(--accent); font-weight: 600; }
+.fit .f-add summary > span:not(.label) { color: var(--ink); }
+.fit .f-add summary::after { content: '+'; display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--sun); color: #fff; font: 500 22px/1 'Inter', sans-serif; box-shadow: 0 6px 16px -6px var(--accent); transition: transform .3s; }
+.fit .f-add[open] summary::after { content: '−'; transform: rotate(180deg); }
+.fit .f-add:hover summary::after { transform: scale(1.08); }

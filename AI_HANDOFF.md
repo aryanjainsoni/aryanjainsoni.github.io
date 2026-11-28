@@ -151,6 +151,7 @@ decisions that are truly mine.
    site.trackerUrl.
 
 ## CHANGELOG (newest first — add one line per change)
+- 2026-11-28 Gym Body: "Add a scan" styled as an orange call-to-action card.
 - 2026-11-28 Gym orbs re-themed "ancient + modern tech" (stone gate, astrolabe, lotus, crag, doorway); music toggle is now a note icon.
 - 2026-11-28 Gym music: quiet background level per track (measured loudness) + limiter.
 - 2026-11-28 Gym orbs redesigned (3D loops + glass + glyphs, always live, hover boost) + per-tab music with crossfade.
